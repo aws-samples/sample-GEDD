@@ -1,4 +1,5 @@
-# GEDD — Grounded Eval-Driven Development
+# GEDD — Grounded Eval-Driven Development<img width="1231" height="739" alt="Screenshot 2026-05-15 at 12 48 05 PM" src="https://github.com/user-attachments/assets/cca8f835-93c2-4f95-816e-0f87b6d11a73" />
+
 
 **Build LLM evaluation judges grounded in real observed failures, not assumptions.**
 
