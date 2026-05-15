@@ -331,17 +331,140 @@ python -m grounded_evals.app
 
 The app runs at `http://localhost:8080`.
 
-### Environment Variables
+---
+
+## Workshop Setup & Configuration
+
+### Prerequisites
+
+- Python 3.12+
+- AWS account with [Amazon Bedrock model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html) enabled
+- AWS credentials configured (`aws configure` or environment variables)
+
+### Step 1: Configure AWS Credentials
+
+The app uses the standard boto3 credential chain. Ensure your credentials are set:
+
+```bash
+# Option A: AWS CLI profile (recommended for workshops)
+aws configure
+
+# Option B: Environment variables
+export AWS_ACCESS_KEY_ID=your-access-key
+export AWS_SECRET_ACCESS_KEY=your-secret-key
+export AWS_SESSION_TOKEN=your-session-token   # if using temporary credentials
+```
+
+### Step 2: Choose Your LLM Provider
+
+GEDD supports two LLM providers. Choose one:
+
+#### Option A: Amazon Bedrock (Default — recommended for workshops)
+
+Uses IAM credentials via boto3. No API key needed — just ensure your AWS account has Bedrock model access enabled.
+
+```bash
+# Set your region (must match where you enabled Bedrock models)
+export AWS_REGION=us-east-1
+
+# Optionally override the default model for the coaching agent
+export BEDROCK_MODEL_ID=us.anthropic.claude-haiku-4-5-20251001-v1:0
+```
+
+#### Option B: Direct Anthropic API (local dev / no AWS)
+
+If you don't have Bedrock access, use a direct Anthropic API key:
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
+export BEDROCK_MODEL_ID=claude-sonnet-4-6-20250514   # uses Anthropic model names
+```
+
+> **Note:** When `ANTHROPIC_API_KEY` is set, it takes priority over Bedrock.
+
+### Step 3: Change the Default Model
+
+The default coaching model is `us.anthropic.claude-haiku-4-5-20251001-v1:0`. To change it:
+
+**Via environment variable:**
+```bash
+export BEDROCK_MODEL_ID=us.anthropic.claude-sonnet-4-5-20241022-v2:0
+```
+
+**Via config file** (`configs/llm_config.yaml`):
+```yaml
+llm:
+  provider: bedrock       # "bedrock" or "anthropic"
+  region: us-east-1
+  model_id: us.anthropic.claude-sonnet-4-5-20241022-v2:0
+```
+
+### Available Models for Evaluation
+
+The eval runner supports these Bedrock models out of the box (select up to 3 for side-by-side comparison):
+
+| Model | ID | API |
+|---|---|---|
+| Claude Haiku 4.5 | `us.anthropic.claude-haiku-4-5-20251001-v1:0` | Anthropic Messages |
+| Claude Sonnet 4.5 | `us.anthropic.claude-sonnet-4-5-20241022-v2:0` | Anthropic Messages |
+| Claude Opus 4.5 | `us.anthropic.claude-opus-4-5-20250115-v1:0` | Anthropic Messages |
+| Amazon Nova Pro | `us.amazon.nova-pro-v1:0` | Bedrock Converse |
+| Amazon Nova Lite | `us.amazon.nova-lite-v1:0` | Bedrock Converse |
+| Amazon Nova Micro | `us.amazon.nova-micro-v1:0` | Bedrock Converse |
+| Llama 3.3 70B | `us.meta.llama3-3-70b-instruct-v1:0` | Bedrock Converse |
+| Mistral Large 24.11 | `us.mistral.mistral-large-2411-v1:0` | Bedrock Converse |
+
+> **Workshop tip:** Ensure you have [requested access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html) to the models you want to use in the AWS Console under **Amazon Bedrock → Model access**.
+
+### Step 4: Authentication (Optional)
+
+For local/workshop use, the app uses a simple password login:
+
+```bash
+# Set a custom password (default: "playground2024")
+export ADMIN_PASSWORD=your-workshop-password
+```
+
+For production, configure Cognito:
+```bash
+export COGNITO_USER_POOL_ID=us-east-1_xxxxxxx
+export COGNITO_CLIENT_ID=your-client-id
+```
+
+### Step 5: Run the App
+
+```bash
+cd grounded-evals
+python -m grounded_evals.app
+```
+
+Open `http://localhost:8080` and log in.
+
+### All Environment Variables
 
 | Variable | Purpose | Default |
 |---|---|---|
+| `AWS_REGION` | AWS region for Bedrock | `us-east-1` |
+| `BEDROCK_MODEL_ID` | Model ID for coaching agent | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
+| `ANTHROPIC_API_KEY` | Direct Anthropic API key (bypasses Bedrock) | — |
+| `ADMIN_PASSWORD` | Login password | `playground2024` |
 | `HOST` | Server bind address | `0.0.0.0` |
 | `PORT` | Server port | `8080` |
-| `AWS_REGION` | Bedrock region | `us-west-2` |
-| `ANTHROPIC_MODEL` | Default model | `claude-haiku-4-5-20250315` |
-| `AGENTCORE_AGENT_ID` | Remote agent ID (optional) | — |
-| `ADMIN_PASSWORD` | Fallback auth password | — |
-| `LANGSMITH_API_KEY` | Tracing (optional) | — |
+| `COGNITO_USER_POOL_ID` | Cognito User Pool (production auth) | — |
+| `COGNITO_CLIENT_ID` | Cognito App Client ID | — |
+| `AGENTCORE_AGENT_ID` | Remote AgentCore agent ID | — |
+| `LANGSMITH_API_KEY` | LangSmith tracing key (optional) | — |
+| `LANGSMITH_PROJECT` | LangSmith project name | `agent-playground` |
+
+### Troubleshooting
+
+| Issue | Solution |
+|---|---|
+| `AccessDeniedException` on Bedrock calls | Enable model access in AWS Console → Bedrock → Model access |
+| `NoCredentialProviders` | Run `aws configure` or set `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
+| Wrong region error | Ensure `AWS_REGION` matches where you enabled Bedrock models |
+| Models not responding | Check that the specific model ID is available in your region |
+| Login not working | Default password is `playground2024` or set `ADMIN_PASSWORD` |
 
 ---
 
