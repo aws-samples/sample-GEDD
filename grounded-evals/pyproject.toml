@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grounded-evals"
+version = "0.1.0"
+description = "Open Coding guided workflow for AI Agent golden dataset generation and LLM-as-a-Judge creation"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic[bedrock]>=0.40.0",
+    "boto3>=1.35.0",
+    "langsmith>=0.1.0",
+    "nicegui>=2.0",
+    "pydantic>=2.0",
+    "pyyaml>=6.0",
+    "rich>=13.0",
+    "click>=8.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "mypy>=1.10",
+    "ruff>=0.5",
+]
+deploy = [
+    "aws-cdk-lib>=2.150.0",
+    "constructs>=10.0",
+]
+
+[project.scripts]
+grounded-evals = "grounded_evals.cli:main"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/grounded_evals/open_coding/fracture.py" = ["E501"]
+"src/grounded_evals/open_coding/compare.py" = ["E501"]
+"src/grounded_evals/axial_coding/paradigm.py" = ["E501"]
+"src/grounded_evals/axial_coding/mapper.py" = ["E501"]
+"src/grounded_evals/judge_builder/prompt_gen.py" = ["E501"]
+"src/grounded_evals/judge_builder/calibrate.py" = ["E501"]
+"src/grounded_evals/ui/steps/judge_builder_step.py" = ["E501"]
+"src/grounded_evals/ui/steps/define_agent.py" = ["E501"]
+"src/grounded_evals/ui/steps/system_prompt.py" = ["E501"]
+"src/grounded_evals/ui/journey_map.py" = ["E501"]
+"src/grounded_evals/app.py" = ["E501"]
+"src/grounded_evals/ui/eval_tab.py" = ["E501"]
+"src/grounded_evals/agent/prompt.py" = ["E501"]
+"src/grounded_evals/agent/tools.py" = ["E501"]
+"src/grounded_evals/agent/handler.py" = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"

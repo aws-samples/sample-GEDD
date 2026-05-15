@@ -1,0 +1,35 @@
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+.venv/
+venv/
+.env
+.env.local
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+data/raw/
+data/coded/
+data/categories/
+data/judges/
+.DS_Store
+.nicegui/
+
+# CDK
+cdk.out/
+infra/.cdk.staging/
+infra/cdk.out/
+agentcore-deploy/
+
+# Node
+node_modules/
+package-lock.json
+
+# Temp files
+~$*
+*.pptx

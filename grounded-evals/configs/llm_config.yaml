@@ -1,0 +1,18 @@
+# LLM Configuration for grounded-evals
+# Uses Amazon Bedrock Model API Keys
+# Docs: https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html
+#
+# Set one of these environment variables:
+#   ANTHROPIC_AWS_API_KEY       - Bedrock Model API key (preferred)
+#   AWS_BEARER_TOKEN_BEDROCK    - Alternative Bedrock API key env var
+#
+# Region (optional, defaults to us-east-1):
+#   AWS_REGION or AWS_DEFAULT_REGION
+#
+# Fallback for local dev (no Bedrock):
+#   ANTHROPIC_API_KEY           - Direct Anthropic API key
+
+llm:
+  provider: bedrock_api_key
+  region: us-east-1
+  model_id: claude-sonnet-4-20250514

@@ -1,0 +1,22 @@
+agent:
+  name: "Customer Support Agent"
+  description: "Handles customer inquiries for an e-commerce platform"
+  capabilities:
+    - "Order status lookup"
+    - "Return/refund processing"
+    - "Product recommendations"
+    - "Complaint escalation"
+  target_users:
+    - persona: "Frustrated customer"
+      description: "Has a problem, wants fast resolution"
+    - persona: "Confused shopper"
+      description: "Needs help navigating options"
+    - persona: "Power user"
+      description: "Knows the system, tests edge cases"
+  known_edge_cases:
+    - "Multi-item orders with mixed return eligibility"
+    - "Expired promotions referenced by customer"
+    - "Requests outside agent scope (e.g., account deletion)"
+  constraints:
+    - "Must not reveal internal policies"
+    - "Must escalate after 3 failed resolution attempts"
