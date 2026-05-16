@@ -529,6 +529,51 @@ This matters because:
 
 ---
 
+## The Grounded Evals Flywheel
+
+```mermaid
+flowchart TD
+    A["🧑‍💼 DOMAIN EXPERTS + PMs
+    Collaborative qualitative coding"]
+    B["🔍 OPEN CODING
+    Discover failure patterns
+    inductively from agent output"]
+    C["🔗 AXIAL CODING
+    Map causes, contexts,
+    strategies, consequences"]
+    D["📋 RUBRIC GENERATION
+    Observable criteria from
+    empirical failure patterns"]
+    E["✨ GOLDEN DATASET
+    Human-annotated ground truth
+    with inter-annotator agreement"]
+    F["⚖️ LLM-AS-JUDGE
+    Calibrated against humans
+    Scalable automated eval"]
+    G["📡 PRODUCTION MONITORING
+    Detect drift, new patterns"]
+
+    A --> B
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    F --> G
+    G -->|"feeds back"| B
+
+    style A fill:#1565c0,stroke:#0d47a1,color:#fff
+    style B fill:#1976d2,stroke:#1565c0,color:#fff
+    style C fill:#1e88e5,stroke:#1976d2,color:#fff
+    style D fill:#2196f3,stroke:#1e88e5,color:#fff
+    style E fill:#42a5f5,stroke:#2196f3,color:#fff
+    style F fill:#64b5f6,stroke:#42a5f5,color:#fff
+    style G fill:#90caf9,stroke:#64b5f6,color:#1a1a1a
+```
+
+> **The flywheel never stops.** Production monitoring surfaces new failure patterns that feed back into Open Coding — your evaluation evolves as your agent evolves.
+
+---
+
 ## Security
 
 See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
