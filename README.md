@@ -1,4 +1,3 @@
-<img width="431" height="620" alt="Screenshot 2026-05-14 at 10 29 57 AM" src="https://github.com/user-attachments/assets/266f69e2-502d-47f8-b2a2-9a4c9eb6f46f" />
 # GEDD — Grounded Eval-Driven Development<img width="1231" height="739" alt="Screenshot 2026-05-15 at 12 48 05 PM" src="https://github.com/user-attachments/assets/cca8f835-93c2-4f95-816e-0f87b6d11a73" />
 
 
