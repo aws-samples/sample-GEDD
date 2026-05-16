@@ -248,7 +248,17 @@ def main_page() -> None:
         app.storage.user["authenticated"] = False
         ui.navigate.to("/login")
 
+    def new_agent():
+        s = _user_state()
+        s["session_data"] = Session().model_dump(mode="json")
+        s["current_step"] = 1
+        s["annotations"] = []
+        s["messages"] = []
+        s["prompt_variants"] = []
+        ui.navigate.to("/coach")
+
     with ui.row().classes("w-full items-center").style("padding: 0.5rem 1rem 0"):
+        ui.button("New Agent", icon="restart_alt", on_click=new_agent).props("flat dense color=primary").tooltip("Start over with a new agent")
         ui.html(
             '<div style="text-align:center; flex:1">'
             '<div class="brand-title">Agent Playground</div>'
