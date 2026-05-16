@@ -1,9 +1,7 @@
 # GEDD — Grounded Eval-Driven Development<img width="1231" height="739" alt="Screenshot 2026-05-15 at 12 48 05 PM" src="https://github.com/user-attachments/assets/cca8f835-93c2-4f95-816e-0f87b6d11a73" />
 
 
-**Build LLM evaluation judges grounded in real observed failures, not assumptions.**
-
-GEDD applies [Grounded Theory](https://en.wikipedia.org/wiki/Grounded_theory) — a rigorous qualitative research methodology — to the problem of evaluating AI agents. Instead of inventing rubrics from guesses about what might go wrong, you discover evaluation criteria inductively from what *actually* goes wrong.
+**Grounded Eval-Driven Development (GEDD)** is a problem-space framework for AI evaluation — purpose-built for product managers and domain experts who need to curate golden datasets for their AI products. It applies the same discipline you already use in product discovery (observe → understand → validate → build) to the problem of evaluating AI agents. Using qualitative research techniques from social science (Open Coding, Axial Coding, and the Paradigm Model), GEDD keeps you in the problem space until you've *earned the right* to write a rubric — by observing real agent behavior, inductively coding failure patterns from data, and mapping the causal relationships that explain why your agent fails under specific conditions.
 
 ---
 
