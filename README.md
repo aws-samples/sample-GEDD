@@ -490,6 +490,7 @@ Open `http://localhost:8080` and log in.
 | `PORT` | Server port | `8080` |
 | `COGNITO_USER_POOL_ID` | Cognito User Pool (production auth) | — |
 | `COGNITO_CLIENT_ID` | Cognito App Client ID | — |
+| `STORAGE_SECRET` | Secret key for session persistence (set a strong random string in production) | `dev-secret-change-me` |
 | `AGENTCORE_AGENT_ID` | Remote AgentCore agent ID | — |
 | `LANGSMITH_API_KEY` | LangSmith tracing key (optional) | — |
 | `LANGSMITH_PROJECT` | LangSmith project name | `agent-playground` |

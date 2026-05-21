@@ -8,6 +8,41 @@ from nicegui import app, ui
 from grounded_evals.ui.layout import page_layout
 
 
+def _build_responses(storage: dict) -> list[dict]:
+    """Merge eval_results + annotations into a unified response list for coding.
+
+    This removes the hard dependency on the Eval tab annotation step: unannotated
+    model responses from eval_results are surfaced for coding even if the user
+    skipped the ✓/⚠/✗ step in the Eval tab.
+    """
+    seen: set[tuple[str, str]] = set()
+    result: list[dict] = []
+
+    for a in storage.get('annotations', []):
+        key = (a.get('query', ''), a.get('response', ''))
+        if key not in seen:
+            seen.add(key)
+            result.append(a)
+
+    for er in storage.get('eval_results', []):
+        for model_id, resp_text in er.get('responses', {}).items():
+            if not resp_text or resp_text.startswith('[Error:'):
+                continue
+            key = (er.get('query', ''), resp_text)
+            if key not in seen:
+                seen.add(key)
+                result.append({
+                    'query': er.get('query', ''),
+                    'response': resp_text,
+                    'annotation': er.get('annotations', {}).get(model_id, ''),
+                    'model': model_id,
+                    'error_code': '',
+                    'notes': er.get('notes', ''),
+                })
+
+    return result
+
+
 CODING_CSS = """
 .coding-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .coding-query-card {
@@ -53,7 +88,7 @@ def coding_page():
     storage.setdefault('memos', [])
     storage.setdefault('annotations', [])
 
-    responses = storage.get('annotations', [])
+    responses = _build_responses(storage)
     current_idx = {'value': 0}
     selected_codes = {'value': []}
 
@@ -139,7 +174,7 @@ def coding_page():
         left_panel.clear()
         with left_panel:
             if not responses:
-                ui.label('No responses to annotate. Complete some evaluations first.').style("color: var(--text-tertiary)")
+                ui.label('No responses to code yet. Run an evaluation in the Eval tab first.').style("color: var(--text-tertiary)")
                 return
 
             idx = current_idx['value']

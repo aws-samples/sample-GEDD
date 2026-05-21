@@ -185,6 +185,41 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ── Coach page ──────────────────────────────────────────────────────── */
+.chat-card { background: var(--bg-surface-2); border-radius: 12px; border: 1px solid var(--border-subtle); }
+.msg-user { background: var(--accent-tint); border: 1px solid rgba(94,106,210,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; color: var(--text-primary); }
+.msg-ai { background: var(--bg-surface-1); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--accent); color: var(--text-secondary); }
+.msg-ai strong { color: var(--text-primary); }
+.msg-error { background: var(--red-tint); border: 1px solid rgba(235,87,87,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--red); color: var(--text-secondary); }
+.input-box { border-radius: 10px !important; background: var(--bg-surface-1) !important; border: 1px solid var(--border-default) !important; font-size: 0.88rem !important; color: var(--text-primary) !important; transition: border-color 150ms ease !important; }
+.input-box:focus-within { border-color: var(--accent) !important; }
+.send-btn { background: var(--accent) !important; color: white !important; transition: opacity 150ms ease !important; }
+.send-btn:hover { opacity: 0.85 !important; }
+
+/* Progress tracker */
+.progress-track { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; margin-bottom: 1rem; background: var(--bg-surface-2); border-radius: 10px; border: 1px solid var(--border-subtle); }
+.progress-dot { display: flex; flex-direction: column; align-items: center; flex: 1; }
+.dot-circle { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; background: var(--bg-hover); color: var(--text-muted); transition: all 0.3s ease; }
+.progress-dot.active .dot-circle { background: var(--green-tint); color: var(--green-bright); }
+.progress-dot.current .dot-circle { background: var(--accent); color: white; box-shadow: 0 0 12px rgba(94,106,210,0.4); }
+.dot-label { font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
+.progress-dot.active .dot-label { color: var(--green-bright); }
+.progress-dot.current .dot-label { color: var(--accent-bright); font-weight: 600; }
+
+/* Sidebar */
+.sidebar-panel { width: 320px; min-width: 320px; padding: 1.25rem 1rem; background: var(--bg-surface-2); border-radius: 12px; border: 1px solid var(--border-subtle); height: fit-content; position: sticky; top: 1rem; max-height: 90vh; overflow-y: auto; }
+.sidebar-section { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); }
+.sidebar-section:last-child { border-bottom: none; }
+.sidebar-title { font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.sidebar-value { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+.sidebar-detail { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; }
+.sidebar-empty { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Annotation labels */
+.annotation-correct { color: var(--green-bright); }
+.annotation-partial { color: var(--yellow); }
+.annotation-incorrect { color: var(--red); }
 """
 
 
