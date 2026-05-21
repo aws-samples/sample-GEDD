@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 
 import boto3
 from nicegui import app, ui
 
 from grounded_evals.guide.session import Session
-from grounded_evals.llm.client import get_default_client, traced_eval_call
+from grounded_evals.llm.client import get_default_client, get_model_id, traced_eval_call
 
 AVAILABLE_MODELS = [
     {"id": "us.anthropic.claude-haiku-4-5-20251001-v1:0", "label": "Claude Haiku 4.5", "api": "anthropic"},
@@ -68,6 +69,36 @@ def _get_eval_results() -> list[dict]:
 
 def _get_selected_models() -> list[str]:
     return app.storage.user.setdefault("eval_selected_models", [])
+
+
+def _get_judge_results() -> dict:
+    return app.storage.user.setdefault("_eval_judge_results", {})
+
+
+async def _score_with_judge(judge_prompt: str, query: str, response: str) -> bool | None:
+    """Score one response with the stored judge prompt. Returns True=PASS, False=FAIL, None=error."""
+    try:
+        client = get_default_client()
+        model_id = get_model_id()
+        full_prompt = (
+            f"{judge_prompt}\n\n<query>{query}</query>\n<response>{response}</response>"
+        )
+        resp = await asyncio.to_thread(
+            client.messages.create,
+            model=model_id,
+            max_tokens=512,
+            messages=[{"role": "user", "content": full_prompt}],
+        )
+        text = resp.content[0].text
+        m = re.search(r'"pass"\s*:\s*(true|false)', text, re.IGNORECASE)
+        if m:
+            return m.group(1).lower() == "true"
+        text_lower = text.lower()
+        if "true" in text_lower or ("pass" in text_lower and "fail" not in text_lower):
+            return True
+        return False
+    except Exception:
+        return None
 
 
 def render(session: Session, annotations_list: list[dict], prompt_variants: list[dict] | None = None) -> None:
@@ -219,26 +250,59 @@ def render_results(
 
     model_labels = {m["id"]: m["label"] for m in AVAILABLE_MODELS}
 
+    judge_prompt = app.storage.user.get("_generated_judge_prompt", "")
+    judge_results = _get_judge_results()
+
     with container:
         with ui.row().classes("w-full items-center justify-between").style("margin-bottom:12px"):
             ui.label(
                 f"Results: {len(eval_results)} queries × {len(selected_models)} models"
             ).style("font-size:0.9rem; font-weight:700; color:var(--text-primary)")
 
-            # Model comparison summary
-            summary_parts = []
-            for model_id in selected_models:
-                label = model_labels.get(model_id, model_id)
-                correct = sum(
-                    1 for r in eval_results if r["annotations"].get(model_id) == "correct"
-                )
-                total_ann = sum(1 for r in eval_results if model_id in r["annotations"])
-                if total_ann:
-                    summary_parts.append(f"{label}: {correct}/{total_ann} ✓")
-            if summary_parts:
-                ui.label(" · ".join(summary_parts)).style(
-                    "font-size:0.75rem; color:var(--text-tertiary)"
-                )
+            with ui.row().classes("items-center gap-2"):
+                # Model comparison summary
+                summary_parts = []
+                for model_id in selected_models:
+                    label = model_labels.get(model_id, model_id)
+                    correct = sum(
+                        1 for r in eval_results if r["annotations"].get(model_id) == "correct"
+                    )
+                    total_ann = sum(1 for r in eval_results if model_id in r["annotations"])
+                    if total_ann:
+                        summary_parts.append(f"{label}: {correct}/{total_ann} ✓")
+                if summary_parts:
+                    ui.label(" · ".join(summary_parts)).style(
+                        "font-size:0.75rem; color:var(--text-tertiary)"
+                    )
+
+                if judge_prompt:
+                    judge_status = ui.label("").style("font-size:0.72rem; color:var(--text-muted)")
+                    judge_btn_ref: dict = {}
+
+                    async def run_all_judges():
+                        judge_btn_ref["btn"].props("loading")
+                        scored = 0
+                        for idx, result in enumerate(eval_results):
+                            for mid in selected_models:
+                                resp = result["responses"].get(mid, "")
+                                if not resp or resp.startswith("[Error:"):
+                                    continue
+                                key = f"{idx}_{mid}"
+                                verdict = await _score_with_judge(judge_prompt, result["query"], resp)
+                                judge_results[key] = {"pass": verdict}
+                                scored += 1
+                        judge_btn_ref["btn"].props(remove="loading")
+                        passed = sum(1 for v in judge_results.values() if v.get("pass") is True)
+                        judge_status.set_text(f"Judge: {passed}/{scored} PASS")
+                        render_current()
+
+                    judge_btn = ui.button("Run Judge", icon="gavel", on_click=run_all_judges).props("size=sm outline dark")
+                    judge_btn_ref["btn"] = judge_btn
+
+                    # Show prior run summary if results exist
+                    if judge_results:
+                        passed = sum(1 for v in judge_results.values() if v.get("pass") is True)
+                        judge_status.set_text(f"Judge: {passed}/{len(judge_results)} PASS")
 
         # Step-through navigation
         current_idx = {"value": 0}

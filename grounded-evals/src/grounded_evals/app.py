@@ -2,6 +2,7 @@
 
 import asyncio
 import csv
+import difflib
 import io
 import json
 import os
@@ -415,6 +416,52 @@ def main_page() -> None:
             ui.button("Save Variant", icon="add", on_click=save_variant).props("size=sm").style(
                 "margin-top: 8px; background: var(--accent); color: white; border-radius: 6px"
             )
+
+        # Variant diff viewer
+        saved_variants = _user_state().get("prompt_variants", [])
+        if len(saved_variants) >= 2:
+            with ui.expansion("Compare Variants", icon="difference").classes("w-full").style(
+                "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "
+                "border: 1px solid var(--border-subtle); color: var(--text-primary)"
+            ):
+                variant_names = [v["name"] for v in saved_variants]
+                diff_container = ui.column().classes("w-full")
+
+                with ui.row().classes("gap-2 items-end").style("margin-bottom: 8px"):
+                    sel_a = ui.select(options=variant_names, value=variant_names[0], label="Variant A").props("dense outlined dark").style("width: 160px")
+                    ui.label("→").style("color: var(--text-muted); padding-bottom: 4px")
+                    sel_b = ui.select(options=variant_names, value=variant_names[1], label="Variant B").props("dense outlined dark").style("width: 160px")
+                    ui.button("Show Diff", icon="compare", on_click=lambda: _render_diff()).props("size=sm outline dark")
+
+                def _render_diff():
+                    a_prompt = next((v["prompt"] for v in saved_variants if v["name"] == sel_a.value), "")
+                    b_prompt = next((v["prompt"] for v in saved_variants if v["name"] == sel_b.value), "")
+                    diff_lines = list(difflib.ndiff(a_prompt.splitlines(), b_prompt.splitlines()))
+                    diff_container.clear()
+                    with diff_container:
+                        if not diff_lines:
+                            ui.label("No differences.").style("color: var(--text-muted); font-size: 0.8rem")
+                            return
+                        html_lines = []
+                        for line in diff_lines:
+                            if line.startswith("+ "):
+                                color, bg = "var(--green-bright)", "var(--green-tint)"
+                            elif line.startswith("- "):
+                                color, bg = "var(--red)", "var(--red-tint)"
+                            elif line.startswith("? "):
+                                continue
+                            else:
+                                color, bg = "var(--text-tertiary)", "transparent"
+                            escaped = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                            html_lines.append(
+                                f'<div style="font-family:monospace;font-size:0.72rem;line-height:1.6;'
+                                f'padding:1px 8px;color:{color};background:{bg};white-space:pre-wrap">{escaped}</div>'
+                            )
+                        ui.html(
+                            '<div style="border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow:hidden">'
+                            + "".join(html_lines)
+                            + "</div>"
+                        )
 
         # Golden query table — view, edit, delete
         if session.golden_prompts:
