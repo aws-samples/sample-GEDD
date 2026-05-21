@@ -89,6 +89,86 @@ def report_page():
                     ui.label(value).classes("stat-value").style(f"color: {color}")
                     ui.label(label).classes("stat-label")
 
+        # ── Verdict Distribution Chart ──────────────────────────────────────
+        if total:
+            with ui.element("div").classes("page-card"):
+                with ui.row().classes("w-full gap-4 items-start"):
+                    # Donut chart — verdict breakdown
+                    with ui.column().classes("flex-1").style("min-width:220px"):
+                        ui.label("Verdict Distribution").style(
+                            "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                            "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+                        )
+                        # Aggregate by verdict (including custom labels)
+                        verdict_counts: dict[str, int] = {}
+                        for a in annotations:
+                            key = a.get("annotation", "unknown") or "unknown"
+                            verdict_counts[key] = verdict_counts.get(key, 0) + 1
+                        label_color_map = {"correct": "#4ade80", "partial": "#f0bf00", "incorrect": "#eb5757"}
+                        pie_data = [
+                            {
+                                "name": k.replace("_", " ").title(),
+                                "value": v,
+                                "itemStyle": {"color": label_color_map.get(k, "#828fff")},
+                            }
+                            for k, v in sorted(verdict_counts.items(), key=lambda x: -x[1])
+                        ]
+                        donut_opts = {
+                            "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                            "series": [{
+                                "type": "pie",
+                                "radius": ["45%", "75%"],
+                                "data": pie_data,
+                                "label": {"color": "#b4b8c0", "fontSize": 11},
+                                "emphasis": {"itemStyle": {"shadowBlur": 10}},
+                            }],
+                            "backgroundColor": "transparent",
+                        }
+                        ui.echart(donut_opts).style("height:200px; width:100%")
+
+                    # Category breakdown bar chart
+                    category_counts: dict[str, dict] = {}
+                    for a in annotations:
+                        cat = a.get("notes", "")[:30] or a.get("error_code", "") or "General"
+                        verdict = a.get("annotation", "unknown")
+                        if cat not in category_counts:
+                            category_counts[cat] = {"correct": 0, "partial": 0, "incorrect": 0}
+                        bucket = verdict if verdict in ("correct", "partial", "incorrect") else "incorrect"
+                        category_counts[cat][bucket] += 1
+
+                    # Also pull category from coding_annotations
+                    code_counts: dict[str, int] = {}
+                    for ca in coding_annotations:
+                        for code in ca.get("codes", []):
+                            code_counts[code] = code_counts.get(code, 0) + 1
+
+                    if code_counts:
+                        with ui.column().classes("flex-1").style("min-width:220px"):
+                            ui.label("Error Code Frequency").style(
+                                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+                            )
+                            top_codes = sorted(code_counts.items(), key=lambda x: -x[1])[:10]
+                            bar_opts = {
+                                "tooltip": {"trigger": "axis", "axisPointer": {"type": "shadow"}},
+                                "grid": {"top": 10, "bottom": 20, "left": 120, "right": 20},
+                                "xAxis": {"type": "value", "axisLine": {"lineStyle": {"color": "#4a4e55"}}},
+                                "yAxis": {
+                                    "type": "category",
+                                    "data": [c[0] for c in reversed(top_codes)],
+                                    "axisLabel": {"color": "#b4b8c0", "fontSize": 11},
+                                    "axisLine": {"lineStyle": {"color": "#4a4e55"}},
+                                },
+                                "series": [{
+                                    "type": "bar",
+                                    "data": [c[1] for c in reversed(top_codes)],
+                                    "itemStyle": {"color": "#5e6ad2", "borderRadius": [0, 4, 4, 0]},
+                                    "label": {"show": True, "position": "right", "color": "#b4b8c0", "fontSize": 10},
+                                }],
+                                "backgroundColor": "transparent",
+                            }
+                            ui.echart(bar_opts).style(f"height:{max(140, len(top_codes) * 26)}px; width:100%")
+
         # ── Model Comparison Analytics ─────────────────────────────────────
         # Group annotations by model and category
         model_stats: dict[str, dict] = {}

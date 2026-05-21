@@ -249,6 +249,45 @@ def page_layout(title: str = ""):
             app.storage.user["authenticated"] = False
             ui.navigate.to("/login")
 
+        def confirm_new_project():
+            with ui.dialog() as dlg:
+                dlg.open()
+                with ui.card().style(
+                    "min-width:320px; padding:1.5rem; background:var(--bg-surface-2); "
+                    "border:1px solid var(--border-default); border-radius:12px"
+                ):
+                    ui.label("Start a New Project?").style(
+                        "font-size:1rem; font-weight:600; color:var(--text-primary); margin-bottom:8px"
+                    )
+                    ui.label(
+                        "This will clear your current session — agent definition, golden queries, "
+                        "annotations, codebook, and all analysis. This cannot be undone."
+                    ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
+                    with ui.row().classes("gap-2 justify-end"):
+                        ui.button("Cancel", on_click=dlg.close).props("flat size=sm dark").style(
+                            "color:var(--text-tertiary)"
+                        )
+                        def do_reset():
+                            keys_to_clear = [
+                                "session_data", "current_step", "annotations", "messages",
+                                "prompt_variants", "codebook", "coding_annotations", "memos",
+                                "paradigm_model", "failure_patterns", "eval_results",
+                                "eval_selected_models", "_eval_judge_results",
+                                "_generated_judge_prompt", "custom_annotation_labels",
+                                "shared_eval_results", "shared_annotator",
+                            ]
+                            for key in keys_to_clear:
+                                app.storage.user.pop(key, None)
+                            dlg.close()
+                            ui.navigate.to("/coach")
+                        ui.button("Start Fresh", icon="refresh", on_click=do_reset).props(
+                            "size=sm color=negative"
+                        )
+
+        ui.button(icon="add_circle_outline", on_click=confirm_new_project).props(
+            "flat round size=sm"
+        ).style("color: var(--text-muted)").tooltip("New Project")
+
         ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
             "color: var(--text-muted)"
         ).tooltip("Logout")

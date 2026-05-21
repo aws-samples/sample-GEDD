@@ -1,6 +1,7 @@
 """Tag Failures (Open Coding) Annotation Workbench page."""
 
 import asyncio
+import json
 from datetime import datetime
 from uuid import uuid4
 
@@ -286,6 +287,140 @@ def coding_page():
             for m in reversed(memos):
                 with ui.element('div').classes('memo-box').style("margin-top: 6px"):
                     ui.label(m.get('text', '')).style("font-size: 0.78rem; color: var(--text-secondary)")
+
+            # ── Export / Share / Import ──────────────────────────────────
+            ui.separator().style("opacity:0.12; margin:14px 0")
+            ui.label('Share Annotations').style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+            )
+
+            # Export coding annotations as shareable JSON
+            def export_coding():
+                data = {
+                    'annotator': storage.get('email', 'anonymous'),
+                    'exported_at': datetime.now().isoformat(),
+                    'codebook': storage['codebook'],
+                    'coding_annotations': storage['coding_annotations'],
+                }
+                ui.download(json.dumps(data, indent=2).encode(), 'coding_annotations.json')
+
+            ui.button('Export Annotations', icon='download', on_click=export_coding).props(
+                'size=sm outline dark'
+            ).style('color:var(--accent-bright); width:100%; margin-bottom:6px')
+
+            # Share code generation
+            import random
+            import string as _string
+
+            def generate_share():
+                if not storage['coding_annotations']:
+                    ui.notify('No annotations to share yet', type='warning')
+                    return
+                code = ''.join(random.choices(_string.ascii_uppercase + _string.digits, k=6))
+                data = {
+                    'annotator': storage.get('email', 'anonymous'),
+                    'shared_at': datetime.now().isoformat(),
+                    'codebook': storage['codebook'],
+                    'coding_annotations': storage['coding_annotations'],
+                }
+                app.storage.general[f'coding_share_{code}'] = data
+                with ui.dialog() as dlg:
+                    dlg.open()
+                    with ui.card().style(
+                        'min-width:280px; padding:1.5rem; background:var(--bg-surface-2)'
+                    ):
+                        ui.label('Coding Share Code').style(
+                            'font-size:0.7rem; color:var(--text-tertiary); text-transform:uppercase'
+                        )
+                        ui.label(code).style(
+                            'font-size:2rem; font-weight:700; color:var(--accent-bright); letter-spacing:0.12em; margin:6px 0'
+                        )
+                        ui.label('Teammates can import using this code below.').style(
+                            'font-size:0.78rem; color:var(--text-secondary)'
+                        )
+                        ui.button(
+                            'Copy', on_click=lambda: ui.run_javascript(f"navigator.clipboard.writeText('{code}')")
+                        ).props('size=sm color=primary')
+
+            ui.button('Share by Code', icon='share', on_click=generate_share).props(
+                'size=sm outline dark'
+            ).style('color:var(--green-bright); width:100%; margin-bottom:10px')
+
+            # Import section
+            ui.label('Import from Teammate').style(
+                "font-size: 0.65rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom:6px"
+            )
+            shared_container = ui.column().classes('w-full')
+
+            def render_shared_comparison():
+                shared = storage.get('shared_coding_annotations')
+                if not shared:
+                    return
+                shared_container.clear()
+                with shared_container:
+                    annotator = shared.get('annotator', 'Unknown')
+                    ext_anns = shared.get('coding_annotations', [])
+                    my_anns = {
+                        (a['query'], a['response']): a.get('codes', [])
+                        for a in storage['coding_annotations']
+                    }
+                    agree = 0
+                    total_cmp = 0
+                    for ext in ext_anns:
+                        key = (ext.get('query', ''), ext.get('response', ''))
+                        if key in my_anns:
+                            total_cmp += 1
+                            if set(ext.get('codes', [])) & set(my_anns[key]):
+                                agree += 1
+                    with ui.card().style(
+                        'background:var(--accent-tint); border:1px solid var(--accent); '
+                        'border-radius:8px; padding:10px; margin-top:6px'
+                    ):
+                        ui.label(f"Loaded from {annotator}").style(
+                            "font-size:0.75rem; font-weight:600; color:var(--accent-bright)"
+                        )
+                        ui.label(f"{len(ext_anns)} annotations · {len(shared.get('codebook',[]))} codes").style(
+                            "font-size:0.7rem; color:var(--text-tertiary)"
+                        )
+                        if total_cmp:
+                            pct = agree / total_cmp * 100
+                            color = 'var(--green-bright)' if pct >= 70 else ('var(--yellow)' if pct >= 50 else 'var(--red)')
+                            ui.label(f"Code overlap: {pct:.0f}% ({agree}/{total_cmp})").style(
+                                f"font-size:0.78rem; font-weight:600; color:{color}; margin-top:4px"
+                            )
+
+            with ui.row().classes('w-full items-center gap-1').style("margin-bottom:4px"):
+                code_in = ui.input(placeholder='6-char code').props('dense outlined dark').style('flex:1; font-size:0.8rem')
+
+                def load_by_code():
+                    code = code_in.value.strip().upper()
+                    data = app.storage.general.get(f'coding_share_{code}')
+                    if not data:
+                        ui.notify('Code not found', type='negative')
+                        return
+                    storage['shared_coding_annotations'] = data
+                    render_shared_comparison()
+                    ui.notify(f"Loaded annotations from {data.get('annotator','?')}", type='positive')
+
+                ui.button(icon='input', on_click=load_by_code).props('flat round size=sm').style('color:var(--accent-bright)')
+
+            def handle_coding_upload(e):
+                try:
+                    data = json.loads(e.content.read())
+                    storage['shared_coding_annotations'] = data
+                    render_shared_comparison()
+                    ui.notify(f"Imported annotations from {data.get('annotator','?')}", type='positive')
+                except Exception as ex:
+                    ui.notify(f'Parse error: {ex}', type='negative')
+
+            ui.upload(
+                label='Upload JSON',
+                on_upload=handle_coding_upload,
+                auto_upload=True,
+            ).props('accept=.json flat dense dark').style('font-size:0.75rem; color:var(--text-tertiary)')
+
+            render_shared_comparison()
 
     def nav(delta):
         current_idx['value'] = max(0, min(len(responses) - 1, current_idx['value'] + delta))
