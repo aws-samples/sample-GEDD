@@ -122,6 +122,23 @@ def _get_judge_results() -> dict:
     return app.storage.user.setdefault("_eval_judge_results", {})
 
 
+def _save_eval_snapshot(selected_models: list[str], eval_results: list[dict]) -> None:
+    """Persist a summary of this run to eval_history (capped at 10 entries)."""
+    history = app.storage.user.setdefault("eval_history", [])
+    all_ann = [r.get("annotations", {}) for r in eval_results]
+    total_ann = sum(len(a) for a in all_ann)
+    correct = sum(1 for a in all_ann for v in a.values() if v == "correct")
+    history.append({
+        "timestamp": datetime.now().isoformat(),
+        "models": selected_models,
+        "query_count": len(eval_results),
+        "total_annotated": total_ann,
+        "correct": correct,
+        "pass_rate": f"{correct / total_ann * 100:.0f}%" if total_ann else "—",
+    })
+    app.storage.user["eval_history"] = history[-10:]
+
+
 async def _score_with_judge(judge_prompt: str, query: str, response: str) -> bool | None:
     """Score one response with the stored judge prompt. Returns True=PASS, False=FAIL, None=error."""
     try:
@@ -356,6 +373,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             )
             run_btn.props(remove="loading")
             render_results(results_container, sel, annotations_list)
+            _save_eval_snapshot(sel, eval_results_store)
 
         run_btn = ui.button(
             "Run Evaluation", icon="play_arrow", on_click=run_eval
@@ -366,6 +384,50 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
     existing_sel = _get_selected_models()
     if existing_results and existing_sel:
         render_results(results_container, existing_sel, annotations_list)
+
+    # ── Run History ───────────────────────────────────────────────────────────
+    with ui.expansion("Run History", icon="history").classes("w-full").style(
+        "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-top:1rem"
+    ):
+        history = app.storage.user.get("eval_history", [])
+        if not history:
+            ui.label("No previous runs yet. Complete an evaluation to start tracking history.").style(
+                "font-size:0.78rem; color:var(--text-muted)"
+            )
+        else:
+            ui.label(f"Last {len(history)} evaluation run(s):").style(
+                "font-size:0.78rem; color:var(--text-tertiary); margin-bottom:8px"
+            )
+            for i, run in enumerate(reversed(history)):
+                ts = run.get("timestamp", "")[:16].replace("T", " ")
+                pass_rate = run.get("pass_rate", "—")
+                pr_color = (
+                    "var(--green-bright)"
+                    if "%" in pass_rate and int(pass_rate[:-1]) >= 70
+                    else ("var(--yellow)" if "%" in pass_rate and int(pass_rate[:-1]) >= 40 else "var(--red)")
+                    if "%" in pass_rate else "var(--text-muted)"
+                )
+                model_names = [
+                    next((m["label"] for m in AVAILABLE_MODELS if m["id"] == mid), mid.split(".")[-1])
+                    for mid in run.get("models", [])
+                ]
+                with ui.element("div").style(
+                    "background:var(--bg-surface-1); border-radius:8px; padding:10px 14px; "
+                    "margin-bottom:6px; border:1px solid var(--border-subtle)"
+                ):
+                    with ui.row().classes("w-full items-center justify-between"):
+                        ui.label(f"Run #{len(history) - i}  ·  {ts}").style(
+                            "font-size:0.78rem; font-weight:600; color:var(--text-primary)"
+                        )
+                        ui.label(f"Pass rate: {pass_rate}").style(
+                            f"font-size:0.78rem; font-weight:600; color:{pr_color}"
+                        )
+                    n_models = len(run.get("models", []))
+                    q_count = run.get("query_count", 0)
+                    ui.label(
+                        f"{q_count} queries · {', '.join(model_names)} · "
+                        f"{run.get('total_annotated', 0)}/{q_count * n_models} annotated"
+                    ).style("font-size:0.72rem; color:var(--text-tertiary); margin-top:2px")
 
     # ── Import / Share Panel ──────────────────────────────────────────────────
     with ui.expansion("Import or Share Annotations", icon="share").classes("w-full").style(
@@ -632,13 +694,92 @@ def render_results(
                         passed = sum(1 for v in judge_results.values() if v.get("pass") is True)
                         judge_status.set_text(f"Judge: {passed}/{len(judge_results)} PASS")
 
+        # ── Filter bar ────────────────────────────────────────────────────────
+        filter_state = {"key": "all"}
+        position = {"value": 0}
+
+        def get_filtered_indices() -> list[int]:
+            key = filter_state["key"]
+            if key == "all":
+                return list(range(len(eval_results)))
+            if key == "unannotated":
+                return [
+                    i for i, r in enumerate(eval_results)
+                    if not any(r["annotations"].get(m) for m in selected_models)
+                ]
+            return [
+                i for i, r in enumerate(eval_results)
+                if any(r["annotations"].get(m) == key for m in selected_models)
+            ]
+
+        filter_bar_container = ui.row().classes("gap-1 flex-wrap items-center").style(
+            "margin-bottom:10px"
+        )
+
+        def render_filter_bar():
+            filter_bar_container.clear()
+            with filter_bar_container:
+                ui.label("Filter:").style(
+                    "font-size:0.72rem; color:var(--text-tertiary); margin-right:4px"
+                )
+                filter_options = [("all", "All"), ("unannotated", "Unannotated")] + [
+                    (l["key"], l["label"]) for l in _get_all_labels()
+                ]
+                for fkey, flabel in filter_options:
+                    if fkey == "all":
+                        count = len(eval_results)
+                    elif fkey == "unannotated":
+                        count = sum(
+                            1 for r in eval_results
+                            if not any(r["annotations"].get(m) for m in selected_models)
+                        )
+                    else:
+                        count = sum(
+                            1 for r in eval_results
+                            if any(r["annotations"].get(m) == fkey for m in selected_models)
+                        )
+                    is_active = filter_state["key"] == fkey
+
+                    def make_filter(k=fkey):
+                        def apply():
+                            filter_state["key"] = k
+                            position["value"] = 0
+                            render_filter_bar()
+                            render_current()
+                        return apply
+
+                    ui.button(
+                        f"{flabel} ({count})", on_click=make_filter()
+                    ).props("size=xs dense no-caps").style(
+                        f"{'background:var(--accent); color:white' if is_active else 'background:var(--bg-hover); color:var(--text-secondary)'}; "
+                        "border-radius:4px; padding:2px 8px; font-size:0.72rem"
+                    )
+
+        render_filter_bar()
+
+        # System prompt from storage (needed for retry)
+        _session_data = app.storage.user.get("session_data", {})
+        _stored_system_prompt = (
+            (_session_data.get("agent_spec") or {}).get("system_prompt", "")
+            if isinstance(_session_data, dict) else ""
+        )
+
         # Step-through navigation
-        current_idx = {"value": 0}
         card_container = ui.column().classes("w-full")
 
         def render_current():
             card_container.clear()
-            idx = current_idx["value"]
+            fi = get_filtered_indices()
+            if not fi:
+                with card_container:
+                    ui.label("No results match this filter.").style(
+                        "font-size:0.85rem; color:var(--text-muted); text-align:center; padding:24px 0"
+                    )
+                return
+
+            pos = min(position["value"], len(fi) - 1)
+            position["value"] = pos
+            idx = fi[pos]
             result = eval_results[idx]
             ext_result = shared_results[idx] if shared_results and idx < len(shared_results) else None
             all_labels = _get_all_labels()
@@ -651,17 +792,15 @@ def render_results(
                     ui.button(
                         icon="chevron_left",
                         on_click=lambda: go(-1),
-                    ).props("flat round" + (" disable" if idx == 0 else ""))
-                    ui.label(f"Query {idx + 1} of {len(eval_results)}").style(
-                        "font-size:0.85rem; font-weight:600; color:var(--text-primary)"
-                    )
+                    ).props("flat round" + (" disable" if pos == 0 else ""))
+                    ui.label(
+                        f"Query {pos + 1} of {len(fi)}"
+                        + (f"  (#{idx + 1} overall)" if filter_state["key"] != "all" else "")
+                    ).style("font-size:0.85rem; font-weight:600; color:var(--text-primary)")
                     ui.button(
                         icon="chevron_right",
                         on_click=lambda: go(1),
-                    ).props(
-                        "flat round"
-                        + (" disable" if idx == len(eval_results) - 1 else "")
-                    )
+                    ).props("flat round" + (" disable" if pos >= len(fi) - 1 else ""))
 
                 # Query card
                 with ui.card().classes("w-full").style(
@@ -687,8 +826,6 @@ def render_results(
                         border_color = _label_css_color(annotation) if annotation else (
                             "var(--red)" if is_error else "var(--border-default)"
                         )
-
-                        # External annotator's verdict for this model
                         ext_ann = ext_result.get("annotations", {}).get(model_id, "") if ext_result else ""
 
                         with ui.card().classes("flex-1").style(
@@ -704,6 +841,21 @@ def render_results(
                                 ui.label(resp).style(
                                     "font-size:0.75rem; color:var(--red); font-style:italic"
                                 )
+
+                                async def retry_query(m_id=model_id, r=result):
+                                    r["responses"][m_id] = "Retrying…"
+                                    render_current()
+                                    new_resp = await run_query_against_model(
+                                        _stored_system_prompt, r["query"], m_id
+                                    )
+                                    r["responses"][m_id] = new_resp
+                                    render_current()
+
+                                ui.button(
+                                    "Retry", icon="refresh", on_click=retry_query
+                                ).props("size=xs outline").style(
+                                    "color:var(--yellow); border-color:var(--yellow)44; margin-top:6px"
+                                )
                             else:
                                 with ui.scroll_area().style("max-height:250px; width:100%"):
                                     ui.markdown(resp).style(
@@ -712,7 +864,6 @@ def render_results(
 
                             ui.separator().style("opacity:0.2; margin:8px 0")
 
-                            # My annotation label buttons (dynamic — all labels)
                             ui.label("My verdict:").style(
                                 "font-size:0.65rem; color:var(--text-tertiary); margin-bottom:4px"
                             )
@@ -729,6 +880,7 @@ def render_results(
                                             "notes": result.get("notes", ""),
                                         })
                                         render_current()
+                                        render_filter_bar()
                                     return annotate
 
                                 for lbl in all_labels:
@@ -744,7 +896,6 @@ def render_results(
                                         on_click=make_annotate(model_id, lbl["key"])
                                     ).props("dense size=sm" + ("" if is_active else " flat")).style(btn_style)
 
-                            # External annotator's verdict (if shared annotations loaded)
                             if ext_ann and shared_annotator:
                                 ext_css = _label_css_color(ext_ann)
                                 ui.html(
@@ -790,9 +941,10 @@ def render_results(
                 )
 
         def go(delta: int):
-            current_idx["value"] = max(
-                0, min(len(eval_results) - 1, current_idx["value"] + delta)
-            )
+            fi = get_filtered_indices()
+            if not fi:
+                return
+            position["value"] = max(0, min(len(fi) - 1, position["value"] + delta))
             render_current()
 
         render_current()

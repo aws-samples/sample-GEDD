@@ -45,6 +45,26 @@ def _build_responses(storage: dict) -> list[dict]:
     return result
 
 
+def _is_similar(a: str, b: str) -> bool:
+    """Similarity check using character n-gram overlap (Jaccard) + word overlap."""
+    def _ngrams(s: str, n: int = 3) -> set[str]:
+        s = s.lower().strip()
+        return set(s[i:i + n] for i in range(max(0, len(s) - n + 1)))
+
+    ng_a = _ngrams(a)
+    ng_b = _ngrams(b)
+    if not ng_a or not ng_b:
+        return False
+    jaccard = len(ng_a & ng_b) / len(ng_a | ng_b)
+    words_a = set(a.lower().split())
+    words_b = set(b.lower().split())
+    word_overlap = (
+        len(words_a & words_b) / min(len(words_a), len(words_b))
+        if min(len(words_a), len(words_b)) > 0 else 0
+    )
+    return jaccard > 0.35 or word_overlap > 0.5
+
+
 CODING_CSS = """
 .coding-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .coding-query-card {
@@ -511,22 +531,6 @@ def coding_page():
                     ui.notify(msg, type='warning', timeout=10000)
             except Exception:
                 pass  # AI check is best-effort; never block code entry
-
-    def _is_similar(a: str, b: str) -> bool:
-        """Similarity check using character n-gram overlap."""
-        def _ngrams(s, n=3):
-            s = s.lower().strip()
-            return set(s[i:i+n] for i in range(max(0, len(s) - n + 1)))
-
-        ng_a = _ngrams(a)
-        ng_b = _ngrams(b)
-        if not ng_a or not ng_b:
-            return False
-        jaccard = len(ng_a & ng_b) / len(ng_a | ng_b)
-        words_a = set(a.lower().split())
-        words_b = set(b.lower().split())
-        word_overlap = len(words_a & words_b) / min(len(words_a), len(words_b)) if min(len(words_a), len(words_b)) > 0 else 0
-        return jaccard > 0.35 or word_overlap > 0.5
 
     # Main split layout
     with ui.splitter(value=60).classes('w-full max-w-5xl mx-auto').style("margin-top: 0.5rem") as splitter:
