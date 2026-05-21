@@ -1,4 +1,4 @@
-"""Axial Coding / Paradigm Model Canvas page."""
+"""Map Root Causes (Axial Coding) — Paradigm Model Canvas page."""
 
 from nicegui import app, ui
 
@@ -7,11 +7,19 @@ from grounded_evals.ui.layout import page_layout
 SLOTS = ['phenomenon', 'causal_conditions', 'context', 'intervening_conditions', 'strategies', 'consequences']
 SLOT_LABELS = {
     'phenomenon': 'Phenomenon',
-    'causal_conditions': 'Causal Conditions',
-    'context': 'Context',
-    'intervening_conditions': 'Intervening Conditions',
-    'strategies': 'Strategies',
-    'consequences': 'Consequences',
+    'causal_conditions': 'Triggered By',
+    'context': 'Occurs When',
+    'intervening_conditions': 'Gets Worse If',
+    'strategies': 'Manifests As',
+    'consequences': 'User Impact',
+}
+SLOT_COLORS = {
+    'phenomenon': 'var(--accent-bright)',
+    'causal_conditions': 'var(--red)',
+    'context': 'var(--blue)',
+    'intervening_conditions': 'var(--yellow)',
+    'strategies': 'var(--text-secondary)',
+    'consequences': 'var(--red)',
 }
 
 
@@ -46,109 +54,118 @@ def _saturation_pct():
     return len(_assigned_codes()) / total
 
 
-def _severity_for_code(code_name):
-    codebook = app.storage.user['codebook']
-    for c in codebook:
-        if c['name'] == code_name:
-            freq = c.get('frequency', c.get('count', 0))
-            if freq >= 5:
-                return 'high'
-            elif freq >= 2:
-                return 'medium'
-            return 'low'
-    return 'low'
-
-
 @ui.page('/analysis')
 def analysis_page():
     _ensure_state()
-    page_layout('Axial Coding')
+    page_layout('Map Root Causes')
 
-    with ui.column().classes('w-full max-w-6xl mx-auto p-4 gap-4'):
-        # --- Available Codes ---
-        ui.label('Available Codes').classes('section-title')
+    with ui.column().classes('w-full max-w-5xl mx-auto').style("padding: 1.5rem"):
+        # Coaching
+        with ui.expansion("💡 What should I do here?", icon="help_outline").classes("w-full").style(
+            "background: var(--yellow-tint); border: 1px solid rgba(240,191,0,0.15); "
+            "border-radius: var(--radius-xl); margin-bottom: 1rem; color: var(--text-primary)"
+        ):
+            ui.label("Organize your failure codes into a causal map:").style("font-size: 0.82rem; font-weight: 500; color: var(--text-primary)")
+            ui.label("• What TRIGGERS it? → Triggered By\n"
+                     "• WHEN does it happen? → Occurs When\n"
+                     "• What makes it WORSE? → Gets Worse If\n"
+                     "• HOW does the agent fail? → Manifests As\n"
+                     "• What's the USER IMPACT? → User Impact").style(
+                "font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; white-space: pre-line"
+            )
+
+        # Unassigned codes
+        with ui.row().classes("items-center gap-2").style("margin-bottom: 8px"):
+            ui.label('Unassigned Codes').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em")
         codes_container = ui.row().classes('flex-wrap gap-1')
 
         def refresh_all():
             refresh_codes()
             refresh_canvas()
             refresh_saturation()
-            refresh_patterns()
 
         def refresh_codes():
             codes_container.clear()
             with codes_container:
-                for name in _unassigned_codes():
-                    ui.chip(name, color='green').classes('code-chip')
+                unassigned = _unassigned_codes()
+                if not unassigned:
+                    ui.label('All codes assigned ✓').style("font-size: 0.78rem; color: var(--green-bright)")
+                for name in unassigned:
+                    ui.html(f'<span class="code-chip">{name}</span>')
 
-        # --- Saturation Indicator ---
-        ui.label('Saturation').classes('section-title')
-        saturation_container = ui.column().classes('w-full')
+        # Saturation
+        saturation_container = ui.row().classes('w-full items-center gap-3').style("margin: 10px 0")
 
         def refresh_saturation():
             saturation_container.clear()
             with saturation_container:
                 pct = _saturation_pct()
-                ui.linear_progress(value=pct).props('size=20px color=green')
-                ui.label(f'{pct:.0%} of codes assigned').style('font-size:0.8rem;color:#6b7280')
+                ui.linear_progress(value=pct).props('size=6px color=green').style("flex: 1")
+                ui.label(f'{pct:.0%} assigned').style("font-size: 0.72rem; color: var(--text-tertiary)")
 
-        # --- Paradigm Model Canvas ---
-        ui.label('Paradigm Model Canvas').classes('section-title')
-        canvas_container = ui.column().classes('w-full gap-3')
+        # Paradigm Model Canvas
+        ui.label('Paradigm Model').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 12px; margin-bottom: 8px")
+        canvas_container = ui.column().classes('w-full gap-2')
 
         def make_slot_ui(slot_key, parent):
             model = app.storage.user['paradigm_model']
             codes_in_slot = model.get(slot_key, [])
             has = 'has-items' if codes_in_slot else ''
+            color = SLOT_COLORS.get(slot_key, 'var(--text-tertiary)')
             with parent:
                 with ui.column().classes(f'paradigm-slot {has} w-full'):
-                    ui.label(SLOT_LABELS[slot_key]).style('font-weight:600;font-size:0.8rem;color:#374151')
-                    with ui.row().classes('flex-wrap gap-1'):
+                    ui.label(SLOT_LABELS[slot_key]).style(f"font-weight: 600; font-size: 0.72rem; color: {color}; text-transform: uppercase; letter-spacing: 0.04em")
+                    with ui.row().classes('flex-wrap gap-1').style("margin-top: 6px"):
                         for name in codes_in_slot:
                             def remove(n=name, s=slot_key):
                                 app.storage.user['paradigm_model'][s].remove(n)
                                 refresh_all()
-                            ui.chip(name, color='green', removable=True, on_click=remove).classes('code-chip selected')
+                            ui.chip(name, color='primary', removable=True, on_click=remove).props("size=sm dark")
                     options = _unassigned_codes()
                     if options:
                         def assign(e, s=slot_key):
                             if e.value:
                                 app.storage.user['paradigm_model'][s].append(e.value)
                                 refresh_all()
-                        ui.select(options, label='Assign code...', on_change=assign).props('dense outlined').classes('w-48')
+                        ui.select(options, label='+ Assign code', on_change=assign).props('dense outlined dark').style("max-width: 200px; margin-top: 6px")
 
         def refresh_canvas():
             canvas_container.clear()
             with canvas_container:
-                # Row 1: Causal Conditions | Phenomenon | Context
-                with ui.row().classes('w-full gap-3'):
-                    for slot in ['causal_conditions', 'phenomenon', 'context']:
+                # Phenomenon (full width, highlighted)
+                with ui.element("div").style(
+                    "padding: 12px 14px; border-radius: var(--radius-xl); "
+                    "background: var(--accent-tint); border: 1px solid var(--accent); margin-bottom: 4px"
+                ):
+                    make_slot_ui('phenomenon', ui.column().classes("w-full"))
+
+                # Grid: 2 columns
+                with ui.row().classes('w-full gap-2'):
+                    for slot in ['causal_conditions', 'context']:
                         col = ui.column().classes('flex-1')
                         make_slot_ui(slot, col)
-                # Row 2-4: full width
-                for slot in ['intervening_conditions', 'strategies', 'consequences']:
-                    row = ui.column().classes('w-full')
-                    make_slot_ui(slot, row)
+                with ui.row().classes('w-full gap-2'):
+                    for slot in ['intervening_conditions', 'strategies']:
+                        col = ui.column().classes('flex-1')
+                        make_slot_ui(slot, col)
+                # Consequences full width
+                make_slot_ui('consequences', ui.column().classes("w-full"))
 
-        # --- Generate Pattern Analysis Button ---
+        # AI Analysis button
         async def generate_analysis():
-            """Use LLM-powered axial coding to organize codes into paradigm model."""
             codebook = app.storage.user.get('codebook', [])
             if not codebook:
-                ui.notify('Add codes in the Open Coding tab first', type='warning')
+                ui.notify('Add codes in Tag Failures first', type='warning')
                 return
-
-            # Try LLM-powered paradigm building
             try:
                 import asyncio
                 from grounded_evals.models.core import Code, CodeType
                 from grounded_evals.axial_coding.paradigm import build_paradigm_model
 
                 codes = [Code(name=c['name'], definition=c.get('definition', ''), code_type=CodeType.DESCRIPTIVE) for c in codebook]
-                ui.notify('Analyzing patterns with LLM...', type='info')
+                ui.notify('Analyzing patterns...', type='info')
                 result = await asyncio.to_thread(build_paradigm_model, codes, [])
 
-                # Map result to storage format
                 model = app.storage.user['paradigm_model']
                 if result and result.phenomenon:
                     model['phenomenon'] = [result.phenomenon.name]
@@ -163,47 +180,22 @@ def analysis_page():
                 if result and result.consequences:
                     model['consequences'] = [c.name for c in result.consequences]
                 app.storage.user['paradigm_model'] = model
-                ui.notify('Pattern analysis complete ✓', type='positive')
+                ui.notify('Analysis complete ✓', type='positive')
             except Exception as e:
-                # Fallback: distribute unassigned codes round-robin
                 unassigned = _unassigned_codes()
                 model = app.storage.user['paradigm_model']
                 slots_cycle = ['causal_conditions', 'context', 'intervening_conditions', 'strategies', 'consequences']
                 for i, code in enumerate(unassigned):
-                    target = slots_cycle[i % len(slots_cycle)]
-                    model[target].append(code)
+                    model[slots_cycle[i % len(slots_cycle)]].append(code)
                 app.storage.user['paradigm_model'] = model
                 ui.notify(f'Used heuristic fallback: {e}', type='warning')
             refresh_all()
 
-        ui.button('Generate Pattern Analysis (AI)', icon='auto_fix_high', on_click=generate_analysis).props('color=green')
-
-        # --- Failure Pattern Cards ---
-        ui.label('Failure Patterns').classes('section-title')
-        patterns_container = ui.column().classes('w-full gap-3')
-
-        def refresh_patterns():
-            patterns_container.clear()
-            model = app.storage.user['paradigm_model']
-            with patterns_container:
-                for phenom in model.get('phenomenon', []):
-                    severity = _severity_for_code(phenom)
-                    sev_class = f'severity-{severity}'
-                    with ui.card().classes(f'pattern-card {sev_class} w-full'):
-                        ui.label(phenom).style('font-weight:700;font-size:1rem')
-                        ui.badge(severity.upper(), color={'high': 'red', 'medium': 'orange', 'low': 'green'}[severity])
-                        with ui.grid(columns=2).classes('w-full gap-2 mt-2'):
-                            ui.label('Triggers').style('font-weight:600;font-size:0.75rem')
-                            ui.label(', '.join(model.get('causal_conditions', [])) or '—').style('font-size:0.8rem')
-                            ui.label('Context').style('font-weight:600;font-size:0.75rem')
-                            ui.label(', '.join(model.get('context', [])) or '—').style('font-size:0.8rem')
-                            ui.label('Manifests as').style('font-weight:600;font-size:0.75rem')
-                            ui.label(', '.join(model.get('strategies', [])) or '—').style('font-size:0.8rem')
-                            ui.label('User Impact').style('font-weight:600;font-size:0.75rem')
-                            ui.label(', '.join(model.get('consequences', [])) or '—').style('font-size:0.8rem')
+        ui.button('Generate Pattern Analysis (AI)', icon='auto_fix_high', on_click=generate_analysis).props('size=sm').style(
+            "margin-top: 12px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+        )
 
         # Initial render
         refresh_codes()
         refresh_saturation()
         refresh_canvas()
-        refresh_patterns()

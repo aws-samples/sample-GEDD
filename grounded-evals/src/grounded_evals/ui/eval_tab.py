@@ -70,28 +70,28 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
 
     if not session.golden_prompts:
         with ui.card().classes("w-full q-pa-lg").style(
-            "text-align:center; background:white; border-radius:16px"
+            "text-align:center; background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle)"
         ):
-            ui.icon("science", size="xl", color="grey")
+            ui.icon("science", size="xl").style("color: var(--text-muted)")
             ui.label("No golden queries yet").style(
-                "font-size:1.1rem; font-weight:600; color:#374151; margin-top:12px"
+                "font-size:1.1rem; font-weight:600; color:var(--text-primary); margin-top:12px"
             )
             ui.label(
                 "Go to the Coach tab and generate golden queries first."
-            ).style("font-size:0.85rem; color:#6b7280; margin-top:4px")
+            ).style("font-size:0.85rem; color:var(--text-tertiary); margin-top:4px")
         return
 
     if not session.agent_spec.system_prompt:
         with ui.card().classes("w-full q-pa-lg").style(
-            "text-align:center; background:white; border-radius:16px"
+            "text-align:center; background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle)"
         ):
-            ui.icon("warning", size="xl", color="orange")
+            ui.icon("warning", size="xl").style("color: var(--yellow)")
             ui.label("No system prompt defined").style(
-                "font-size:1.1rem; font-weight:600; color:#374151; margin-top:12px"
+                "font-size:1.1rem; font-weight:600; color:var(--text-primary); margin-top:12px"
             )
             ui.label(
                 "Go to the Coach tab and create a system prompt first."
-            ).style("font-size:0.85rem; color:#6b7280; margin-top:4px")
+            ).style("font-size:0.85rem; color:var(--text-tertiary); margin-top:4px")
         return
 
     variants = prompt_variants or []
@@ -99,13 +99,13 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
     # System Prompt Variant Selection
     if variants and len(variants) > 1:
         with ui.card().classes("w-full q-pa-md").style(
-            "background:white; border-radius:16px; border:1px solid #e5e7eb; margin-bottom:1rem"
+            "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:1rem"
         ):
             ui.label("System Prompt Variant").style(
-                "font-size:0.85rem; font-weight:700; color:#14532d; margin-bottom:8px"
+                "font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:8px"
             )
             ui.label("Select which prompt variant to test (A/B testing)").style(
-                "font-size:0.75rem; color:#6b7280; margin-bottom:8px"
+                "font-size:0.75rem; color:var(--text-tertiary); margin-bottom:8px"
             )
             variant_options = {v["name"]: v["name"] + f" ({len(v['prompt'])} chars)" for v in variants}
             selected_variant = ui.select(
@@ -116,14 +116,14 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
 
     # Model selection
     with ui.card().classes("w-full q-pa-md").style(
-        "background:white; border-radius:16px; border:1px solid #e5e7eb; margin-bottom:1rem"
+        "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:1rem"
     ):
         ui.label("Select Models to Compare").style(
-            "font-size:0.85rem; font-weight:700; color:#14532d; margin-bottom:8px"
+            "font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:8px"
         )
         ui.label(
             f"Running {len(session.golden_prompts)} golden queries against selected models"
-        ).style("font-size:0.75rem; color:#6b7280; margin-bottom:12px")
+        ).style("font-size:0.75rem; color:var(--text-tertiary); margin-bottom:12px")
 
         selected_models: list[str] = []
         checkboxes = []
@@ -135,7 +135,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
         ui.separator().style("opacity:0.2; margin:12px 0")
 
         results_container = ui.column().classes("w-full")
-        progress_label = ui.label("").style("font-size:0.8rem; color:#6b7280")
+        progress_label = ui.label("").style("font-size:0.8rem; color:var(--text-tertiary)")
 
         async def run_eval():
             sel = [mid for cb, mid in checkboxes if cb.value]
@@ -213,7 +213,7 @@ def render_results(
     with container:
         ui.label(
             f"Results: {len(eval_results)} queries × {len(selected_models)} models"
-        ).style("font-size:0.9rem; font-weight:700; color:#14532d; margin:12px 0")
+        ).style("font-size:0.9rem; font-weight:700; color:var(--text-primary); margin:12px 0")
 
         # Step-through navigation
         current_idx = {"value": 0}
@@ -234,7 +234,7 @@ def render_results(
                         on_click=lambda: go(-1),
                     ).props("flat round" + (" disable" if idx == 0 else ""))
                     ui.label(f"Query {idx + 1} of {len(eval_results)}").style(
-                        "font-size:0.85rem; font-weight:600; color:#374151"
+                        "font-size:0.85rem; font-weight:600; color:var(--text-primary)"
                     )
                     ui.button(
                         icon="chevron_right",
@@ -246,16 +246,16 @@ def render_results(
 
                 # Query card
                 with ui.card().classes("w-full").style(
-                    "background:#f0fdf4; border-radius:12px; padding:16px; margin-bottom:12px"
+                    "background:var(--accent-tint); border-radius:10px; padding:16px; margin-bottom:12px; border:1px solid rgba(94,106,210,0.2)"
                 ):
                     if result["category"]:
                         ui.html(
-                            f'<span style="font-size:0.65rem; font-weight:600; color:#16a34a; '
+                            f'<span style="font-size:0.65rem; font-weight:600; color:var(--accent-bright); '
                             f'text-transform:uppercase; letter-spacing:0.04em">'
                             f'{result["category"]}</span>'
                         )
                     ui.label(result["query"]).style(
-                        "font-size:0.9rem; font-weight:500; color:#1a1a1a; margin-top:4px"
+                        "font-size:0.9rem; font-weight:500; color:var(--text-primary); margin-top:4px"
                     )
 
                 # Model responses side by side
@@ -266,31 +266,31 @@ def render_results(
                         is_error = resp.startswith("[Error:")
 
                         border_color = {
-                            "correct": "#16a34a",
-                            "partial": "#d97706",
-                            "incorrect": "#dc2626",
-                        }.get(annotation, "#fecaca" if is_error else "#e5e7eb")
+                            "correct": "var(--green)",
+                            "partial": "var(--yellow)",
+                            "incorrect": "var(--red)",
+                        }.get(annotation, "var(--red)" if is_error else "var(--border-default)")
 
                         with ui.card().classes("flex-1").style(
-                            f"border-radius:12px; padding:12px; border:2px solid {border_color}; "
-                            f"min-width:0"
+                            f"border-radius:10px; padding:12px; border:2px solid {border_color}; "
+                            f"min-width:0; background:var(--bg-surface-1)"
                         ):
                             ui.label(model_labels.get(model_id, model_id)).style(
-                                "font-size:0.7rem; font-weight:600; color:#16a34a; "
+                                "font-size:0.7rem; font-weight:600; color:var(--accent-bright); "
                                 "text-transform:uppercase; margin-bottom:6px"
                             )
 
                             # Full response in scrollable area
                             if is_error:
                                 ui.label(resp).style(
-                                    "font-size:0.75rem; color:#dc2626; font-style:italic"
+                                    "font-size:0.75rem; color:var(--red); font-style:italic"
                                 )
                             else:
                                 with ui.scroll_area().style(
                                     "max-height:250px; width:100%"
                                 ):
                                     ui.markdown(resp).style(
-                                        "font-size:0.75rem; color:#374151; line-height:1.5"
+                                        "font-size:0.75rem; color:var(--text-secondary); line-height:1.5"
                                     )
 
                             # Annotation buttons
@@ -353,7 +353,7 @@ def render_results(
                 ui.label(
                     f"Annotated: {total_annotated}/{total_possible}"
                 ).style(
-                    "font-size:0.75rem; color:#6b7280; margin-top:12px"
+                    "font-size:0.75rem; color:var(--text-tertiary); margin-top:12px"
                 )
 
         def go(delta: int):
