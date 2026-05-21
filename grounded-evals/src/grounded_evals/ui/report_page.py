@@ -259,8 +259,8 @@ def report_page():
                     return
                 try:
                     from grounded_evals.axial_coding.mapper import map_errors_to_categories
-                    from grounded_evals.judge_builder.rubric import generate_rubric
                     from grounded_evals.judge_builder.prompt_gen import generate_judge_prompt
+                    from grounded_evals.judge_builder.rubric import generate_rubric
                     from grounded_evals.models.core import Code, CodeType
 
                     gen_btn.props("loading")
@@ -324,7 +324,6 @@ def report_page():
                         return
 
                     manual_scores_store: list[dict] = storage.setdefault("_calibration_manual", [{}] * len(sample))
-                    judge_scores_store: list[dict] = storage.get("_calibration_judge", [])
 
                     ui.label(f"Score these {len(sample)} responses (1-5 per dimension):").style(
                         "font-size: 0.82rem; font-weight: 500; color: var(--text-primary); margin-bottom: 8px"
@@ -379,8 +378,8 @@ def report_page():
 
                         cal_btn.props("loading")
                         try:
-                            from grounded_evals.llm.client import get_default_client, get_model_id
                             from grounded_evals.judge_builder.calibrate import calibrate
+                            from grounded_evals.llm.client import get_default_client, get_model_id
 
                             client = get_default_client()
                             model_id = get_model_id()
