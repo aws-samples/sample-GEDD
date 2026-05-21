@@ -365,12 +365,110 @@ def main_page() -> None:
                     writer.writerow([p.prompt_text, p.rationale, p.expected_behavior, p.property_values.get("dimensions", "")])
                 ui.download(output.getvalue().encode(), "golden_queries.csv")
 
+            def _export_session():
+                """Serialize all user state to a JSON file for persistence."""
+                cur_s = _user_state()
+                payload = {
+                    "session_data": cur_s.get("session_data"),
+                    "current_step": cur_s.get("current_step", 1),
+                    "annotations": cur_s.get("annotations", []),
+                    "prompt_variants": cur_s.get("prompt_variants", []),
+                    "codebook": cur_s.get("codebook", []),
+                    "coding_annotations": cur_s.get("coding_annotations", []),
+                    "memos": cur_s.get("memos", []),
+                    "paradigm_model": cur_s.get("paradigm_model", {}),
+                    "failure_patterns": cur_s.get("failure_patterns", []),
+                    "eval_results": cur_s.get("eval_results", []),
+                    "eval_selected_models": cur_s.get("eval_selected_models", []),
+                }
+                ui.download(json.dumps(payload, indent=2).encode(), "gedd_session.json")
+
+            async def _import_session():
+                """Open a file picker and restore session state from a JSON export."""
+                async def handle_upload(e):
+                    try:
+                        data = json.loads(e.content.read())
+                        s = _user_state()
+                        for key in ["session_data", "current_step", "annotations", "prompt_variants",
+                                    "codebook", "coding_annotations", "memos", "paradigm_model",
+                                    "failure_patterns", "eval_results", "eval_selected_models"]:
+                            if key in data:
+                                s[key] = data[key]
+                        ui.notify("Session restored ✓", type="positive")
+                        ui.navigate.to("/coach")
+                    except Exception as ex:
+                        ui.notify(f"Import failed: {ex}", type="negative")
+
+                ui.upload(on_upload=handle_upload, auto_upload=True, label="Import session JSON").props(
+                    "accept=.json flat dense"
+                ).style("color: var(--text-tertiary); font-size: 0.8rem")
+
             with ui.row().classes("w-full justify-center gap-sm").style("margin-top: 8px"):
                 ui.button("System Prompt", icon="download", on_click=_download_system_prompt).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Golden Queries (CSV)", icon="download", on_click=_download_queries_csv).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Export Session", icon="save", on_click=_export_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Import Session", icon="upload_file", on_click=_import_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
 
-        # "Next step" nudge when ready
+        # Golden query table — view, edit, delete
         if session.golden_prompts:
+            with ui.expansion(
+                f"Golden Queries ({len(session.golden_prompts)})",
+                icon="list",
+            ).classes("w-full").style(
+                "margin-top: 12px; background: var(--bg-surface-2); border-radius: 10px; "
+                "border: 1px solid var(--border-subtle); color: var(--text-primary)"
+            ):
+                queries_container = ui.column().classes("w-full").style("padding: 8px 0")
+
+                def refresh_query_table():
+                    queries_container.clear()
+                    cur = _user_session()
+                    with queries_container:
+                        if not cur.golden_prompts:
+                            ui.label("No queries yet.").style("color: var(--text-muted); font-size: 0.8rem")
+                            return
+                        for i, p in enumerate(cur.golden_prompts):
+                            with ui.element("div").style(
+                                "display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; "
+                                "border-bottom: 1px solid var(--border-subtle)"
+                            ):
+                                # Category badge
+                                ui.html(
+                                    f'<span style="font-size:0.6rem;font-weight:600;color:var(--accent-bright);'
+                                    f'background:var(--accent-tint);border-radius:4px;padding:2px 6px;'
+                                    f'white-space:nowrap;flex-shrink:0">{p.rationale or "uncategorized"}</span>'
+                                )
+                                # Editable query text
+                                edit_input = ui.input(value=p.prompt_text).classes("flex-grow").props(
+                                    "dense borderless dark"
+                                ).style("font-size: 0.82rem; color: var(--text-primary)")
+
+                                def make_save(idx=i):
+                                    def on_save(e):
+                                        cur2 = _user_session()
+                                        if idx < len(cur2.golden_prompts):
+                                            cur2.golden_prompts[idx].prompt_text = e.value
+                                            _save_user_session(cur2)
+                                    return on_save
+
+                                edit_input.on_value_change(make_save())
+
+                                def make_delete(idx=i):
+                                    def on_delete():
+                                        cur2 = _user_session()
+                                        if idx < len(cur2.golden_prompts):
+                                            cur2.golden_prompts.pop(idx)
+                                            _save_user_session(cur2)
+                                            refresh_query_table()
+                                    return on_delete
+
+                                ui.button(
+                                    icon="delete_outline", on_click=make_delete()
+                                ).props("flat round size=xs").style("color: var(--text-muted); flex-shrink: 0")
+
+                refresh_query_table()
+
+            # Next step nudge
             with ui.element("div").style(
                 "margin-top: 12px; padding: 12px 16px; border-radius: 10px; "
                 "background: var(--green-tint); border: 1px solid rgba(39,166,68,0.2); text-align: center"

@@ -162,7 +162,7 @@ def analysis_page():
                 from grounded_evals.models.core import Code, CodeType
                 from grounded_evals.axial_coding.paradigm import build_paradigm_model
 
-                codes = [Code(name=c['name'], definition=c.get('definition', ''), code_type=CodeType.DESCRIPTIVE) for c in codebook]
+                codes = [Code(label=c['name'], definition=c.get('definition', ''), code_type=CodeType.DESCRIPTIVE) for c in codebook]
                 ui.notify('Analyzing patterns...', type='info')
                 result = await asyncio.to_thread(build_paradigm_model, codes, [])
 
@@ -191,9 +191,61 @@ def analysis_page():
                 ui.notify(f'Used heuristic fallback: {e}', type='warning')
             refresh_all()
 
-        ui.button('Generate Pattern Analysis (AI)', icon='auto_fix_high', on_click=generate_analysis).props('size=sm').style(
-            "margin-top: 12px; background: var(--accent); color: white; border-radius: var(--radius-md)"
-        )
+        with ui.row().classes("gap-2").style("margin-top: 12px"):
+            ui.button('Generate Pattern Analysis (AI)', icon='auto_fix_high', on_click=generate_analysis).props('size=sm').style(
+                "background: var(--accent); color: white; border-radius: var(--radius-md)"
+            )
+
+            async def suggest_categories():
+                """Call fracture_domain() using the current agent spec and seed the codebook."""
+                import asyncio
+                from grounded_evals.guide.session import Session
+                from grounded_evals.open_coding.fracture import fracture_domain
+
+                session_data = app.storage.user.get('session_data', {})
+                if not session_data:
+                    ui.notify('Define your agent in the Coach tab first', type='warning')
+                    return
+                try:
+                    session = Session.model_validate(session_data)
+                    if not session.agent_spec.name:
+                        ui.notify('Agent name not set — go to Coach and define your agent first', type='warning')
+                        return
+                    suggest_btn.props('loading')
+                    ui.notify('Generating category suggestions from agent spec...', type='info')
+                    categories = await asyncio.to_thread(fracture_domain, session.agent_spec)
+
+                    codebook = app.storage.user.setdefault('codebook', [])
+                    existing_names = {c['name'] for c in codebook}
+                    added = 0
+                    from datetime import datetime
+                    from uuid import uuid4
+                    for cat in categories:
+                        name = cat.name
+                        if name not in existing_names:
+                            codebook.append({
+                                'id': str(uuid4()),
+                                'name': name,
+                                'definition': cat.definition,
+                                'type': 'constructed',
+                                'created_at': datetime.now().isoformat(),
+                            })
+                            existing_names.add(name)
+                            added += 1
+
+                    app.storage.user['codebook'] = codebook
+                    ui.notify(f'Added {added} category suggestions to codebook ✓', type='positive')
+                    refresh_all()
+                except Exception as e:
+                    ui.notify(f'Category suggestion failed: {e}', type='negative')
+                finally:
+                    suggest_btn.props(remove='loading')
+
+            suggest_btn = ui.button(
+                'Suggest Categories from Agent Spec', icon='category', on_click=suggest_categories
+            ).props('size=sm outline').style(
+                "border-color: var(--accent); color: var(--accent-bright); border-radius: var(--radius-md)"
+            )
 
         # Initial render
         refresh_codes()
