@@ -145,6 +145,34 @@ def report_page():
                     "color: var(--text-muted); font-size: 0.8rem"
                 )
 
+        # ── Analyst Notes (memos from Tag Failures) ───────────────────────
+        memos = storage.get("memos", [])
+        if memos:
+            with ui.element("div").classes("page-card"):
+                ui.label("Analyst Notes").style(
+                    "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+                )
+                for memo in reversed(memos[-5:]):
+                    with ui.element("div").style(
+                        "background: var(--yellow-tint); border: 1px solid rgba(240,191,0,0.2); "
+                        "border-left: 3px solid var(--yellow); border-radius: var(--radius-lg); "
+                        "padding: 10px 14px; margin-bottom: 8px"
+                    ):
+                        codes = memo.get("codes", [])
+                        if codes:
+                            with ui.row().classes("gap-1 flex-wrap").style("margin-bottom: 4px"):
+                                for c in codes:
+                                    ui.html(f'<span class="code-chip" style="font-size:0.65rem">{c}</span>')
+                        ui.label(memo.get("text", "")).style(
+                            "font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5; font-style: italic"
+                        )
+                        ts = memo.get("timestamp", "")
+                        if ts:
+                            ui.label(ts[:16].replace("T", " ")).style(
+                                "font-size: 0.65rem; color: var(--text-muted); margin-top: 4px"
+                            )
+
         # ── Root Cause Analysis ────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
             ui.label("Root Cause Analysis").style(
