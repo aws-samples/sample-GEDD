@@ -4,6 +4,31 @@ from nicegui import app, ui
 
 from grounded_evals.ui.layout import BRAND_CSS
 
+
+def _get_progress(storage: dict) -> dict[str, str]:
+    """Return done/current/todo for each workflow path based on real session state."""
+    session = storage.get("session_data") or {}
+    agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
+    if not isinstance(agent_spec, dict):
+        agent_spec = {}
+
+    has_agent = bool(agent_spec.get("name"))
+    has_prompt = bool(agent_spec.get("system_prompt"))
+    has_queries = bool(session.get("golden_prompts") if isinstance(session, dict) else False)
+    has_eval = bool(storage.get("eval_results"))
+    has_annotations = bool(storage.get("coding_annotations"))
+    has_paradigm = any(v for v in storage.get("paradigm_model", {}).values())
+
+    coach_done = has_agent and has_prompt and has_queries
+
+    return {
+        "/coach": "done" if coach_done else ("current" if has_agent else "todo"),
+        "/eval": "done" if has_eval else ("current" if coach_done else "todo"),
+        "/coding": "done" if has_annotations else ("current" if has_eval else "todo"),
+        "/analysis": "done" if has_paradigm else ("current" if has_annotations else "todo"),
+        "/report": "current" if has_paradigm else ("todo" if not has_annotations else "current"),
+    }
+
 PROBLEM_STEPS = [
     {"num": 1, "title": "Define the Job", "desc": "What is your agent trying to accomplish? For whom?", "path": "/coach", "icon": "chat"},
     {"num": 2, "title": "Observe Behavior", "desc": "Run golden queries — see what actually happens", "path": "/eval", "icon": "science"},
@@ -286,19 +311,56 @@ def home_page():
             _render_demo()
 
         # Workflow steps
-        with ui.column().classes("w-full").style("margin-top: 2rem"):
+        storage = app.storage.user
+        progress = _get_progress(storage)
+
+        # Progress summary bar (if user has started)
+        session = storage.get("session_data") or {}
+        agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
+        agent_name_home = agent_spec.get("name", "") if isinstance(agent_spec, dict) else ""
+        n_queries = len(session.get("golden_prompts", []) if isinstance(session, dict) else [])
+        n_annotations = len(storage.get("coding_annotations", []))
+        done_count = sum(1 for s in progress.values() if s == "done")
+
+        if agent_name_home:
+            with ui.element("div").style(
+                "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
+                "border-radius: var(--radius-xl); padding: 14px 16px; margin-bottom: 1.5rem"
+            ):
+                with ui.row().classes("items-center justify-between w-full"):
+                    with ui.column().style("gap: 2px"):
+                        ui.label(f"Continuing: {agent_name_home}").style(
+                            "font-size: 0.85rem; font-weight: 600; color: var(--text-primary)"
+                        )
+                        ui.label(
+                            f"{n_queries} queries · {n_annotations} annotations · {done_count}/5 steps done"
+                        ).style("font-size: 0.75rem; color: var(--text-tertiary)")
+                    ui.button("Continue", icon="arrow_forward", on_click=lambda: ui.navigate.to(
+                        next((p for p, s in progress.items() if s == "current"), "/coach")
+                    )).props("size=sm color=primary")
+
+        with ui.column().classes("w-full").style("margin-top: 1rem"):
             # Problem space
             with ui.row().classes("items-center gap-2").style("margin-bottom: 10px"):
                 ui.html('<span class="section-badge" style="background: var(--accent-tint); color: var(--accent-bright)">PROBLEM SPACE</span>')
                 ui.label("Understand what fails — and why").style("font-size: 0.78rem; color: var(--text-tertiary)")
 
             for step in PROBLEM_STEPS:
+                status = progress.get(step["path"], "todo")
+                is_done = status == "done"
+                is_current = status == "current"
+                icon_color = "var(--green-bright)" if is_done else ("var(--accent-bright)" if is_current else "var(--text-muted)")
+                text_color = "var(--text-primary)" if not status == "todo" else "var(--text-muted)"
                 with ui.element("div").classes("workflow-card").on("click", lambda _, p=step["path"]: ui.navigate.to(p)):
-                    with ui.row().classes("items-center gap-3"):
-                        ui.icon(step["icon"]).style("color: var(--accent-bright); font-size: 1.2rem")
-                        with ui.column().style("gap: 1px"):
-                            ui.label(step["title"]).style("font-size: 0.9rem; font-weight: 600; color: var(--text-primary)")
+                    with ui.row().classes("items-center gap-3 w-full"):
+                        ui.icon("check_circle" if is_done else step["icon"]).style(f"color: {icon_color}; font-size: 1.2rem")
+                        with ui.column().style("gap: 1px; flex: 1"):
+                            ui.label(step["title"]).style(f"font-size: 0.9rem; font-weight: 600; color: {text_color}")
                             ui.label(step["desc"]).style("font-size: 0.78rem; color: var(--text-tertiary)")
+                        if is_done:
+                            ui.html('<span style="font-size:0.65rem;background:var(--green-tint);color:var(--green-bright);padding:2px 9px;border-radius:99px;font-weight:600;white-space:nowrap">Done</span>')
+                        elif is_current:
+                            ui.html('<span style="font-size:0.65rem;background:var(--accent-tint);color:var(--accent-bright);padding:2px 9px;border-radius:99px;font-weight:600;white-space:nowrap">→ Next</span>')
 
             # Divider
             with ui.row().classes("w-full items-center").style("margin: 14px 0"):
@@ -312,12 +374,21 @@ def home_page():
                 ui.label("Build evaluation grounded in discovery").style("font-size: 0.78rem; color: var(--text-tertiary)")
 
             for step in SOLUTION_STEPS:
+                status = progress.get(step["path"], "todo")
+                is_done = status == "done"
+                is_current = status == "current"
                 with ui.element("div").classes("workflow-card").on("click", lambda _, p=step["path"]: ui.navigate.to(p)):
-                    with ui.row().classes("items-center gap-3"):
-                        ui.icon(step["icon"]).style("color: var(--green-bright); font-size: 1.2rem")
-                        with ui.column().style("gap: 1px"):
+                    with ui.row().classes("items-center gap-3 w-full"):
+                        ui.icon("check_circle" if is_done else step["icon"]).style(
+                            f"color: {'var(--green-bright)' if is_done else 'var(--green-bright)'}; font-size: 1.2rem"
+                        )
+                        with ui.column().style("gap: 1px; flex: 1"):
                             ui.label(step["title"]).style("font-size: 0.9rem; font-weight: 600; color: var(--text-primary)")
                             ui.label(step["desc"]).style("font-size: 0.78rem; color: var(--text-tertiary)")
+                        if is_done:
+                            ui.html('<span style="font-size:0.65rem;background:var(--green-tint);color:var(--green-bright);padding:2px 9px;border-radius:99px;font-weight:600">Done</span>')
+                        elif is_current:
+                            ui.html('<span style="font-size:0.65rem;background:var(--green-tint);color:var(--green-bright);padding:2px 9px;border-radius:99px;font-weight:600">→ Next</span>')
 
         # Footer
         with ui.element("div").style(

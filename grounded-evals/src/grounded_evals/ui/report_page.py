@@ -581,40 +581,166 @@ def report_page():
 
             render_calibration()
 
+        # ── Interactive Judge Test ─────────────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Test Your Judge").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label("Enter any query + response to see how your judge scores it inline.").style(
+                "font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px"
+            )
+            judge_prompt_current = storage.get("_generated_judge_prompt", "")
+            if not judge_prompt_current:
+                ui.label("Generate a Full Rubric Judge above first.").style(
+                    "font-size: 0.8rem; color: var(--text-muted)"
+                )
+            else:
+                test_query = ui.textarea(
+                    label="Query", placeholder="What did the user ask?"
+                ).classes("w-full").props("dense outlined dark rows=2")
+                test_response = ui.textarea(
+                    label="Agent Response", placeholder="What did the agent reply?"
+                ).classes("w-full").props("dense outlined dark rows=3").style("margin-top: 8px")
+                test_result_container = ui.column().classes("w-full")
+
+                async def run_judge_test():
+                    q = test_query.value.strip()
+                    r = test_response.value.strip()
+                    if not q or not r:
+                        ui.notify("Enter both a query and a response", type="warning")
+                        return
+                    test_btn.props("loading")
+                    try:
+                        from grounded_evals.llm.client import get_default_client, get_model_id
+                        client = get_default_client()
+                        model_id = get_model_id()
+                        full_prompt = f"{judge_prompt_current}\n\n<query>{q}</query>\n<response>{r}</response>"
+                        resp = await asyncio.to_thread(
+                            client.messages.create,
+                            model=model_id,
+                            max_tokens=512,
+                            messages=[{"role": "user", "content": full_prompt}],
+                        )
+                        text = resp.content[0].text
+                        import re as _re
+                        is_pass = bool(_re.search(r'"pass"\s*:\s*true', text, _re.IGNORECASE)) or (
+                            "pass" in text.lower() and "fail" not in text.lower()
+                        )
+                        test_result_container.clear()
+                        with test_result_container:
+                            verdict_color = "var(--green)" if is_pass else "var(--red)"
+                            verdict_label = "PASS" if is_pass else "FAIL"
+                            with ui.element("div").style(
+                                f"background:var(--bg-surface-1); border:2px solid {verdict_color}; "
+                                f"border-radius:var(--radius-lg); padding:14px; margin-top:10px"
+                            ):
+                                ui.label(verdict_label).style(
+                                    f"font-size:1.2rem; font-weight:700; color:{verdict_color}"
+                                )
+                                ui.label(text).style(
+                                    "font-size:0.78rem; color:var(--text-secondary); margin-top:6px; white-space:pre-wrap"
+                                )
+                    except Exception as e:
+                        ui.notify(f"Judge test error: {e}", type="negative")
+                    finally:
+                        test_btn.props(remove="loading")
+
+                test_btn = ui.button(
+                    "Run Judge", icon="gavel", on_click=run_judge_test
+                ).props("size=sm color=primary").style("margin-top: 8px")
+
         # ── "So What?" Summary ────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
             ui.label('"So What?" — Executive Summary').style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
             )
-            if total:
+
+            summary_container = ui.column().classes("w-full")
+
+            def _render_summary(text: str):
+                summary_container.clear()
+                with summary_container:
+                    with ui.element("div").style(
+                        "background:var(--bg-surface-1); border-left:3px solid var(--accent); "
+                        "border-radius:var(--radius-lg); padding:14px; margin-bottom:10px"
+                    ):
+                        ui.label(text).style(
+                            "font-size:0.88rem; color:var(--text-primary); line-height:1.7; white-space:pre-wrap"
+                        )
+
+            prev_summary = storage.get("_exec_summary", "")
+            if prev_summary:
+                _render_summary(prev_summary)
+            elif total:
                 pass_rate = correct / total * 100
-                ui.label(f"Your agent passes {pass_rate:.0f}% of test cases ({correct}/{total} correct).").style(
+                ui.label(f"{pass_rate:.0f}% pass rate ({correct}/{total} correct).").style(
                     "font-size: 0.88rem; font-weight: 500; color: var(--text-primary)"
                 )
-                if incorrect:
-                    ui.label(f"⚠️ {incorrect} responses are incorrect ({incorrect/total*100:.0f}%).").style(
-                        "font-size: 0.82rem; color: var(--red); margin-top: 4px"
+                if patterns:
+                    ui.label(f"Top failures: {', '.join(p['name'] for p in patterns[:3])}").style(
+                        "font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px"
                     )
-            if patterns:
-                top = patterns[:3]
-                names = ", ".join(p["name"] for p in top)
-                ui.label(f"Top failure patterns: {names}").style(
-                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 6px"
-                )
-            if paradigm.get("causal_conditions"):
-                causes = paradigm["causal_conditions"]
-                cause_text = ", ".join(causes) if isinstance(causes[0], str) else ", ".join(c.get("name", "") for c in causes)
-                ui.label(f"Root causes: {cause_text}").style(
-                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px"
-                )
-                ui.label("→ Fixing these would address multiple failure patterns.").style(
-                    "font-size: 0.8rem; color: var(--green-bright); font-weight: 500; margin-top: 2px"
-                )
-            if not annotations:
+            else:
                 ui.label("Complete annotations to generate summary.").style(
                     "color: var(--text-muted); font-size: 0.8rem"
                 )
+
+            async def generate_exec_summary():
+                if not total:
+                    ui.notify("No annotations yet — complete the Eval step first", type="warning")
+                    return
+                summ_btn.props("loading")
+                try:
+                    from grounded_evals.llm.client import get_default_client, get_model_id
+                    client = get_default_client()
+                    model_id = get_model_id()
+                    raw_causes = paradigm.get("causal_conditions", [])
+                    causes_text = ", ".join(
+                        c if isinstance(c, str) else c.get("name", "") for c in raw_causes
+                    ) or "not yet identified"
+                    phenomenon_text = ", ".join(paradigm.get("phenomenon", [])) or "not yet identified"
+                    failures_text = "\n".join(
+                        f"- {p['name']} ({p['frequency']} occurrences, {p['severity']} severity)"
+                        for p in patterns[:5]
+                    ) or "No failure patterns recorded."
+                    llm_prompt = f"""You are writing an executive summary for a product manager after running an AI agent evaluation.
+
+Agent: {agent_name}
+Pass rate: {correct/total*100:.0f}% ({correct}/{total} correct, {partial} partial, {incorrect} incorrect)
+Top failure patterns:
+{failures_text}
+Root cause (central phenomenon): {phenomenon_text}
+Causal conditions: {causes_text}
+
+Write exactly 3 sentences as a plain-text executive summary for a non-technical PM:
+1. Overall performance verdict (is this ready? what does the number mean in plain terms?)
+2. The dominant failure and its root cause (specific, not generic)
+3. The single most important recommended action
+
+Be direct and specific. No jargon, no bullet points, no headers. Just 3 sentences."""
+
+                    resp = await asyncio.to_thread(
+                        client.messages.create,
+                        model=model_id,
+                        max_tokens=300,
+                        messages=[{"role": "user", "content": llm_prompt}],
+                    )
+                    text = resp.content[0].text.strip()
+                    storage["_exec_summary"] = text
+                    _render_summary(text)
+                    ui.notify("Summary generated ✓", type="positive")
+                except Exception as e:
+                    ui.notify(f"Error: {e}", type="negative")
+                finally:
+                    summ_btn.props(remove="loading")
+
+            summ_btn = ui.button(
+                "Generate Summary (AI)", icon="auto_awesome", on_click=generate_exec_summary
+            ).props("size=sm").style(
+                "margin-top: 8px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+            )
 
         # ── Prompt Improvement Suggestions ───────────────────────────────
         with ui.element("div").classes("page-card"):

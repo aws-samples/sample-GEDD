@@ -189,7 +189,17 @@ def coding_page():
                 ui.label(f'{idx + 1} / {len(responses)}').style("font-weight: 600; font-size: 0.85rem; color: var(--text-primary)")
                 ui.button(icon='chevron_right', on_click=lambda: nav(1)).props('flat round size=sm').style("color: var(--text-tertiary)")
                 if existing:
-                    ui.badge('Annotated', color='green').props('outline')
+                    annotator = existing.get('annotator', '')
+                    ts = existing.get('timestamp', '')[:10]
+                    label_text = f'Annotated by {annotator}' if annotator and annotator != 'anonymous' else 'Annotated'
+                    ui.badge(label_text, color='green').props('outline').tooltip(ts)
+
+            # Keyboard shortcut hint
+            ui.html(
+                '<div style="font-size:0.62rem;color:var(--text-muted);margin-bottom:6px">'
+                '← → navigate &nbsp;·&nbsp; S save &nbsp;·&nbsp; 1/2/3 quick verdict'
+                '</div>'
+            )
 
             # Query
             with ui.element("div").classes("coding-query-card"):
@@ -255,7 +265,47 @@ def coding_page():
                 render_right()
                 render_left()
 
-            ui.button('Save Annotation', icon='save', on_click=save_annotation).props('color=primary size=sm').style("margin-top: 10px")
+            with ui.row().classes("gap-2 items-center").style("margin-top: 10px"):
+                ui.button('Save', icon='save', on_click=save_annotation).props('color=primary size=sm')
+
+                # Apply codes to all responses with similar text
+                async def apply_to_similar():
+                    codes = list(selected_codes['value'])
+                    if not codes:
+                        ui.notify('Select codes first', type='warning')
+                        return
+                    current_text = item.get('response', '')
+                    applied = 0
+                    for i2, r2 in enumerate(responses):
+                        if i2 == idx:
+                            continue
+                        if _is_similar(current_text[:80], r2.get('response', '')[:80]):
+                            existing2 = get_annotation_for(i2)
+                            merged_codes = list(set((existing2.get('codes', []) if existing2 else []) + codes))
+                            ann2 = {
+                                'id': str(uuid4()),
+                                'query': r2.get('query', ''),
+                                'response': r2.get('response', ''),
+                                'codes': merged_codes,
+                                'memo': f'Bulk-applied from similar response',
+                                'annotator': storage.get('username', 'anonymous'),
+                                'timestamp': datetime.now().isoformat(),
+                            }
+                            storage['coding_annotations'] = [
+                                a for a in storage['coding_annotations']
+                                if not (a['query'] == ann2['query'] and a['response'] == ann2['response'])
+                            ]
+                            storage['coding_annotations'].append(ann2)
+                            applied += 1
+                    if applied:
+                        ui.notify(f'Applied to {applied} similar response(s)', type='positive')
+                        render_stats()
+                    else:
+                        ui.notify('No similar responses found', type='info')
+
+                ui.button('Apply to Similar', icon='auto_fix_normal', on_click=apply_to_similar).props(
+                    'outline size=sm dark'
+                ).style('color:var(--accent-bright); font-size:0.75rem')
 
     def render_right():
         right_panel.clear()
@@ -486,6 +536,54 @@ def coding_page():
         with splitter.after:
             with ui.element('div').classes('w-full').style("padding: 12px") as right_panel:
                 pass
+
+    # Keyboard shortcuts: ← → navigate, S save, 1/2/3 quick verdict
+    def handle_key(e):
+        key = e.key
+        if key == 'ArrowRight':
+            nav(1)
+        elif key == 'ArrowLeft':
+            nav(-1)
+        elif key.lower() == 's':
+            # Trigger save by clicking the save button equivalent
+            idx = current_idx['value']
+            if responses:
+                item = responses[idx]
+                existing = get_annotation_for(idx)
+                ann = {
+                    'id': str(uuid4()),
+                    'query': item.get('query', ''),
+                    'response': item.get('response', ''),
+                    'codes': list(selected_codes['value']),
+                    'memo': '',
+                    'annotator': storage.get('username', 'anonymous'),
+                    'timestamp': datetime.now().isoformat(),
+                }
+                storage['coding_annotations'] = [
+                    a for a in storage['coding_annotations']
+                    if not (a['query'] == ann['query'] and a['response'] == ann['response'])
+                ]
+                storage['coding_annotations'].append(ann)
+                ui.notify('Saved ✓', type='positive', timeout=1500)
+                render_stats()
+                render_saturation_curve()
+                render_left()
+        elif key in ('1', '2', '3'):
+            # Quick annotation verdict from codebook (1=first code, 2=second, 3=third)
+            codebook = storage.get('codebook', [])
+            try:
+                code_idx = int(key) - 1
+                if code_idx < len(codebook):
+                    name = codebook[code_idx]['name']
+                    if name in selected_codes['value']:
+                        selected_codes['value'].remove(name)
+                    else:
+                        selected_codes['value'].append(name)
+                    render_left()
+            except (ValueError, IndexError):
+                pass
+
+    ui.keyboard(on_key=handle_key, ignore=['input', 'select', 'textarea', 'button'])
 
     # Initial render
     render_stats()
