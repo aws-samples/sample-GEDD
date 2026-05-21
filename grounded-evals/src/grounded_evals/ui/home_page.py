@@ -4,7 +4,6 @@ from nicegui import app, ui
 
 from grounded_evals.ui.layout import BRAND_CSS
 
-
 PROBLEM_STEPS = [
     {"num": 1, "title": "Define the Job", "desc": "What is your agent trying to accomplish? For whom?", "path": "/coach", "icon": "chat"},
     {"num": 2, "title": "Observe Behavior", "desc": "Run golden queries — see what actually happens", "path": "/eval", "icon": "science"},

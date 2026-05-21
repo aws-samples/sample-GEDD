@@ -159,8 +159,9 @@ def analysis_page():
                 return
             try:
                 import asyncio
-                from grounded_evals.models.core import Code, CodeType
+
                 from grounded_evals.axial_coding.paradigm import build_paradigm_model
+                from grounded_evals.models.core import Code, CodeType
 
                 codes = [Code(label=c['name'], definition=c.get('definition', ''), code_type=CodeType.DESCRIPTIVE) for c in codebook]
                 ui.notify('Analyzing patterns...', type='info')
@@ -199,6 +200,7 @@ def analysis_page():
             async def suggest_categories():
                 """Call fracture_domain() using the current agent spec and seed the codebook."""
                 import asyncio
+
                 from grounded_evals.guide.session import Session
                 from grounded_evals.open_coding.fracture import fracture_domain
 

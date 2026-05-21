@@ -11,17 +11,17 @@ from fastapi.responses import RedirectResponse
 from nicegui import app, ui
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import grounded_evals.ui.analysis_page  # noqa: F401
+import grounded_evals.ui.coding_page  # noqa: F401
+import grounded_evals.ui.eval_page  # noqa: F401
+
+# Import new pages (registers their @ui.page routes)
+import grounded_evals.ui.home_page  # noqa: F401
+import grounded_evals.ui.report_page  # noqa: F401
 from grounded_evals.agent import StateBundle, run_agent_turn
 from grounded_evals.agentcore_client import get_agentcore_client
 from grounded_evals.guide.session import Session
 from grounded_evals.ui.layout import BRAND_CSS
-
-# Import new pages (registers their @ui.page routes)
-import grounded_evals.ui.home_page  # noqa: F401
-import grounded_evals.ui.eval_page  # noqa: F401
-import grounded_evals.ui.coding_page  # noqa: F401
-import grounded_evals.ui.analysis_page  # noqa: F401
-import grounded_evals.ui.report_page  # noqa: F401
 
 # --- Authentication via Cognito ---
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")

@@ -2,7 +2,6 @@
 
 from nicegui import app, ui
 
-
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "home"},
     {"path": "/coach", "label": "1. Coach", "icon": "chat"},
