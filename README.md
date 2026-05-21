@@ -267,13 +267,13 @@ The judge outputs structured JSON:
 
 ```mermaid
 flowchart TD
-    subgraph UI["NiceGUI Web App"]
-        HOME[Home Page]
-        COACH[Coach Chat]
-        EVAL[Eval Runner]
-        CODING[Open Coding Workbench]
-        ANALYSIS[Axial Coding Canvas]
-        REPORT[Report & Export]
+    subgraph UI["NiceGUI Web App (Dark Mode)"]
+        HOME[Home + Interactive Demo]
+        COACH["1. Coach<br/><i>Define Agent, System Prompt,<br/>Golden Queries</i>"]
+        EVAL["2. Eval<br/><i>Run queries against models</i>"]
+        CODING["3. Tag Failures<br/><i>Open Coding workbench</i>"]
+        ANALYSIS["4. Map Root Causes<br/><i>Paradigm Model canvas</i>"]
+        REPORT["5. Report<br/><i>Judge generation + export</i>"]
     end
 
     subgraph Core["Core Engine"]
@@ -310,6 +310,19 @@ flowchart TD
     style Infra fill:#fce4ec
 ```
 
+### Step-by-Step User Flow
+
+The app guides domain experts through a numbered workflow:
+
+| Step | Page | What You Do |
+|---|---|---|
+| — | Home | See the interactive demo, understand the methodology |
+| 1 | Coach | Define your agent, craft system prompt, generate golden queries |
+| 2 | Eval | Run golden queries against Bedrock models, annotate responses |
+| 3 | Tag Failures | Inductively code failure patterns from real outputs |
+| 4 | Map Root Causes | Organize codes into the Paradigm Model (causes → consequences) |
+| 5 | Report | Generate binary LLM-as-Judge prompts, export everything |
+
 ---
 
 ## Quick Start
@@ -328,7 +341,9 @@ pip install -e ".[dev]"
 python -m grounded_evals.app
 ```
 
-The app runs at `http://localhost:8080`.
+The app runs at `http://localhost:8080`. Login with password `playground2024` (or set `ADMIN_PASSWORD`).
+
+The home page shows an interactive demo of the full GEDD methodology using a TravelBot example — click through all 5 steps to understand the workflow before starting your own evaluation.
 
 ---
 
@@ -485,14 +500,20 @@ grounded-evals/
 │   │   └── calibrate.py    #   Human vs judge agreement
 │   ├── agent/              # Conversational coach
 │   │   ├── handler.py      #   Tool-use loop
-│   │   ├── tools.py        #   6 coaching tools
+│   │   ├── tools.py        #   Coaching tools
 │   │   └── prompt.py       #   Coach system prompt
+│   ├── ui/                 # NiceGUI pages (dark mode)
+│   │   ├── home_page.py    #   Home + interactive demo
+│   │   ├── coding_page.py  #   Tag Failures (Open Coding)
+│   │   ├── analysis_page.py#   Map Root Causes (Axial Coding)
+│   │   ├── report_page.py  #   Report + Judge generation
+│   │   ├── eval_page.py    #   Eval runner
+│   │   ├── eval_tab.py     #   Model comparison UI
+│   │   └── layout.py       #   Design system + nav
 │   ├── ingest/             # Input parsing
-│   │   ├── parser.py       #   YAML agent spec parser
-│   │   └── models.py       #   AgentSpec, Capability, Persona
 │   ├── models/core.py      # All data models (Pydantic)
-│   ├── ui/                 # NiceGUI pages
-│   └── app.py              # App entry point
+│   ├── llm/client.py       # Bedrock + Anthropic client
+│   └── app.py              # App entry point + Coach page
 ├── agentcore/              # AWS AgentCore runtime
 ├── infra/                  # CDK infrastructure
 ├── configs/                # Example YAML specs
