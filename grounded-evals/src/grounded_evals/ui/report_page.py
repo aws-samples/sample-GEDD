@@ -33,6 +33,100 @@ def _build_failure_patterns(codebook: list[dict], coding_annotations: list[dict]
     return sorted(patterns, key=lambda p: p["frequency"], reverse=True)
 
 
+def _build_html_report(
+    agent_name: str,
+    date_str: str,
+    total: int,
+    correct: int,
+    partial: int,
+    incorrect: int,
+    patterns: list[dict],
+    codebook: list[dict],
+    system_prompt: str,
+    judge_prompt: str,
+    exec_summary: str,
+    annotations: list[dict],
+) -> str:
+    """Build a self-contained HTML report suitable for stakeholder sharing."""
+    pass_rate = f"{correct / total * 100:.0f}%" if total else "0%"
+
+    patterns_rows = "".join(
+        f"<tr><td>{p['name']}</td>"
+        f"<td class='sev-{p['severity']}'>{p['severity'].upper()}</td>"
+        f"<td>{p['frequency']}</td>"
+        f"<td>{p.get('definition', '')[:120]}</td></tr>"
+        for p in patterns
+    )
+    ann_rows = "".join(
+        f"<tr><td>{a.get('query', '')[:70]}</td>"
+        f"<td>{a.get('model', '')}</td>"
+        f"<td class='v-{a.get('annotation', '')}'>{a.get('annotation', '')}</td>"
+        f"<td>{a.get('error_code', '')}</td></tr>"
+        for a in annotations[:50]
+    )
+    codebook_items = "".join(
+        f"<li><strong>{c['name']}</strong>: {c.get('definition', '')}</li>"
+        for c in codebook
+    )
+    summary_html = (
+        f"<p class='summary'>{exec_summary}</p>" if exec_summary
+        else f"<p>{pass_rate} pass rate ({correct}/{total} correct).</p>"
+    )
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GEDD Eval Report — {agent_name}</title>
+<style>
+  body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:2rem;color:#1a1a1a;line-height:1.6}}
+  h1{{font-size:1.6rem;font-weight:700;border-bottom:2px solid #e2e8f0;padding-bottom:.5rem}}
+  h2{{font-size:.75rem;font-weight:600;color:#475569;text-transform:uppercase;letter-spacing:.04em;margin-top:2rem}}
+  .meta{{color:#64748b;font-size:.85rem;margin-bottom:1.5rem}}
+  .stats{{display:flex;gap:1rem;flex-wrap:wrap;margin:1rem 0}}
+  .stat{{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem 1.5rem;text-align:center;flex:1;min-width:100px}}
+  .sv{{font-size:1.8rem;font-weight:700}}.sl{{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:#64748b}}
+  .correct{{color:#16a34a}}.partial{{color:#d97706}}.incorrect{{color:#dc2626}}
+  .summary{{background:#f0f9ff;border-left:4px solid #0ea5e9;padding:1rem 1.25rem;border-radius:0 8px 8px 0;font-size:.95rem;color:#0c4a6e}}
+  table{{width:100%;border-collapse:collapse;margin:1rem 0;font-size:.85rem}}
+  th{{background:#f1f5f9;text-align:left;padding:8px 12px;color:#475569;font-weight:600;font-size:.75rem;text-transform:uppercase}}
+  td{{padding:8px 12px;border-bottom:1px solid #e2e8f0;vertical-align:top}}
+  tr:hover td{{background:#f8fafc}}
+  .v-correct{{color:#16a34a;font-weight:600}}.v-partial{{color:#d97706;font-weight:600}}.v-incorrect{{color:#dc2626;font-weight:600}}
+  .sev-high{{color:#dc2626;font-weight:600}}.sev-medium{{color:#d97706;font-weight:600}}.sev-low{{color:#16a34a;font-weight:600}}
+  pre{{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:1rem;font-size:.78rem;white-space:pre-wrap;word-break:break-word;max-height:400px;overflow-y:auto}}
+  ul{{padding-left:1.5rem}}li{{margin-bottom:.3rem}}
+  .footer{{margin-top:3rem;padding-top:1rem;border-top:1px solid #e2e8f0;font-size:.75rem;color:#94a3b8;text-align:center}}
+</style>
+</head>
+<body>
+<h1>Evaluation Report — {agent_name}</h1>
+<p class="meta">Generated {date_str} &nbsp;·&nbsp; {total} total annotations</p>
+<h2>Overall Results</h2>
+<div class="stats">
+  <div class="stat"><div class="sv">{total}</div><div class="sl">Total</div></div>
+  <div class="stat"><div class="sv correct">{correct}</div><div class="sl">Correct</div></div>
+  <div class="stat"><div class="sv partial">{partial}</div><div class="sl">Partial</div></div>
+  <div class="stat"><div class="sv incorrect">{incorrect}</div><div class="sl">Incorrect</div></div>
+  <div class="stat"><div class="sv">{pass_rate}</div><div class="sl">Pass Rate</div></div>
+</div>
+<h2>Executive Summary</h2>
+{summary_html}
+<h2>Failure Patterns</h2>
+{"<table><thead><tr><th>Pattern</th><th>Severity</th><th>Freq</th><th>Definition</th></tr></thead><tbody>" + patterns_rows + "</tbody></table>" if patterns else "<p>No failure patterns recorded yet.</p>"}
+<h2>Error Codebook</h2>
+{"<ul>" + codebook_items + "</ul>" if codebook else "<p>No error codes defined yet.</p>"}
+<h2>Sample Annotations (first 50)</h2>
+{"<table><thead><tr><th>Query</th><th>Model</th><th>Verdict</th><th>Error Code</th></tr></thead><tbody>" + ann_rows + "</tbody></table>" if annotations else "<p>No annotations yet.</p>"}
+<h2>System Prompt</h2>
+{"<pre>" + system_prompt[:3000] + "</pre>" if system_prompt else "<p>Not available.</p>"}
+<h2>Judge Prompt</h2>
+{"<pre>" + judge_prompt[:3000] + "</pre>" if judge_prompt else "<p>Not generated yet.</p>"}
+<div class="footer">Generated by GEDD (Grounded Eval-Driven Development)</div>
+</body>
+</html>"""
+
+
 @ui.page("/report")
 def report_page():
     page_layout("Report")
@@ -971,3 +1065,25 @@ Respond in JSON only:
                 ui.button("Codebook (JSON)", on_click=download_codebook, icon="download").props("outline size=sm dark")
                 ui.button("Judge Prompt (TXT)", on_click=download_judge, icon="download").props("outline size=sm dark")
                 ui.button("Full Report (JSON)", on_click=download_full_report, icon="download").props("outline size=sm dark")
+
+                def download_html_report():
+                    html = _build_html_report(
+                        agent_name=agent_name,
+                        date_str=date.today().isoformat(),
+                        total=total,
+                        correct=correct,
+                        partial=partial,
+                        incorrect=incorrect,
+                        patterns=patterns,
+                        codebook=codebook,
+                        system_prompt=system_prompt,
+                        judge_prompt=storage.get("_generated_judge_prompt", ""),
+                        exec_summary=storage.get("_exec_summary", ""),
+                        annotations=annotations,
+                    )
+                    safe_name = agent_name.replace(" ", "_").replace("/", "-")
+                    ui.download(html.encode(), f"eval_report_{safe_name}.html")
+
+                ui.button(
+                    "HTML Report", on_click=download_html_report, icon="picture_as_pdf"
+                ).props("outline size=sm dark").style("color:var(--accent-bright)")
