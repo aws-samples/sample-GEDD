@@ -318,11 +318,34 @@ The app guides domain experts through a numbered workflow:
 | Step | Page | What You Do |
 |---|---|---|
 | — | Home | See the interactive demo, understand the methodology |
-| 1 | Coach | Define your agent, craft system prompt, generate golden queries |
-| 2 | Eval | Run golden queries against Bedrock models, annotate responses |
+| 1 | Coach | Define your agent, craft system prompt, generate golden queries; manage your query table (inline edit/delete); export or import full sessions as JSON |
+| 2 | Eval | Run golden queries against up to 3 Bedrock models side-by-side; annotate each response (✓ / ⚠ / ✗); view per-model pass rate summary |
 | 3 | Tag Failures | Inductively code failure patterns from real outputs |
-| 4 | Map Root Causes | Organize codes into the Paradigm Model (causes → consequences) |
-| 5 | Report | Generate binary LLM-as-Judge prompts, export everything |
+| 4 | Map Root Causes | Organize codes into the Paradigm Model (causes → consequences); use AI to suggest initial categories from your agent spec |
+| 5 | Report | Run the full judge pipeline (error mapping → rubric → judge prompt); calibrate judge against manual scores; export judge prompt as TXT |
+
+---
+
+## Features
+
+### Session Management
+- **Export / Import** — Save your entire session (agent spec, queries, annotations, codebook, paradigm model, eval results) to a single JSON file and restore it later or share with teammates. Buttons on the Coach page sidebar.
+
+### Golden Query Workbench
+- **Query table** — Collapsible table on the Coach page lists all saved queries with their categories. Edit any query inline or delete it; changes persist immediately to your session.
+
+### Eval — Model Comparison
+- **Multi-model side-by-side eval** — Select up to 3 Bedrock models and run all golden queries in one pass. Responses appear in a step-through card view.
+- **Per-model pass rate summary** — After annotating, the results header shows `Model: correct/total ✓` for every evaluated model.
+
+### Map Root Causes — AI Category Suggestions
+- **"Suggest Categories from Agent Spec"** button calls `fracture_domain()` on your saved agent spec and seeds the codebook with AI-generated failure categories — ready to assign codes to the Paradigm Model slots.
+
+### Report — Full Judge Pipeline
+- **One-click pipeline** — "Generate Full Rubric Judge (AI)" chains `map_errors_to_categories → generate_rubric → generate_judge_prompt` automatically. The resulting judge prompt is displayed and available for export.
+- **Calibration UI** — Score a sample of responses manually (1–5 per dimension), then run the generated judge over the same set. The tool reports agreement % and flags dimension-level disagreements so you can refine your rubric before deploying.
+- **Export judge prompt** — Download the generated judge system prompt as a plain `.txt` file.
+- **Failure pattern analytics** — The report page computes frequency and severity of each failure code from your coding annotations, so you know which patterns dominate.
 
 ---
 

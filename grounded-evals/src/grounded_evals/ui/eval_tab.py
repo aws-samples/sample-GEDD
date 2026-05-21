@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
 import boto3
-from nicegui import ui
+from nicegui import app, ui
 
 from grounded_evals.guide.session import Session
 from grounded_evals.llm.client import get_default_client, traced_eval_call
@@ -21,11 +22,6 @@ AVAILABLE_MODELS = [
     {"id": "us.mistral.mistral-large-2411-v1:0", "label": "Mistral Large 24.11", "api": "converse"},
 ]
 
-# Eval results: [{query_idx, query, responses: {model_id: response}, annotations: {model_id: "correct"|"partial"|"incorrect"}, notes}]
-eval_results: list[dict] = []
-# Persist selected models across tab switches so results can be re-rendered
-_selected_models: list[str] = []
-
 
 def _get_model_api(model_id: str) -> str:
     for m in AVAILABLE_MODELS:
@@ -36,7 +32,8 @@ def _get_model_api(model_id: str) -> str:
 
 def _call_converse(system_prompt: str, query: str, model_id: str) -> str:
     """Call Bedrock Converse API for non-Anthropic models."""
-    client = boto3.client("bedrock-runtime", region_name="us-east-1")
+    region = os.environ.get("AWS_REGION") or os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
+    client = boto3.client("bedrock-runtime", region_name=region)
     response = client.converse(
         modelId=model_id,
         system=[{"text": system_prompt}],
@@ -63,6 +60,14 @@ async def run_query_against_model(
             )
     except Exception as e:
         return f"[Error: {e}]"
+
+
+def _get_eval_results() -> list[dict]:
+    return app.storage.user.setdefault("eval_results", [])
+
+
+def _get_selected_models() -> list[str]:
+    return app.storage.user.setdefault("eval_selected_models", [])
 
 
 def render(session: Session, annotations_list: list[dict], prompt_variants: list[dict] | None = None) -> None:
@@ -97,6 +102,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
     variants = prompt_variants or []
 
     # System Prompt Variant Selection
+    selected_variant_ref: dict = {"value": variants[0]["name"] if variants else ""}
     if variants and len(variants) > 1:
         with ui.card().classes("w-full q-pa-md").style(
             "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:1rem"
@@ -113,6 +119,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                 value=variants[0]["name"],
                 label="Prompt Variant",
             ).style("width:200px")
+            selected_variant.on_value_change(lambda e: selected_variant_ref.update({"value": e.value}))
 
     # Model selection
     with ui.card().classes("w-full q-pa-md").style(
@@ -125,11 +132,11 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             f"Running {len(session.golden_prompts)} golden queries against selected models"
         ).style("font-size:0.75rem; color:var(--text-tertiary); margin-bottom:12px")
 
-        selected_models: list[str] = []
         checkboxes = []
+        existing_selected = _get_selected_models()
         with ui.row().classes("gap-md"):
             for model in AVAILABLE_MODELS:
-                cb = ui.checkbox(model["label"], value=False)
+                cb = ui.checkbox(model["label"], value=model["id"] in existing_selected)
                 checkboxes.append((cb, model["id"]))
 
         ui.separator().style("opacity:0.2; margin:12px 0")
@@ -146,36 +153,35 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                 ui.notify("Select up to 3 models", type="warning")
                 return
 
-            # Determine which system prompt to use
+            # Determine active system prompt
             active_prompt = session.agent_spec.system_prompt
             if variants and len(variants) > 1:
-                variant_name = selected_variant.value
+                variant_name = selected_variant_ref["value"]
                 for v in variants:
                     if v["name"] == variant_name:
                         active_prompt = v["prompt"]
                         break
 
-            selected_models.clear()
-            selected_models.extend(sel)
-            _selected_models.clear()
-            _selected_models.extend(sel)
-            eval_results.clear()
+            # Store per-user
+            selected_models_store = _get_selected_models()
+            selected_models_store.clear()
+            selected_models_store.extend(sel)
+
+            eval_results_store = _get_eval_results()
+            eval_results_store.clear()
+
             run_btn.props("loading")
-            progress_label.set_text("Running queries with prompt variant...")
+            progress_label.set_text("Running queries...")
 
             total = len(session.golden_prompts)
             for idx, gp in enumerate(session.golden_prompts):
-                progress_label.set_text(
-                    f"Running query {idx + 1}/{total}..."
-                )
+                progress_label.set_text(f"Running query {idx + 1}/{total}...")
                 responses = {}
-                for model_id in selected_models:
-                    resp = await run_query_against_model(
-                        active_prompt, gp.prompt_text, model_id
-                    )
+                for model_id in sel:
+                    resp = await run_query_against_model(active_prompt, gp.prompt_text, model_id)
                     responses[model_id] = resp
 
-                eval_results.append({
+                eval_results_store.append({
                     "query_idx": idx,
                     "query": gp.prompt_text,
                     "category": gp.rationale,
@@ -185,18 +191,20 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                 })
 
             progress_label.set_text(
-                f"Done! {total} queries × {len(selected_models)} models = {total * len(selected_models)} responses"
+                f"Done! {total} queries × {len(sel)} models = {total * len(sel)} responses"
             )
             run_btn.props(remove="loading")
-            render_results(results_container, selected_models, annotations_list)
+            render_results(results_container, sel, annotations_list)
 
         run_btn = ui.button(
             "Run Evaluation", icon="play_arrow", on_click=run_eval
         ).props("color=primary")
 
-    # Re-render existing results if switching back to this tab
-    if eval_results and _selected_models:
-        render_results(results_container, _selected_models, annotations_list)
+    # Re-render existing results when navigating back to this tab
+    existing_results = _get_eval_results()
+    existing_sel = _get_selected_models()
+    if existing_results and existing_sel:
+        render_results(results_container, existing_sel, annotations_list)
 
 
 def render_results(
@@ -205,15 +213,32 @@ def render_results(
     """Render the eval results with annotation controls."""
     container.clear()
 
+    eval_results = _get_eval_results()
     if not eval_results:
         return
 
     model_labels = {m["id"]: m["label"] for m in AVAILABLE_MODELS}
 
     with container:
-        ui.label(
-            f"Results: {len(eval_results)} queries × {len(selected_models)} models"
-        ).style("font-size:0.9rem; font-weight:700; color:var(--text-primary); margin:12px 0")
+        with ui.row().classes("w-full items-center justify-between").style("margin-bottom:12px"):
+            ui.label(
+                f"Results: {len(eval_results)} queries × {len(selected_models)} models"
+            ).style("font-size:0.9rem; font-weight:700; color:var(--text-primary)")
+
+            # Model comparison summary
+            summary_parts = []
+            for model_id in selected_models:
+                label = model_labels.get(model_id, model_id)
+                correct = sum(
+                    1 for r in eval_results if r["annotations"].get(model_id) == "correct"
+                )
+                total_ann = sum(1 for r in eval_results if model_id in r["annotations"])
+                if total_ann:
+                    summary_parts.append(f"{label}: {correct}/{total_ann} ✓")
+            if summary_parts:
+                ui.label(" · ".join(summary_parts)).style(
+                    "font-size:0.75rem; color:var(--text-tertiary)"
+                )
 
         # Step-through navigation
         current_idx = {"value": 0}
@@ -280,20 +305,16 @@ def render_results(
                                 "text-transform:uppercase; margin-bottom:6px"
                             )
 
-                            # Full response in scrollable area
                             if is_error:
                                 ui.label(resp).style(
                                     "font-size:0.75rem; color:var(--red); font-style:italic"
                                 )
                             else:
-                                with ui.scroll_area().style(
-                                    "max-height:250px; width:100%"
-                                ):
+                                with ui.scroll_area().style("max-height:250px; width:100%"):
                                     ui.markdown(resp).style(
                                         "font-size:0.75rem; color:var(--text-secondary); line-height:1.5"
                                     )
 
-                            # Annotation buttons
                             ui.separator().style("opacity:0.2; margin:8px 0")
                             with ui.row().classes("gap-xs items-center"):
 
@@ -330,29 +351,21 @@ def render_results(
                                     + (" color=red" if annotation == "incorrect" else " flat")
                                 ).tooltip("Incorrect")
 
-                # Manual notes input
+                # Notes input
                 notes_input = ui.input(
                     placeholder="Add notes for this query (error code, why it failed...)",
                     value=result.get("notes", ""),
-                ).classes("w-full").style(
-                    "margin-top:12px; font-size:0.8rem"
-                ).props("dense outlined")
+                ).classes("w-full").style("margin-top:12px; font-size:0.8rem").props("dense outlined")
 
                 def save_notes(e, r=result):
                     r["notes"] = e.value
 
                 notes_input.on_value_change(save_notes)
 
-                # Summary stats
-                total_annotated = sum(
-                    1
-                    for r in eval_results
-                    for _ in r["annotations"].values()
-                )
+                # Annotation progress
+                total_annotated = sum(1 for r in eval_results for _ in r["annotations"].values())
                 total_possible = len(eval_results) * len(selected_models)
-                ui.label(
-                    f"Annotated: {total_annotated}/{total_possible}"
-                ).style(
+                ui.label(f"Annotated: {total_annotated}/{total_possible}").style(
                     "font-size:0.75rem; color:var(--text-tertiary); margin-top:12px"
                 )
 

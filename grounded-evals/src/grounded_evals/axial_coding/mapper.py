@@ -74,9 +74,14 @@ def map_errors_to_categories(
     )
 
     response_text = message.content[0].text
-    json_start = response_text.find("{")
-    json_end = response_text.rfind("}") + 1
-    data = json.loads(response_text[json_start:json_end])
+    try:
+        json_start = response_text.find("{")
+        json_end = response_text.rfind("}") + 1
+        if json_start == -1 or json_end <= json_start:
+            raise ValueError("No JSON object found in response")
+        data = json.loads(response_text[json_start:json_end])
+    except (json.JSONDecodeError, ValueError) as e:
+        raise RuntimeError(f"map_errors_to_categories: failed to parse LLM response — {e}") from e
 
     return [
         ErrorMapping(

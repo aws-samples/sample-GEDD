@@ -1,8 +1,10 @@
-"""Eval Report page — summary, failure patterns, judges, and exports."""
+"""Eval Report page — summary, failure patterns, full judge pipeline, calibration, exports."""
 
+import asyncio
 import csv
 import io
 import json
+from collections import Counter
 from datetime import date
 
 from nicegui import app, ui
@@ -10,173 +12,553 @@ from nicegui import app, ui
 from grounded_evals.ui.layout import page_layout
 
 
-@ui.page('/report')
+def _build_failure_patterns(codebook: list[dict], coding_annotations: list[dict]) -> list[dict]:
+    """Derive failure_patterns from codebook usage across coding annotations."""
+    code_counter: Counter = Counter()
+    for ann in coding_annotations:
+        for code_name in ann.get("codes", []):
+            code_counter[code_name] += 1
+
+    patterns = []
+    for code in codebook:
+        name = code["name"]
+        freq = code_counter.get(name, 0)
+        if freq == 0:
+            continue
+        total = max(1, sum(code_counter.values()))
+        pct = freq / total
+        severity = "high" if pct >= 0.4 else ("medium" if pct >= 0.2 else "low")
+        patterns.append({"name": name, "frequency": freq, "severity": severity, "definition": code.get("definition", "")})
+
+    return sorted(patterns, key=lambda p: p["frequency"], reverse=True)
+
+
+@ui.page("/report")
 def report_page():
-    page_layout('Report')
+    page_layout("Report")
     storage = app.storage.user
-    session = storage.get('session_data', {})
-    annotations = storage.get('annotations', [])
-    codebook = storage.get('codebook', [])
-    paradigm = storage.get('paradigm_model', {})
-    patterns = storage.get('failure_patterns', [])
+    session = storage.get("session_data", {})
+    annotations = storage.get("annotations", [])
+    codebook = storage.get("codebook", [])
+    coding_annotations = storage.get("coding_annotations", [])
+    paradigm = storage.get("paradigm_model", {})
 
-    agent_name = session.get('agent_spec', {}).get('name', 'Unknown Agent') if isinstance(session.get('agent_spec'), dict) else 'Unknown Agent'
-    golden_prompts = session.get('golden_prompts', [])
+    # Derive failure_patterns from actual coding data and persist
+    patterns = _build_failure_patterns(codebook, coding_annotations)
+    storage["failure_patterns"] = patterns
+
+    agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
+    agent_name = agent_spec.get("name", "Unknown Agent") if isinstance(agent_spec, dict) else "Unknown Agent"
+    agent_description = agent_spec.get("description", "") if isinstance(agent_spec, dict) else ""
+    system_prompt = agent_spec.get("system_prompt", "") if isinstance(agent_spec, dict) else ""
+    golden_prompts = session.get("golden_prompts", []) if isinstance(session, dict) else []
+
     total = len(annotations)
-    correct = sum(1 for a in annotations if a.get('annotation') == 'correct')
-    partial = sum(1 for a in annotations if a.get('annotation') == 'partial')
-    incorrect = sum(1 for a in annotations if a.get('annotation') == 'incorrect')
+    correct = sum(1 for a in annotations if a.get("annotation") == "correct")
+    partial = sum(1 for a in annotations if a.get("annotation") == "partial")
+    incorrect = sum(1 for a in annotations if a.get("annotation") == "incorrect")
 
-    with ui.column().classes('w-full max-w-5xl mx-auto').style("padding: 1.5rem; gap: 16px"):
-        # Header
+    # Error code tallies from eval annotations
+    error_counts: dict[str, int] = {}
+    for a in annotations:
+        code = a.get("error_code", "")
+        if code:
+            error_counts[code] = error_counts.get(code, 0) + 1
+
+    with ui.column().classes("w-full max-w-5xl mx-auto").style("padding: 1.5rem; gap: 16px"):
+
+        # ── Header ─────────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
             with ui.row().classes("items-center justify-between w-full"):
                 ui.label("Evaluation Report").style("font-size: 1.1rem; font-weight: 600; color: var(--text-primary)")
                 ui.label(date.today().isoformat()).style("font-size: 0.75rem; color: var(--text-muted)")
             with ui.row().classes("gap-4 mt-2"):
-                ui.label(f'Agent: {agent_name}').style("font-size: 0.8rem; color: var(--text-secondary)")
-                ui.label(f'Queries: {len(golden_prompts)}').style("font-size: 0.8rem; color: var(--text-secondary)")
+                ui.label(f"Agent: {agent_name}").style("font-size: 0.8rem; color: var(--text-secondary)")
+                ui.label(f"Queries: {len(golden_prompts)}").style("font-size: 0.8rem; color: var(--text-secondary)")
 
-        # Stats
-        with ui.row().classes('w-full gap-3'):
+        # ── Annotation stats ───────────────────────────────────────────────
+        with ui.row().classes("w-full gap-3"):
             stats = [
-                ('Total', str(total), 'var(--text-primary)'),
-                ('Correct', f'{(correct/total*100):.0f}%' if total else '0%', 'var(--green-bright)'),
-                ('Partial', f'{(partial/total*100):.0f}%' if total else '0%', 'var(--yellow)'),
-                ('Incorrect', f'{(incorrect/total*100):.0f}%' if total else '0%', 'var(--red)'),
+                ("Total", str(total), "var(--text-primary)"),
+                ("Correct", f"{(correct/total*100):.0f}%" if total else "0%", "var(--green-bright)"),
+                ("Partial", f"{(partial/total*100):.0f}%" if total else "0%", "var(--yellow)"),
+                ("Incorrect", f"{(incorrect/total*100):.0f}%" if total else "0%", "var(--red)"),
             ]
             for label, value, color in stats:
-                with ui.card().classes('stat-card flex-1'):
-                    ui.label(value).classes('stat-value').style(f'color: {color}')
-                    ui.label(label).classes('stat-label')
+                with ui.card().classes("stat-card flex-1"):
+                    ui.label(value).classes("stat-value").style(f"color: {color}")
+                    ui.label(label).classes("stat-label")
 
-        # Failure Patterns
-        with ui.element("div").classes("page-card"):
-            ui.label('Failure Patterns').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px")
-            sorted_patterns = sorted(patterns, key=lambda p: p.get('frequency', 0), reverse=True)
-            if sorted_patterns:
+        # ── Model Comparison Analytics ─────────────────────────────────────
+        # Group annotations by model and category
+        model_stats: dict[str, dict] = {}
+        for a in annotations:
+            model = a.get("model", "unknown")
+            if model not in model_stats:
+                model_stats[model] = {"correct": 0, "partial": 0, "incorrect": 0, "total": 0}
+            model_stats[model][a.get("annotation", "incorrect")] += 1
+            model_stats[model]["total"] += 1
+
+        if model_stats:
+            with ui.element("div").classes("page-card"):
+                ui.label("Model Comparison").style(
+                    "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px"
+                )
                 columns = [
-                    {'name': 'name', 'label': 'Pattern', 'field': 'name', 'align': 'left'},
-                    {'name': 'frequency', 'label': 'Freq', 'field': 'frequency'},
-                    {'name': 'severity', 'label': 'Severity', 'field': 'severity'},
+                    {"name": "model", "label": "Model", "field": "model", "align": "left"},
+                    {"name": "total", "label": "Evaluated", "field": "total"},
+                    {"name": "correct", "label": "✓ Correct", "field": "correct"},
+                    {"name": "partial", "label": "⚠ Partial", "field": "partial"},
+                    {"name": "incorrect", "label": "✗ Incorrect", "field": "incorrect"},
+                    {"name": "pass_rate", "label": "Pass Rate", "field": "pass_rate"},
                 ]
-                rows = [{'name': p.get('name', ''), 'frequency': p.get('frequency', 0), 'severity': p.get('severity', '')} for p in sorted_patterns]
-                ui.table(columns=columns, rows=rows, row_key='name').classes('w-full').props("dark dense flat")
-            else:
-                ui.label('No patterns recorded yet.').style("color: var(--text-muted); font-size: 0.8rem")
+                rows = []
+                for model, s in model_stats.items():
+                    t = max(s["total"], 1)
+                    rows.append({
+                        "model": model,
+                        "total": s["total"],
+                        "correct": s["correct"],
+                        "partial": s["partial"],
+                        "incorrect": s["incorrect"],
+                        "pass_rate": f"{s['correct']/t*100:.0f}%",
+                    })
+                ui.table(columns=columns, rows=rows, row_key="model").classes("w-full").props("dark dense flat")
 
-        # Root Cause
+        # ── Failure Patterns (from Open Coding) ───────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label('Root Cause Analysis').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px")
-            error_counts = {}
-            for a in annotations:
-                code = a.get('error_code', '')
-                if code:
-                    error_counts[code] = error_counts.get(code, 0) + 1
+            ui.label("Failure Patterns").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+            )
+            if patterns:
+                columns = [
+                    {"name": "name", "label": "Pattern", "field": "name", "align": "left"},
+                    {"name": "frequency", "label": "Freq", "field": "frequency"},
+                    {"name": "severity", "label": "Severity", "field": "severity"},
+                    {"name": "definition", "label": "Definition", "field": "definition", "align": "left"},
+                ]
+                ui.table(columns=columns, rows=patterns, row_key="name").classes("w-full").props("dark dense flat")
+            else:
+                ui.label("Complete the Tag Failures step to see patterns here.").style(
+                    "color: var(--text-muted); font-size: 0.8rem"
+                )
 
-            if error_counts:
-                for code, count in sorted(error_counts.items(), key=lambda x: -x[1]):
-                    with ui.row().classes("items-center gap-2").style("margin-bottom: 4px"):
-                        ui.element("div").style(f"width: {min(count/max(error_counts.values())*100, 100)}%; height: 4px; background: var(--accent); border-radius: 2px; min-width: 20px")
+        # ── Root Cause Analysis ────────────────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Root Cause Analysis").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+            )
+            all_error_counts = dict(error_counts)
+            # Also include coding annotation code frequencies
+            for ann in coding_annotations:
+                for code in ann.get("codes", []):
+                    all_error_counts[code] = all_error_counts.get(code, 0) + 1
+
+            if all_error_counts:
+                max_count = max(all_error_counts.values())
+                for code, count in sorted(all_error_counts.items(), key=lambda x: -x[1]):
+                    with ui.row().classes("items-center gap-2").style("margin-bottom: 6px"):
+                        ui.element("div").style(
+                            f"width: {min(count/max_count*160, 160)}px; height: 4px; "
+                            f"background: var(--accent); border-radius: 2px; min-width: 20px"
+                        )
                         ui.label(f"{code} ({count})").style("font-size: 0.78rem; color: var(--text-secondary)")
             else:
-                ui.label('No error codes recorded yet.').style("color: var(--text-muted); font-size: 0.8rem")
+                ui.label("No error codes recorded yet. Annotate responses in Eval or Tag Failures.").style(
+                    "color: var(--text-muted); font-size: 0.8rem"
+                )
 
-        # Binary Judge Prompts
+        # ── Full Judge Pipeline ────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label('Binary LLM-as-Judge Prompts').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px")
-            ui.label('Auto-generated from your paradigm model.').style("font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px")
+            ui.label("LLM-as-Judge Generation").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label("Generate a grounded judge prompt from your error analysis.").style(
+                "font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px"
+            )
 
-            def _gen_judge(phenomenon, causal, strategies, consequences):
-                return f"""You are evaluating whether a response exhibits {phenomenon.upper()}.
+            judge_output_container = ui.column().classes("w-full")
 
-Triggered by: {causal}
-Manifests as: {strategies}
-User impact: {consequences}
+            def _render_judge_prompts(judge_prompt: str | None = None):
+                judge_output_container.clear()
+                with judge_output_container:
+                    # Binary judges from paradigm model (always shown)
+                    phenomena = paradigm.get("phenomenon", [])
+                    targets = phenomena if phenomena else [c["name"] for c in codebook[:5]]
+                    causal = ", ".join(paradigm.get("causal_conditions", [])) or "Unknown"
+                    strategies_text = ", ".join(paradigm.get("strategies", [])) or "Unknown"
+                    consequences_text = ", ".join(paradigm.get("consequences", [])) or "Unknown"
 
-<response>{{response}}</response>
+                    if targets:
+                        ui.label("Binary Judges (from Paradigm Model)").style(
+                            "font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); "
+                            "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+                        )
+                        for target in targets:
+                            prompt = (
+                                f"You are evaluating whether a response exhibits {target.upper()}.\n\n"
+                                f"Triggered by: {causal}\n"
+                                f"Manifests as: {strategies_text}\n"
+                                f"User impact: {consequences_text}\n\n"
+                                f"<response>{{response}}</response>\n\n"
+                                f"Think step by step. Score TRUE if the response exhibits this pattern. Score FALSE otherwise."
+                            )
+                            with ui.element("div").style(
+                                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                                "border-radius: var(--radius-lg); padding: 12px; margin-bottom: 10px"
+                            ):
+                                with ui.row().classes("items-center justify-between w-full"):
+                                    ui.label(f"Judge: {target}").style(
+                                        "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
+                                    )
+                                    ui.button("Copy", icon="content_copy", on_click=lambda _, p=prompt: ui.run_javascript(
+                                        f"navigator.clipboard.writeText({json.dumps(p)})"
+                                    )).props("flat size=sm").style("color: var(--text-tertiary)")
+                                with ui.element("pre").style(
+                                    "background: var(--bg-base); border: 1px solid var(--border-subtle); "
+                                    "border-radius: var(--radius-md); padding: 10px; margin-top: 8px; "
+                                    "font-size: 0.7rem; color: var(--text-secondary); white-space: pre-wrap; "
+                                    "line-height: 1.5; max-height: 180px; overflow-y: auto; font-family: monospace"
+                                ):
+                                    ui.label(prompt)
 
-Think step by step. Score TRUE if the response exhibits this pattern. Score FALSE otherwise."""
-
-            phenomena = paradigm.get('phenomenon', [])
-            targets = phenomena if phenomena else [c['name'] for c in codebook[:5]]
-            causal = ', '.join(paradigm.get('causal_conditions', [])) or 'Unknown'
-            strategies_text = ', '.join(paradigm.get('strategies', [])) or 'Unknown'
-            consequences_text = ', '.join(paradigm.get('consequences', [])) or 'Unknown'
-
-            if not targets and not codebook:
-                ui.label('Complete Tag Failures and Map Root Causes first.').style("color: var(--text-muted); font-size: 0.8rem")
-            else:
-                for target in targets:
-                    prompt = _gen_judge(target, causal, strategies_text, consequences_text)
-                    with ui.element("div").style(
-                        "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-                        "border-radius: var(--radius-lg); padding: 12px; margin-bottom: 10px"
-                    ):
-                        with ui.row().classes("items-center justify-between w-full"):
-                            ui.label(f'Judge: {target}').style("font-weight: 600; font-size: 0.85rem; color: var(--text-primary)")
-                            ui.button('Copy', icon='content_copy', on_click=lambda _, p=prompt: ui.run_javascript(
-                                f'navigator.clipboard.writeText({json.dumps(p)})'
-                            )).props('flat size=sm').style("color: var(--text-tertiary)")
-                        with ui.element("pre").style(
-                            "background: var(--bg-base); border: 1px solid var(--border-subtle); "
-                            "border-radius: var(--radius-md); padding: 10px; margin-top: 8px; "
-                            "font-size: 0.7rem; color: var(--text-secondary); white-space: pre-wrap; "
-                            "line-height: 1.5; max-height: 180px; overflow-y: auto; font-family: monospace"
+                    # Full rubric-based judge (if generated)
+                    if judge_prompt:
+                        ui.separator().style("opacity: 0.1; margin: 16px 0")
+                        ui.label("Full Rubric Judge (grounded in error analysis)").style(
+                            "font-size: 0.72rem; font-weight: 600; color: var(--green-bright); "
+                            "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+                        )
+                        with ui.element("div").style(
+                            "background: var(--bg-surface-1); border: 1px solid var(--green); "
+                            "border-radius: var(--radius-lg); padding: 12px"
                         ):
-                            ui.label(prompt)
+                            with ui.row().classes("items-center justify-between w-full"):
+                                ui.label("Multi-criterion rubric judge").style(
+                                    "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
+                                )
+                                ui.button("Copy", icon="content_copy", on_click=lambda: ui.run_javascript(
+                                    f"navigator.clipboard.writeText({json.dumps(judge_prompt)})"
+                                )).props("flat size=sm").style("color: var(--text-tertiary)")
+                            with ui.scroll_area().style("max-height: 300px; width: 100%; margin-top: 8px"):
+                                with ui.element("pre").style(
+                                    "font-size: 0.7rem; color: var(--text-secondary); white-space: pre-wrap; "
+                                    "line-height: 1.5; font-family: monospace"
+                                ):
+                                    ui.label(judge_prompt)
 
-        # "So What?" Summary
+            _render_judge_prompts(storage.get("_generated_judge_prompt"))
+
+            async def generate_full_judge():
+                if not codebook:
+                    ui.notify("Complete Tag Failures step first — need error codes", type="warning")
+                    return
+                try:
+                    from grounded_evals.axial_coding.mapper import map_errors_to_categories
+                    from grounded_evals.judge_builder.rubric import generate_rubric
+                    from grounded_evals.judge_builder.prompt_gen import generate_judge_prompt
+                    from grounded_evals.models.core import Code, CodeType
+
+                    gen_btn.props("loading")
+                    ui.notify("Mapping errors to dimensions...", type="info")
+
+                    codes = [Code(label=c["name"], definition=c.get("definition", ""), code_type=CodeType.DESCRIPTIVE) for c in codebook]
+                    mappings = await asyncio.to_thread(map_errors_to_categories, codes)
+                    if not mappings:
+                        ui.notify("Could not map error codes — check LLM connectivity", type="warning")
+                        gen_btn.props(remove="loading")
+                        return
+
+                    rubric = generate_rubric(mappings)
+                    judge_prompt = generate_judge_prompt(rubric, agent_name, agent_description)
+                    storage["_generated_judge_prompt"] = judge_prompt
+
+                    ui.notify("Full judge prompt generated ✓", type="positive")
+                    _render_judge_prompts(judge_prompt)
+                except Exception as e:
+                    ui.notify(f"Error generating judge: {e}", type="negative")
+                finally:
+                    gen_btn.props(remove="loading")
+
+            gen_btn = ui.button(
+                "Generate Full Rubric Judge (AI)", icon="auto_fix_high", on_click=generate_full_judge
+            ).props("size=sm").style(
+                "margin-top: 12px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+            )
+
+        # ── Calibration ────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label('"So What?" — Executive Summary').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px")
+            ui.label("Judge Calibration").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label(
+                "Score a sample of responses yourself, then run the judge — see how well they agree."
+            ).style("font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px")
 
+            # Pick dimensions to score (from codebook or fixed set)
+            dimensions = list({c["name"] for c in codebook}) if codebook else ["accuracy", "completeness", "tone"]
+            dimensions = dimensions[:5]  # cap at 5
+
+            calibration_container = ui.column().classes("w-full")
+
+            def render_calibration():
+                calibration_container.clear()
+                with calibration_container:
+                    sample = annotations[:10] if len(annotations) >= 3 else annotations
+                    if not sample:
+                        ui.label("No annotated responses yet — complete the Eval step first.").style(
+                            "font-size: 0.8rem; color: var(--text-muted)"
+                        )
+                        return
+
+                    judge_prompt = storage.get("_generated_judge_prompt")
+                    if not judge_prompt:
+                        ui.label("Generate a Full Rubric Judge above first.").style(
+                            "font-size: 0.8rem; color: var(--text-muted)"
+                        )
+                        return
+
+                    manual_scores_store: list[dict] = storage.setdefault("_calibration_manual", [{}] * len(sample))
+                    judge_scores_store: list[dict] = storage.get("_calibration_judge", [])
+
+                    ui.label(f"Score these {len(sample)} responses (1-5 per dimension):").style(
+                        "font-size: 0.82rem; font-weight: 500; color: var(--text-primary); margin-bottom: 8px"
+                    )
+
+                    for i, ann in enumerate(sample):
+                        with ui.element("div").style(
+                            "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                            "border-radius: var(--radius-lg); padding: 12px; margin-bottom: 8px"
+                        ):
+                            ui.label(f"Q{i+1}: {ann.get('query', '')[:80]}...").style(
+                                "font-size: 0.78rem; font-weight: 500; color: var(--text-primary); margin-bottom: 4px"
+                            )
+                            ui.label(ann.get("response", "")[:120] + "...").style(
+                                "font-size: 0.72rem; color: var(--text-tertiary); margin-bottom: 8px"
+                            )
+                            row = ui.row().classes("gap-3 flex-wrap")
+                            with row:
+                                for dim in dimensions:
+                                    existing_val = (manual_scores_store[i] or {}).get(dim, 3) if i < len(manual_scores_store) else 3
+
+                                    def make_score_handler(idx=i, d=dim):
+                                        def on_change(e):
+                                            while len(manual_scores_store) <= idx:
+                                                manual_scores_store.append({})
+                                            if manual_scores_store[idx] is None:
+                                                manual_scores_store[idx] = {}
+                                            manual_scores_store[idx][d] = int(e.value)
+                                            storage["_calibration_manual"] = manual_scores_store
+                                        return on_change
+
+                                    with ui.column().style("gap: 2px"):
+                                        ui.label(dim[:12]).style("font-size: 0.65rem; color: var(--text-tertiary)")
+                                        ui.select(
+                                            options={1: "1", 2: "2", 3: "3", 4: "4", 5: "5"},
+                                            value=existing_val,
+                                            on_change=make_score_handler(),
+                                        ).props("dense dark outlined").style("width: 60px")
+
+                    cal_result_container = ui.column().classes("w-full")
+
+                    async def run_calibration():
+                        judge_prompt_text = storage.get("_generated_judge_prompt", "")
+                        if not judge_prompt_text:
+                            ui.notify("Generate a judge first", type="warning")
+                            return
+
+                        manual = storage.get("_calibration_manual", [])
+                        if not any(m for m in manual):
+                            ui.notify("Score at least one response first", type="warning")
+                            return
+
+                        cal_btn.props("loading")
+                        try:
+                            from grounded_evals.llm.client import get_default_client, get_model_id
+                            from grounded_evals.judge_builder.calibrate import calibrate
+
+                            client = get_default_client()
+                            model_id = get_model_id()
+                            judge_scores: list[dict] = []
+
+                            sample_list = annotations[:10] if len(annotations) >= 3 else annotations
+                            for ann in sample_list:
+                                prompt = f"{judge_prompt_text}\n\n<query>{ann.get('query','')}</query>\n<response>{ann.get('response','')}</response>"
+                                resp = await asyncio.to_thread(
+                                    client.messages.create,
+                                    model=model_id,
+                                    max_tokens=512,
+                                    messages=[{"role": "user", "content": prompt}],
+                                )
+                                text = resp.content[0].text
+                                # Try to extract JSON scores from judge response
+                                import re
+                                score_match = re.search(r'"scores"\s*:\s*\{([^}]+)\}', text)
+                                scores_dict: dict[str, int] = {}
+                                if score_match:
+                                    for m in re.finditer(r'"(\w+)"\s*:\s*(\d)', score_match.group(0)):
+                                        scores_dict[m.group(1)] = int(m.group(2))
+                                # Fallback: if judge says pass/fail, map to 4/2
+                                if not scores_dict:
+                                    score_val = 4 if "true" in text.lower() or "pass" in text.lower() else 2
+                                    scores_dict = {d: score_val for d in dimensions}
+                                judge_scores.append(scores_dict)
+
+                            storage["_calibration_judge"] = judge_scores
+                            result = calibrate(
+                                [m for m in manual if m],
+                                judge_scores,
+                            )
+
+                            cal_result_container.clear()
+                            with cal_result_container:
+                                color = "var(--green-bright)" if result.agreement_score >= 0.85 else (
+                                    "var(--yellow)" if result.agreement_score >= 0.7 else "var(--red)"
+                                )
+                                with ui.element("div").style(
+                                    f"background: var(--bg-surface-2); border: 1px solid {color}; "
+                                    f"border-radius: var(--radius-lg); padding: 14px; margin-top: 12px"
+                                ):
+                                    ui.label(f"Agreement: {result.agreement_score:.0%}").style(
+                                        f"font-size: 1.1rem; font-weight: 700; color: {color}"
+                                    )
+                                    ui.label(result.recommendation).style(
+                                        "font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px"
+                                    )
+                                    if result.disagreements:
+                                        ui.label("Disagreements:").style(
+                                            "font-size: 0.72rem; color: var(--text-tertiary); margin-top: 8px; font-weight: 600"
+                                        )
+                                        for d in result.disagreements[:5]:
+                                            ui.label(f"• {d}").style("font-size: 0.72rem; color: var(--red)")
+
+                        except Exception as e:
+                            ui.notify(f"Calibration error: {e}", type="negative")
+                        finally:
+                            cal_btn.props(remove="loading")
+
+                    cal_btn = ui.button(
+                        "Run Calibration", icon="balance", on_click=run_calibration
+                    ).props("size=sm").style(
+                        "margin-top: 12px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+                    )
+
+                    # Show previous result if available
+                    prev_manual = storage.get("_calibration_manual")
+                    prev_judge = storage.get("_calibration_judge")
+                    if prev_manual and prev_judge:
+                        from grounded_evals.judge_builder.calibrate import calibrate
+                        try:
+                            result = calibrate([m for m in prev_manual if m], prev_judge)
+                            with cal_result_container:
+                                color = "var(--green-bright)" if result.agreement_score >= 0.85 else (
+                                    "var(--yellow)" if result.agreement_score >= 0.7 else "var(--red)"
+                                )
+                                with ui.element("div").style(
+                                    f"background: var(--bg-surface-2); border: 1px solid {color}; "
+                                    f"border-radius: var(--radius-lg); padding: 14px; margin-top: 12px"
+                                ):
+                                    ui.label(f"Last calibration: {result.agreement_score:.0%} agreement").style(
+                                        f"font-size: 0.9rem; font-weight: 600; color: {color}"
+                                    )
+                                    ui.label(result.recommendation).style(
+                                        "font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px"
+                                    )
+                        except Exception:
+                            pass
+
+            render_calibration()
+
+        # ── "So What?" Summary ────────────────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label('"So What?" — Executive Summary').style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+            )
             if total:
                 pass_rate = correct / total * 100
-                ui.label(f'Your agent passes {pass_rate:.0f}% of test cases ({correct}/{total} correct).').style(
+                ui.label(f"Your agent passes {pass_rate:.0f}% of test cases ({correct}/{total} correct).").style(
                     "font-size: 0.88rem; font-weight: 500; color: var(--text-primary)"
                 )
                 if incorrect:
-                    ui.label(f'⚠️ {incorrect} responses are incorrect ({incorrect/total*100:.0f}%).').style(
+                    ui.label(f"⚠️ {incorrect} responses are incorrect ({incorrect/total*100:.0f}%).").style(
                         "font-size: 0.82rem; color: var(--red); margin-top: 4px"
                     )
-            if codebook:
-                top_codes = sorted(codebook, key=lambda c: c.get('frequency', c.get('count', 0)), reverse=True)[:3]
-                if top_codes:
-                    names = ', '.join(c['name'] for c in top_codes)
-                    ui.label(f'Top failure types: {names}').style("font-size: 0.82rem; color: var(--text-secondary); margin-top: 6px")
-            if paradigm.get('causal_conditions'):
-                causes = paradigm['causal_conditions']
-                cause_text = ', '.join(causes) if isinstance(causes[0], str) else ', '.join(c.get('name', '') for c in causes)
-                ui.label(f'Root causes: {cause_text}').style("font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px")
-                ui.label('→ Fixing these would address multiple failure patterns.').style(
+            if patterns:
+                top = patterns[:3]
+                names = ", ".join(p["name"] for p in top)
+                ui.label(f"Top failure patterns: {names}").style(
+                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 6px"
+                )
+            if paradigm.get("causal_conditions"):
+                causes = paradigm["causal_conditions"]
+                cause_text = ", ".join(causes) if isinstance(causes[0], str) else ", ".join(c.get("name", "") for c in causes)
+                ui.label(f"Root causes: {cause_text}").style(
+                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px"
+                )
+                ui.label("→ Fixing these would address multiple failure patterns.").style(
                     "font-size: 0.8rem; color: var(--green-bright); font-weight: 500; margin-top: 2px"
                 )
             if not annotations:
-                ui.label('Complete annotations to generate summary.').style("color: var(--text-muted); font-size: 0.8rem")
+                ui.label("Complete annotations to generate summary.").style(
+                    "color: var(--text-muted); font-size: 0.8rem"
+                )
 
-        # Exports
+        # ── Exports ────────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label('Export').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px")
-            with ui.row().classes('gap-2 flex-wrap'):
+            ui.label("Export").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+            )
+            with ui.row().classes("gap-2 flex-wrap"):
                 def download_golden_csv():
                     buf = io.StringIO()
                     writer = csv.writer(buf)
-                    writer.writerow(['query'])
+                    writer.writerow(["query", "category", "expected_behavior"])
                     for p in golden_prompts:
-                        writer.writerow([p if isinstance(p, str) else p.get('query', '')])
-                    ui.download(buf.getvalue().encode(), 'golden_queries.csv')
+                        if isinstance(p, str):
+                            writer.writerow([p, "", ""])
+                        else:
+                            writer.writerow([
+                                p.get("prompt_text", ""),
+                                p.get("rationale", ""),
+                                p.get("expected_behavior", ""),
+                            ])
+                    ui.download(buf.getvalue().encode(), "golden_queries.csv")
 
                 def download_codebook():
-                    ui.download(json.dumps(codebook, indent=2).encode(), 'codebook.json')
+                    ui.download(json.dumps(codebook, indent=2).encode(), "codebook.json")
+
+                def download_judge():
+                    prompt = storage.get("_generated_judge_prompt", "")
+                    if not prompt:
+                        ui.notify("Generate a judge first", type="warning")
+                        return
+                    ui.download(prompt.encode(), "judge_prompt.txt")
 
                 def download_full_report():
                     report = {
-                        'agent': agent_name, 'date': date.today().isoformat(),
-                        'total_annotations': total, 'correct': correct, 'partial': partial, 'incorrect': incorrect,
-                        'error_counts': error_counts, 'codebook': codebook, 'annotations': annotations,
+                        "agent": agent_name,
+                        "date": date.today().isoformat(),
+                        "total_annotations": total,
+                        "correct": correct,
+                        "partial": partial,
+                        "incorrect": incorrect,
+                        "failure_patterns": patterns,
+                        "error_counts": all_error_counts if "all_error_counts" in dir() else error_counts,
+                        "codebook": codebook,
+                        "annotations": annotations,
+                        "paradigm_model": paradigm,
+                        "judge_prompt": storage.get("_generated_judge_prompt", ""),
                     }
-                    ui.download(json.dumps(report, indent=2).encode(), 'full_report.json')
+                    ui.download(json.dumps(report, indent=2).encode(), "full_report.json")
 
-                ui.button('Golden Queries (CSV)', on_click=download_golden_csv, icon='download').props('outline size=sm dark')
-                ui.button('Codebook (JSON)', on_click=download_codebook, icon='download').props('outline size=sm dark')
-                ui.button('Full Report (JSON)', on_click=download_full_report, icon='download').props('outline size=sm dark')
+                ui.button("Golden Queries (CSV)", on_click=download_golden_csv, icon="download").props("outline size=sm dark")
+                ui.button("Codebook (JSON)", on_click=download_codebook, icon="download").props("outline size=sm dark")
+                ui.button("Judge Prompt (TXT)", on_click=download_judge, icon="download").props("outline size=sm dark")
+                ui.button("Full Report (JSON)", on_click=download_full_report, icon="download").props("outline size=sm dark")
