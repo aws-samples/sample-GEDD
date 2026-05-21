@@ -1,4 +1,5 @@
-# GEDD — Grounded Eval-Driven Development<img width="1231" height="739" alt="Screenshot 2026-05-15 at 12 48 05 PM" src="https://github.com/user-attachments/assets/cca8f835-93c2-4f95-816e-0f87b6d11a73" />
+# GEDD — Grounded Eval-Driven Development <img width="1176" height="710" alt="Screenshot 2026-05-21 at 11 21 21 AM" src="https://github.com/user-attachments/assets/6cbd262f-6158-41d4-898e-6ad98b4c668a" />
+
 
 
 **Grounded Eval-Driven Development (GEDD)** is a problem-space framework for AI evaluation — purpose-built for product managers and domain experts who need to curate golden datasets for their AI products. It applies the same discipline you already use in product discovery (observe → understand → validate → build) to the problem of evaluating AI agents. Using qualitative research techniques from social science (Open Coding, Axial Coding, and the Paradigm Model), GEDD keeps you in the problem space — by observing real agent behavior, inductively coding failure patterns from data, and mapping the causal relationships that explain why your agent fails under specific conditions.
