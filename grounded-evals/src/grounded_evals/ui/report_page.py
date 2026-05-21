@@ -531,6 +531,29 @@ def report_page():
                             ])
                     ui.download(buf.getvalue().encode(), "golden_queries.csv")
 
+                def download_golden_jsonl():
+                    lines = []
+                    for p in golden_prompts:
+                        if isinstance(p, dict):
+                            lines.append(json.dumps({
+                                "prompt": p.get("prompt_text", ""),
+                                "system_prompt": system_prompt,
+                                "category": p.get("rationale", ""),
+                                "expected_behavior": p.get("expected_behavior", ""),
+                            }))
+                    for a in annotations:
+                        lines.append(json.dumps({
+                            "prompt": a.get("query", ""),
+                            "response": a.get("response", ""),
+                            "annotation": a.get("annotation", ""),
+                            "model": a.get("model", ""),
+                            "error_code": a.get("error_code", ""),
+                        }))
+                    if not lines:
+                        ui.notify("No data to export yet", type="warning")
+                        return
+                    ui.download("\n".join(lines).encode(), "golden_dataset.jsonl")
+
                 def download_codebook():
                     ui.download(json.dumps(codebook, indent=2).encode(), "codebook.json")
 
@@ -559,6 +582,7 @@ def report_page():
                     ui.download(json.dumps(report, indent=2).encode(), "full_report.json")
 
                 ui.button("Golden Queries (CSV)", on_click=download_golden_csv, icon="download").props("outline size=sm dark")
+                ui.button("Golden Dataset (JSONL)", on_click=download_golden_jsonl, icon="download").props("outline size=sm dark")
                 ui.button("Codebook (JSON)", on_click=download_codebook, icon="download").props("outline size=sm dark")
                 ui.button("Judge Prompt (TXT)", on_click=download_judge, icon="download").props("outline size=sm dark")
                 ui.button("Full Report (JSON)", on_click=download_full_report, icon="download").props("outline size=sm dark")

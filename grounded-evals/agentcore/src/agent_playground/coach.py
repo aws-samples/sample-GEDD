@@ -1,4 +1,15 @@
-"""Coach agent — runs the guided conversation with tool loop."""
+"""Coach agent — runs the guided conversation with tool loop.
+
+IMPORTANT: This file is deployed to AWS AgentCore as a standalone package and
+cannot import from grounded_evals at runtime. However, during local development
+(when grounded_evals is installed), the SYSTEM_PROMPT and TOOLS are imported from
+the canonical source so both stay in sync automatically. The local definitions
+below serve as the AgentCore-runtime fallback only.
+
+To sync manually when grounded_evals is not installed:
+  python scripts/sync_agentcore_coach.py   (if it exists)
+or copy SYSTEM_PROMPT / TOOLS from grounded_evals/agent/prompt.py and tools.py.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +19,14 @@ from uuid import uuid4
 
 from anthropic import AnthropicBedrock
 from pydantic import BaseModel, Field
+
+# Prefer the canonical definitions from the main package when available.
+try:
+    from grounded_evals.agent.prompt import SYSTEM_PROMPT as _SYSTEM_PROMPT  # type: ignore[import]
+    from grounded_evals.agent.tools import TOOLS as _TOOLS  # type: ignore[import]
+    _USE_SHARED = True
+except ImportError:
+    _USE_SHARED = False
 
 
 class Capability(BaseModel):
@@ -220,6 +239,11 @@ TOOLS = [
         },
     },
 ]
+
+# Apply shared definitions if grounded_evals is installed
+if _USE_SHARED:
+    SYSTEM_PROMPT = _SYSTEM_PROMPT  # noqa: F811
+    TOOLS = _TOOLS  # noqa: F811
 
 
 def _get_state_block(state: CoachState) -> str:

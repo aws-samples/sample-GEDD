@@ -14,6 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from grounded_evals.agent import StateBundle, run_agent_turn
 from grounded_evals.agentcore_client import get_agentcore_client
 from grounded_evals.guide.session import Session
+from grounded_evals.ui.layout import BRAND_CSS
 
 # Import new pages (registers their @ui.page routes)
 import grounded_evals.ui.home_page  # noqa: F401
@@ -71,7 +72,7 @@ app.add_middleware(AuthMiddleware)
 
 @ui.page("/login")
 def login_page():
-    ui.add_head_html(f"<style>{CUSTOM_CSS}</style>")
+    ui.add_head_html(f"<style>{BRAND_CSS}</style>")
 
     def try_login():
         if _cognito_auth(email.value, password.value):
@@ -125,55 +126,6 @@ def _save_user_session(session: Session) -> None:
     app.storage.user["session_data"] = session.model_dump(mode="json")
 
 
-CUSTOM_CSS = """
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-:root {
-  --bg-base: #08090a; --bg-surface-1: #0f1011; --bg-surface-2: #141516; --bg-surface-3: #191a1b; --bg-hover: #232326;
-  --border-subtle: rgba(255,255,255,0.06); --border-default: rgba(255,255,255,0.09); --border-strong: rgba(255,255,255,0.14);
-  --text-primary: #f7f8f8; --text-secondary: #b4b8c0; --text-tertiary: #6e737b; --text-muted: #4a4e55;
-  --accent: #5e6ad2; --accent-bright: #828fff; --accent-tint: rgba(94,106,210,0.12);
-  --green: #27a644; --green-bright: #4ade80; --green-tint: rgba(39,166,68,0.12);
-  --yellow: #f0bf00; --yellow-tint: rgba(240,191,0,0.1);
-  --red: #eb5757; --red-tint: rgba(235,87,87,0.1);
-}
-body { font-family: 'Inter', -apple-system, sans-serif !important; background: var(--bg-base) !important; color: var(--text-primary) !important; font-size: 0.875rem; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; }
-.q-page, .q-layout, .q-page-container, .nicegui-content { background: var(--bg-base) !important; color: var(--text-primary) !important; }
-.q-card { background: var(--bg-surface-2) !important; color: var(--text-primary) !important; border: 1px solid var(--border-subtle) !important; box-shadow: none !important; }
-.q-tab { color: var(--text-tertiary) !important; }
-.q-tab--active { color: var(--accent-bright) !important; }
-.q-tab-panel { background: transparent !important; }
-.q-separator { background: var(--border-subtle) !important; }
-.q-field__control { background: var(--bg-surface-1) !important; color: var(--text-primary) !important; }
-.q-field__label, .q-field__native, .q-field__input { color: var(--text-primary) !important; }
-::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 99px; }
-.brand-title { font-size: 1.2rem; font-weight: 700; color: var(--text-primary); }
-.brand-subtitle { font-size: 0.78rem; color: var(--text-tertiary); }
-.chat-card { background: var(--bg-surface-2); border-radius: 12px; border: 1px solid var(--border-subtle); }
-.msg-user { background: var(--accent-tint); border: 1px solid rgba(94,106,210,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; color: var(--text-primary); }
-.msg-ai { background: var(--bg-surface-1); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--accent); color: var(--text-secondary); }
-.msg-ai strong { color: var(--text-primary); }
-.msg-error { background: var(--red-tint); border: 1px solid rgba(235,87,87,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--red); color: var(--text-secondary); }
-.input-box { border-radius: 10px !important; background: var(--bg-surface-1) !important; border: 1px solid var(--border-default) !important; font-size: 0.88rem !important; color: var(--text-primary) !important; transition: border-color 150ms ease !important; }
-.input-box:focus-within { border-color: var(--accent) !important; }
-.send-btn { background: var(--accent) !important; color: white !important; transition: opacity 150ms ease !important; }
-.send-btn:hover { opacity: 0.85 !important; }
-.progress-track { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; margin-bottom: 1rem; background: var(--bg-surface-2); border-radius: 10px; border: 1px solid var(--border-subtle); }
-.progress-dot { display: flex; flex-direction: column; align-items: center; flex: 1; }
-.dot-circle { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.72rem; font-weight: 600; background: var(--bg-hover); color: var(--text-muted); transition: all 0.3s ease; }
-.progress-dot.active .dot-circle { background: var(--green-tint); color: var(--green-bright); }
-.progress-dot.current .dot-circle { background: var(--accent); color: white; box-shadow: 0 0 12px rgba(94,106,210,0.4); }
-.dot-label { font-size: 0.6rem; color: var(--text-muted); margin-top: 4px; font-weight: 500; }
-.progress-dot.active .dot-label { color: var(--green-bright); }
-.progress-dot.current .dot-label { color: var(--accent-bright); font-weight: 600; }
-.sidebar-panel { width: 320px; min-width: 320px; padding: 1.25rem 1rem; background: var(--bg-surface-2); border-radius: 12px; border: 1px solid var(--border-subtle); height: fit-content; position: sticky; top: 1rem; max-height: 90vh; overflow-y: auto; }
-.sidebar-section { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border-subtle); }
-.sidebar-section:last-child { border-bottom: none; }
-.sidebar-title { font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-.sidebar-value { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
-.sidebar-detail { font-size: 0.75rem; color: var(--text-secondary); line-height: 1.4; }
-.sidebar-empty { font-size: 0.75rem; color: var(--text-muted); }
-.annotation-correct { color: var(--green-bright); } .annotation-partial { color: var(--yellow); } .annotation-incorrect { color: var(--red); }
-"""
 
 USE_AGENTCORE = bool(os.environ.get("AGENTCORE_AGENT_ID") or os.environ.get("AGENTCORE_AGENT_ARN"))
 _agentcore = get_agentcore_client()
@@ -250,7 +202,7 @@ def _apply_agentcore_state(updated_state: dict) -> None:
 
 @ui.page("/coach")
 def main_page() -> None:
-    ui.add_head_html(f"<style>{CUSTOM_CSS}</style>")
+    ui.add_head_html(f"<style>{BRAND_CSS}</style>")
 
     s = _user_state()
     session = _user_session()
@@ -285,8 +237,8 @@ def main_page() -> None:
 
         def refresh_progress():
             progress_container.clear()
-            step = min(_user_state()["current_step"], 3)
-            steps = ["Define Agent", "System Prompt", "Golden Queries"]
+            step = min(_user_state()["current_step"], 4)
+            steps = ["Define Agent", "System Prompt", "Golden Queries", "Error Analysis"]
             with progress_container:
                 ui.html(
                     '<div class="progress-track">'
@@ -365,6 +317,23 @@ def main_page() -> None:
                     writer.writerow([p.prompt_text, p.rationale, p.expected_behavior, p.property_values.get("dimensions", "")])
                 ui.download(output.getvalue().encode(), "golden_queries.csv")
 
+            def _download_queries_jsonl():
+                cur = _user_session()
+                if not cur.golden_prompts:
+                    ui.notify("No golden queries yet", type="warning")
+                    return
+                sp = cur.agent_spec.system_prompt or ""
+                lines = [
+                    json.dumps({
+                        "prompt": p.prompt_text,
+                        "system_prompt": sp,
+                        "category": p.rationale,
+                        "expected_behavior": p.expected_behavior,
+                    })
+                    for p in cur.golden_prompts
+                ]
+                ui.download("\n".join(lines).encode(), "golden_queries.jsonl")
+
             def _export_session():
                 """Serialize all user state to a JSON file for persistence."""
                 cur_s = _user_state()
@@ -403,11 +372,49 @@ def main_page() -> None:
                     "accept=.json flat dense"
                 ).style("color: var(--text-tertiary); font-size: 0.8rem")
 
-            with ui.row().classes("w-full justify-center gap-sm").style("margin-top: 8px"):
+            with ui.row().classes("w-full justify-center gap-sm flex-wrap").style("margin-top: 8px"):
                 ui.button("System Prompt", icon="download", on_click=_download_system_prompt).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
-                ui.button("Golden Queries (CSV)", icon="download", on_click=_download_queries_csv).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Queries (CSV)", icon="download", on_click=_download_queries_csv).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Queries (JSONL)", icon="download", on_click=_download_queries_jsonl).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Export Session", icon="save", on_click=_export_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Import Session", icon="upload_file", on_click=_import_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+
+        # A/B prompt variant creator
+        with ui.expansion("Create Prompt Variant (A/B)", icon="science").classes("w-full").style(
+            "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "
+            "border: 1px solid var(--border-subtle); color: var(--text-primary)"
+        ):
+            ui.label("Save a named version of the system prompt to compare against other variants in the Eval tab.").style(
+                "font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px"
+            )
+            with ui.row().classes("w-full gap-2 items-end"):
+                variant_name_input = ui.input(label="Variant name", placeholder='e.g. "B — more concise"').props("dense outlined dark").style("width: 180px")
+                variant_prompt_input = ui.textarea(label="Prompt text (leave blank to copy current)").props("dense outlined dark").classes("flex-grow").style("font-size: 0.78rem")
+
+            def save_variant():
+                name = variant_name_input.value.strip()
+                if not name:
+                    ui.notify("Enter a variant name", type="warning")
+                    return
+                text = variant_prompt_input.value.strip() or _user_session().agent_spec.system_prompt
+                if not text:
+                    ui.notify("No system prompt defined yet", type="warning")
+                    return
+                cur_s = _user_state()
+                variants = cur_s.setdefault("prompt_variants", [])
+                for v in variants:
+                    if v["name"] == name:
+                        v["prompt"] = text
+                        ui.notify(f"Variant '{name}' updated ✓", type="positive")
+                        return
+                variants.append({"name": name, "prompt": text})
+                ui.notify(f"Variant '{name}' saved ✓ — select it in the Eval tab", type="positive")
+                variant_name_input.set_value("")
+                variant_prompt_input.set_value("")
+
+            ui.button("Save Variant", icon="add", on_click=save_variant).props("size=sm").style(
+                "margin-top: 8px; background: var(--accent); color: white; border-radius: 6px"
+            )
 
         # Golden query table — view, edit, delete
         if session.golden_prompts:
