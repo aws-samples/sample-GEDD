@@ -508,6 +508,158 @@ def report_page():
                     "color: var(--text-muted); font-size: 0.8rem"
                 )
 
+        # ── Prompt Improvement Suggestions ───────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Prompt Improvement Suggestions").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label(
+                "Generate concrete system prompt edits grounded in your failure analysis."
+            ).style("font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px")
+
+            suggestions_container = ui.column().classes("w-full")
+
+            def _render_suggestions(improvements: list[dict]) -> None:
+                suggestions_container.clear()
+                with suggestions_container:
+                    for i, imp in enumerate(improvements):
+                        with ui.element("div").style(
+                            "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                            "border-left: 3px solid var(--accent); border-radius: var(--radius-lg); "
+                            "padding: 14px; margin-bottom: 10px"
+                        ):
+                            with ui.row().classes("items-center justify-between w-full"):
+                                ui.label(imp.get("title", f"Suggestion {i+1}")).style(
+                                    "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
+                                )
+                                ui.html(
+                                    f'<span style="font-size:0.65rem;color:var(--accent-bright);'
+                                    f'background:var(--accent-tint);padding:2px 8px;border-radius:4px">'
+                                    f'fixes: {imp.get("addresses", "")}</span>'
+                                )
+                            ui.label("Add to system prompt:").style(
+                                "font-size: 0.68rem; font-weight: 600; color: var(--text-tertiary); "
+                                "text-transform: uppercase; letter-spacing: 0.04em; margin: 8px 0 4px"
+                            )
+                            prompt_text = imp.get("prompt_addition", "")
+                            with ui.element("pre").style(
+                                "background: var(--bg-base); border: 1px solid var(--border-subtle); "
+                                "border-radius: var(--radius-md); padding: 10px; font-size: 0.72rem; "
+                                "color: var(--text-secondary); white-space: pre-wrap; font-family: monospace; "
+                                "line-height: 1.5"
+                            ):
+                                ui.label(prompt_text)
+                            with ui.row().classes("gap-2").style("margin-top: 8px"):
+                                ui.button("Copy", icon="content_copy", on_click=lambda _, t=prompt_text: ui.run_javascript(
+                                    f"navigator.clipboard.writeText({json.dumps(t)})"
+                                )).props("flat size=sm").style("color: var(--text-tertiary)")
+                                if system_prompt:
+                                    def make_save_variant(title=imp.get("title", f"v{i+2}"), text=prompt_text):
+                                        def save():
+                                            combined = system_prompt.rstrip() + "\n\n" + text
+                                            storage.setdefault("prompt_variants", []).append(
+                                                {"name": title, "prompt": combined}
+                                            )
+                                            ui.notify(f"Saved as variant '{title}' — test it in Eval tab", type="positive")
+                                        return save
+                                    ui.button("Save as Variant", icon="science", on_click=make_save_variant()).props("flat size=sm").style(
+                                        "color: var(--accent-bright)"
+                                    )
+                            ui.label(imp.get("rationale", "")).style(
+                                "font-size: 0.72rem; color: var(--text-tertiary); margin-top: 6px; font-style: italic"
+                            )
+
+            # Show previously generated suggestions if any
+            prev_suggestions = storage.get("_prompt_suggestions", [])
+            if prev_suggestions:
+                _render_suggestions(prev_suggestions)
+
+            async def generate_suggestions():
+                if not system_prompt:
+                    ui.notify("No system prompt defined yet — complete the Coach step first", type="warning")
+                    return
+                if not patterns and not paradigm.get("causal_conditions"):
+                    ui.notify("Complete Tag Failures and Map Root Causes first to ground the suggestions", type="warning")
+                    return
+
+                suggest_btn.props("loading")
+                try:
+                    from grounded_evals.llm.client import get_default_client, get_model_id
+
+                    failures_text = "\n".join(
+                        f"- {p['name']} (frequency: {p['frequency']}, severity: {p['severity']})"
+                        for p in patterns[:6]
+                    ) or "No failure patterns recorded yet."
+
+                    raw_causes = paradigm.get("causal_conditions", [])
+                    causes_text = ", ".join(
+                        c if isinstance(c, str) else c.get("name", "") for c in raw_causes
+                    ) or "unknown"
+                    phenomenon_text = ", ".join(paradigm.get("phenomenon", [])) or "unknown"
+
+                    llm_prompt = f"""You are an AI system prompt engineer. A product manager has analysed their AI agent's failures using Grounded Theory methodology and needs concrete system prompt improvements.
+
+Agent name: {agent_name}
+
+Current system prompt:
+---
+{system_prompt[:2000]}
+---
+
+Top failure patterns observed:
+{failures_text}
+
+Root cause analysis (Axial Coding):
+- Central phenomenon: {phenomenon_text}
+- Causal conditions: {causes_text}
+
+Generate exactly 3 specific, actionable improvements to the system prompt. Each must:
+1. Address a specific observed failure pattern
+2. Provide ready-to-paste prompt text (not vague advice)
+3. Be a targeted addition or replacement — not a full rewrite
+
+Respond in JSON only:
+{{
+  "improvements": [
+    {{
+      "title": "short descriptive name (≤6 words)",
+      "addresses": "which failure pattern this fixes",
+      "prompt_addition": "the exact text to add to the system prompt",
+      "rationale": "one sentence explaining why this will help"
+    }}
+  ]
+}}"""
+
+                    client = get_default_client()
+                    model_id = get_model_id()
+                    response = await asyncio.to_thread(
+                        client.messages.create,
+                        model=model_id,
+                        max_tokens=1500,
+                        messages=[{"role": "user", "content": llm_prompt}],
+                    )
+                    text = response.content[0].text
+                    import re
+                    json_match = re.search(r'\{.*\}', text, re.DOTALL)
+                    if not json_match:
+                        raise ValueError("No JSON in response")
+                    data = json.loads(json_match.group())
+                    improvements = data.get("improvements", [])
+                    storage["_prompt_suggestions"] = improvements
+                    _render_suggestions(improvements)
+                    ui.notify(f"{len(improvements)} suggestions generated ✓", type="positive")
+                except Exception as e:
+                    ui.notify(f"Error generating suggestions: {e}", type="negative")
+                finally:
+                    suggest_btn.props(remove="loading")
+
+            suggest_btn = ui.button(
+                "Generate Suggestions (AI)", icon="auto_fix_high", on_click=generate_suggestions
+            ).props("size=sm").style(
+                "margin-top: 8px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+            )
+
         # ── Exports ────────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
             ui.label("Export").style(

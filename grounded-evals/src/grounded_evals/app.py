@@ -475,6 +475,45 @@ def main_page() -> None:
 
                 refresh_query_table()
 
+            # Category saturation coverage
+            with ui.expansion("Coverage by Category", icon="donut_large").classes("w-full").style(
+                "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "
+                "border: 1px solid var(--border-subtle); color: var(--text-primary)"
+            ):
+                cur = _user_session()
+                by_cat: dict[str, int] = {}
+                for p in cur.golden_prompts:
+                    cat = p.rationale or "uncategorized"
+                    by_cat[cat] = by_cat.get(cat, 0) + 1
+
+                total_cats = len(by_cat)
+                saturated = sum(1 for n in by_cat.values() if n >= 3)
+                overall_pct = saturated / total_cats if total_cats else 0
+
+                with ui.column().classes("w-full").style("padding: 8px 0; gap: 6px"):
+                    ui.linear_progress(value=overall_pct).props("size=6px color=green").style("margin-bottom: 4px")
+                    ui.label(
+                        f"{saturated}/{total_cats} categories saturated (≥3 queries each)"
+                    ).style("font-size: 0.72rem; color: var(--text-tertiary); margin-bottom: 8px")
+
+                    for cat, count in sorted(by_cat.items(), key=lambda x: x[1], reverse=True):
+                        if count >= 3:
+                            dot_color, status_label = "var(--green-bright)", "SATURATED"
+                        elif count >= 2:
+                            dot_color, status_label = "var(--yellow)", "APPROACHING"
+                        else:
+                            dot_color, status_label = "var(--red)", "NEEDS MORE"
+                        ui.html(
+                            f'<div style="display:flex;align-items:center;gap:8px;padding:3px 0">'
+                            f'<span style="width:8px;height:8px;border-radius:50%;background:{dot_color};flex-shrink:0"></span>'
+                            f'<span style="font-size:0.78rem;color:var(--text-primary);flex:1">{cat}</span>'
+                            f'<span style="font-size:0.65rem;font-weight:600;color:{dot_color}">{count} · {status_label}</span>'
+                            f'</div>'
+                        )
+
+                    if not by_cat:
+                        ui.label("No queries yet.").style("font-size: 0.78rem; color: var(--text-muted)")
+
             # Next step nudge
             with ui.element("div").style(
                 "margin-top: 12px; padding: 12px 16px; border-radius: 10px; "
