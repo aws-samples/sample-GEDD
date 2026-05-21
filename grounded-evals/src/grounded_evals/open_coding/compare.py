@@ -86,3 +86,60 @@ def constant_comparison(
         raise RuntimeError(f"constant_comparison: failed to parse LLM response — {e}") from e
 
     return ComparisonResult(**data)
+
+
+class CodeComparisonResult(BaseModel):
+    is_duplicate: bool = False
+    similar_codes: list[str] = Field(default_factory=list)
+    merge_suggestion: str = ""
+    explanation: str = ""
+
+
+CODE_COMPARE_PROMPT = """You are helping a researcher organize error codes from qualitative coding of AI agent failures.
+
+New code being added: "{new_code}"
+
+Existing codes in the codebook:
+{existing_codes}
+
+Determine:
+1. Is the new code essentially a duplicate or very similar in meaning to an existing one?
+2. Which existing codes overlap with it (if any)?
+3. If similar codes exist, suggest a single unified label that captures the meaning of both.
+
+Respond in JSON only:
+{{
+  "is_duplicate": true or false,
+  "similar_codes": ["list of existing codes that overlap"],
+  "merge_suggestion": "unified label if merging makes sense, empty string otherwise",
+  "explanation": "one sentence"
+}}"""
+
+
+def compare_codes(new_code: str, existing_codes: list[str]) -> CodeComparisonResult:
+    """Check if a new error code overlaps semantically with existing codebook entries."""
+    if not existing_codes:
+        return CodeComparisonResult(explanation="First code — unique by definition.")
+
+    client = get_default_client()
+    model_id = get_model_id()
+
+    prompt = CODE_COMPARE_PROMPT.format(
+        new_code=new_code,
+        existing_codes="\n".join(f"- {c}" for c in existing_codes),
+    )
+    message = client.messages.create(
+        model=model_id,
+        max_tokens=256,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    response_text = message.content[0].text
+    try:
+        json_start = response_text.find("{")
+        json_end = response_text.rfind("}") + 1
+        if json_start == -1 or json_end <= json_start:
+            raise ValueError("No JSON object found in response")
+        data = json.loads(response_text[json_start:json_end])
+    except (json.JSONDecodeError, ValueError) as e:
+        raise RuntimeError(f"compare_codes: failed to parse LLM response — {e}") from e
+    return CodeComparisonResult(**data)

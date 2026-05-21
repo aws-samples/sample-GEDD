@@ -1,5 +1,6 @@
 """Tag Failures (Open Coding) Annotation Workbench page."""
 
+import asyncio
 from datetime import datetime
 from uuid import uuid4
 
@@ -290,7 +291,7 @@ def coding_page():
         current_idx['value'] = max(0, min(len(responses) - 1, current_idx['value'] + delta))
         render_left()
 
-    def add_code(name):
+    async def add_code(name):
         if not name or not name.strip():
             return
         name = name.strip()
@@ -312,6 +313,19 @@ def coding_page():
         render_left()
         render_right()
         render_stats()
+
+        # AI constant comparison — run in background, show result as notification
+        if len(existing_names) >= 2:
+            try:
+                from grounded_evals.open_coding.compare import compare_codes
+                result = await asyncio.to_thread(compare_codes, name, existing_names)
+                if result.similar_codes:
+                    msg = f"'{name}' may overlap with: {', '.join(result.similar_codes)}"
+                    if result.merge_suggestion:
+                        msg += f" — consider merging as '{result.merge_suggestion}'"
+                    ui.notify(msg, type='warning', timeout=10000)
+            except Exception:
+                pass  # AI check is best-effort; never block code entry
 
     def _is_similar(a: str, b: str) -> bool:
         """Similarity check using character n-gram overlap."""
