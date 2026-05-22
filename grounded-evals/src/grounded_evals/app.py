@@ -3,9 +3,11 @@
 import asyncio
 import csv
 import difflib
+import html as _html
 import io
 import json
 import os
+import secrets
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
@@ -28,14 +30,22 @@ from grounded_evals.ui.layout import BRAND_CSS
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")
 COGNITO_CLIENT_ID = os.environ.get("COGNITO_CLIENT_ID", "")
 COGNITO_REGION = os.environ.get("AWS_REGION", "us-east-1")
-# Fallback password if Cognito not configured
-ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "playground2024")
+# Fallback password if Cognito not configured — must be set explicitly; no hardcoded default
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 UNRESTRICTED_PATHS = {"/login", "/_nicegui", "/favicon.ico", "/health"}
 
 
 def _cognito_auth(email: str, password: str) -> bool:
     """Authenticate user against Cognito User Pool via SRP."""
     if not COGNITO_USER_POOL_ID or not COGNITO_CLIENT_ID:
+        if not ADMIN_PASSWORD:
+            import warnings
+            warnings.warn(
+                "ADMIN_PASSWORD env var is not set and Cognito is not configured — "
+                "all login attempts will fail. Set ADMIN_PASSWORD to enable access.",
+                stacklevel=2,
+            )
+            return False
         return password == ADMIN_PASSWORD
     import boto3
     client = boto3.client("cognito-idp", region_name=COGNITO_REGION)
@@ -50,7 +60,9 @@ def _cognito_auth(email: str, password: str) -> bool:
         return False
     except client.exceptions.UserNotFoundException:
         return False
-    except Exception:
+    except Exception as e:
+        import warnings
+        warnings.warn(f"Cognito auth error (non-credential): {e}", stacklevel=2)
         return False
 
 
@@ -129,7 +141,14 @@ def _save_user_session(session: Session) -> None:
 
 
 USE_AGENTCORE = bool(os.environ.get("AGENTCORE_AGENT_ID") or os.environ.get("AGENTCORE_AGENT_ARN"))
-_agentcore = get_agentcore_client()
+_agentcore = None  # lazily initialized on first use to avoid startup failures
+
+
+def _get_agentcore():
+    global _agentcore
+    if USE_AGENTCORE and _agentcore is None:
+        _agentcore = get_agentcore_client()
+    return _agentcore
 
 
 def _get_state_bundle() -> StateBundle:
@@ -762,11 +781,12 @@ def main_page() -> None:
             return
         user_input.set_value("")
         with chat_container:
-            ui.html(f'<div class="msg-user">{text}</div>')
+            ui.html(f'<div class="msg-user">{_html.escape(text)}</div>')
         send_btn.props("loading")
 
         try:
-            if USE_AGENTCORE and _agentcore:
+            _agc = _get_agentcore()
+            if USE_AGENTCORE and _agc:
                 from uuid import uuid4
                 session_id = str(uuid4())
                 cur_session = _user_session()
@@ -779,7 +799,7 @@ def main_page() -> None:
                     "prompt_variants": cur_s["prompt_variants"],
                 }
                 coach_resp = await asyncio.to_thread(
-                    _agentcore.invoke_coach, text, session_id, state_dict, messages
+                    _agc.invoke_coach, text, session_id, state_dict, messages
                 )
                 _apply_agentcore_state(coach_resp.updated_state)
                 reply = coach_resp.text
@@ -819,7 +839,7 @@ def run() -> None:
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",
-        storage_secret=os.environ.get("STORAGE_SECRET", "dev-secret-change-me"),
+        storage_secret=os.environ.get("STORAGE_SECRET") or secrets.token_hex(32),
     )
 
 

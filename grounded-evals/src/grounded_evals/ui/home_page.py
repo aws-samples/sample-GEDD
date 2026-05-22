@@ -380,7 +380,7 @@ def home_page():
                 with ui.element("div").classes("workflow-card").on("click", lambda _, p=step["path"]: ui.navigate.to(p)):
                     with ui.row().classes("items-center gap-3 w-full"):
                         ui.icon("check_circle" if is_done else step["icon"]).style(
-                            f"color: {'var(--green-bright)' if is_done else 'var(--green-bright)'}; font-size: 1.2rem"
+                            f"color: {'var(--green-bright)' if is_done else 'var(--accent-bright)'}; font-size: 1.2rem"
                         )
                         with ui.column().style("gap: 1px; flex: 1"):
                             ui.label(step["title"]).style("font-size: 0.9rem; font-weight: 600; color: var(--text-primary)")

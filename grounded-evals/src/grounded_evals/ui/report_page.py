@@ -1163,7 +1163,7 @@ Respond in JSON only:
                 with ui.row().classes("items-center gap-3"):
                     color = 'var(--green-bright)' if simulated_agreement >= 85 else ('var(--yellow)' if simulated_agreement >= 70 else 'var(--red)')
                     ui.label(f"{simulated_agreement}%").style(f"font-size: 1.5rem; font-weight: 700; color: {color}")
-                    ui.label("estimated agreement").style("font-size: 0.78rem; color: var(--text-tertiary)")
+                    ui.label("simulated agreement estimate").style("font-size: 0.78rem; color: var(--text-tertiary)")
                     if simulated_agreement >= 85:
                         ui.badge("Ready to deploy", color='green')
                     else:
@@ -1411,7 +1411,7 @@ Respond in JSON only:
                         "partial": partial,
                         "incorrect": incorrect,
                         "failure_patterns": patterns,
-                        "error_counts": all_error_counts if "all_error_counts" in dir() else error_counts,
+                        "error_counts": all_error_counts,
                         "codebook": codebook,
                         "annotations": annotations,
                         "paradigm_model": paradigm,

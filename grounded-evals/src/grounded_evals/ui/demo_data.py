@@ -79,9 +79,9 @@ DEMO_HYPOTHESES = [
 ]
 
 DEMO_EVAL_HISTORY = [
-    {"timestamp": "2025-04-15T14:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 6, "pass_rate": "25%", "results_snapshot": []},
-    {"timestamp": "2025-05-01T10:30:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "50%", "results_snapshot": []},
-    {"timestamp": "2025-05-15T16:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "75%", "results_snapshot": []},
+    {"timestamp": "2025-04-15T14:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 6, "pass_rate": "25%", "query_verdicts": []},
+    {"timestamp": "2025-05-01T10:30:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "50%", "query_verdicts": []},
+    {"timestamp": "2025-05-15T16:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "75%", "query_verdicts": []},
 ]
 
 

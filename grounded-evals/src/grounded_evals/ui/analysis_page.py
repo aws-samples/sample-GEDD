@@ -165,7 +165,13 @@ def analysis_page():
 
                 codes = [Code(label=c['name'], definition=c.get('definition', ''), code_type=CodeType.DESCRIPTIVE) for c in codebook]
                 ui.notify('Analyzing patterns...', type='info')
-                result = await asyncio.to_thread(build_paradigm_model, codes, [])
+                session_data = app.storage.user.get('session_data', {})
+                try:
+                    from grounded_evals.guide.session import Session as _Session
+                    session_categories = _Session.model_validate(session_data).categories
+                except Exception:
+                    session_categories = []
+                result = await asyncio.to_thread(build_paradigm_model, codes, session_categories)
 
                 model = app.storage.user['paradigm_model']
                 if result and result.phenomenon:
