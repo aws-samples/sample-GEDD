@@ -4,6 +4,10 @@
 
 **Grounded Eval-Driven Development (GEDD)** is a problem-space framework for AI evaluation — purpose-built for product managers and domain experts who need to curate golden datasets for their AI products. It applies the same discipline you already use in product discovery (observe → understand → validate → build) to the problem of evaluating AI agents. Using qualitative research techniques from social science (Open Coding, Axial Coding, and the Paradigm Model), GEDD keeps you in the problem space — by observing real agent behavior, inductively coding failure patterns from data, and mapping the causal relationships that explain why your agent fails under specific conditions.
 
+> **The eval pipeline is the product. The agent is just the thing it produces.**
+
+📖 **Read the why:** [Why Grounded Theory? for reliable AI Agents](https://balachanderkeelapudi.substack.com/p/why-grounded-theory-for-reliable) — the long-form argument behind this repo.
+
 ---
 
 ## The Problem
