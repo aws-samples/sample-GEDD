@@ -469,37 +469,154 @@ def report_page():
 
         # ── Full Judge Pipeline ────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label("LLM-as-Judge Generation").style(
-                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
-                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
-            )
-            ui.label("Generate a grounded judge prompt from your error analysis.").style(
-                "font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px"
-            )
+            # Header row with data provenance badge
+            n_codes = len(codebook)
+            n_anns_coded = len(coding_annotations)
+            phenomena_list = paradigm.get("phenomenon", [])
+            n_phenomena = len(phenomena_list)
+            with ui.row().classes("items-start justify-between w-full").style("margin-bottom: 4px"):
+                with ui.column().style("gap: 2px"):
+                    ui.label("LLM-as-Judge Generation").style(
+                        "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                        "text-transform: uppercase; letter-spacing: 0.04em"
+                    )
+                    ui.label("Automatically build evaluation criteria grounded in your qualitative analysis.").style(
+                        "font-size: 0.78rem; color: var(--text-muted)"
+                    )
+                if n_codes:
+                    ui.html(
+                        f'<span style="font-size:0.65rem;background:var(--bg-surface-1);color:var(--accent-bright);'
+                        f'padding:3px 10px;border-radius:99px;border:1px solid var(--border-subtle);white-space:nowrap">'
+                        f'{n_codes} error codes · {n_anns_coded} annotations</span>'
+                    )
 
+            # ── How this works ────────────────────────────────────────────
+            with ui.element("div").style(
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                "border-radius: 12px; padding: 14px 16px; margin: 12px 0 16px"
+            ):
+                ui.label("HOW THIS WORKS").style(
+                    "font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; "
+                    "color: var(--text-tertiary); margin-bottom: 12px"
+                )
+                # Pipeline steps
+                steps = [
+                    ("1", "Open Coding", "Tag Failures", "You annotated responses and assigned error codes to each failure. "
+                     "These codes emerged from your data — not from a pre-defined list.", n_anns_coded, "responses tagged",
+                     "var(--accent)", bool(n_anns_coded)),
+                    ("2", "Axial Coding", "Root Causes", "Error codes were organized into a Paradigm Model: what causes failures, "
+                     "how they manifest, what context triggers them, and their user impact.", n_phenomena, "dimensions mapped",
+                     "var(--yellow)", bool(n_phenomena)),
+                    ("3", "Binary Judges", "Auto-generated", "Each failure phenomenon from the Paradigm Model becomes a dedicated "
+                     "TRUE/FALSE judge. No LLM calls needed — generated instantly from your research.", n_phenomena or n_codes, "judges ready",
+                     "var(--green-bright)", bool(n_phenomena or n_codes)),
+                    ("4", "Full Rubric Judge", "AI-generated", "All error codes are mapped to standard evaluation dimensions "
+                     "(accuracy, completeness, tone...) to build a scored 1–5 multi-criteria rubric judge.", 8, "dimensions",
+                     "var(--green-bright)", bool(storage.get("_generated_judge_prompt"))),
+                ]
+                with ui.row().classes("w-full items-start").style("gap: 0"):
+                    for i, (num, title, tag, desc, count, count_label, color, done) in enumerate(steps):
+                        with ui.element("div").style("flex: 1; min-width: 0"):
+                            with ui.element("div").style(
+                                f"border-radius: 10px; padding: 10px; "
+                                f"background: {'var(--bg-surface-2)' if done else 'transparent'}; "
+                                f"border: 1px solid {'var(--border-subtle)' if done else 'transparent'}"
+                            ):
+                                with ui.row().classes("items-center gap-2").style("margin-bottom: 4px"):
+                                    ui.html(
+                                        f'<span style="width:18px;height:18px;border-radius:50%;background:{color if done else "var(--bg-surface-2)"};'
+                                        f'color:{"white" if done else "var(--text-muted)"};font-size:0.62rem;font-weight:700;'
+                                        f'display:flex;align-items:center;justify-content:center;flex-shrink:0">{num}</span>'
+                                    )
+                                    ui.label(title).style(
+                                        f"font-size: 0.75rem; font-weight: 600; "
+                                        f"color: {'var(--text-primary)' if done else 'var(--text-muted)'}"
+                                    )
+                                    ui.html(
+                                        f'<span style="font-size:0.55rem;padding:1px 6px;border-radius:99px;'
+                                        f'background:{"var(--green-tint)" if done else "var(--bg-surface-1)"};'
+                                        f'color:{"var(--green-bright)" if done else "var(--text-muted)"};font-weight:600">'
+                                        f'{tag}</span>'
+                                    )
+                                ui.label(desc).style(
+                                    "font-size: 0.7rem; color: var(--text-tertiary); line-height: 1.4; margin-bottom: 6px"
+                                )
+                                if done:
+                                    ui.html(
+                                        f'<span style="font-size:0.65rem;color:{color};font-weight:600">'
+                                        f'✓ {count} {count_label}</span>'
+                                    )
+                                else:
+                                    ui.label("Not started yet").style("font-size: 0.65rem; color: var(--text-muted)")
+                        # Arrow between steps
+                        if i < len(steps) - 1:
+                            ui.html(
+                                '<span style="align-self:center;color:var(--text-muted);font-size:1rem;'
+                                'padding:0 4px;flex-shrink:0">→</span>'
+                            )
+
+            # ── Judge output container ─────────────────────────────────────
             judge_output_container = ui.column().classes("w-full")
 
-            def _render_judge_prompts(judge_prompt: str | None = None):
+            def _render_judge_prompts(judge_prompt: str | None = None, judge_mappings: list | None = None):
                 judge_output_container.clear()
                 with judge_output_container:
-                    # Binary judges from paradigm model (always shown)
                     phenomena = paradigm.get("phenomenon", [])
                     targets = phenomena if phenomena else [c["name"] for c in codebook[:5]]
                     causal = ", ".join(paradigm.get("causal_conditions", [])) or "Unknown"
+                    context_text = ", ".join(paradigm.get("context", [])) or "Unknown"
                     strategies_text = ", ".join(paradigm.get("strategies", [])) or "Unknown"
                     consequences_text = ", ".join(paradigm.get("consequences", [])) or "Unknown"
 
+                    # Build code→annotation count map for data trail
+                    code_ann_count: dict[str, int] = {}
+                    for ca in coding_annotations:
+                        for code in ca.get("codes", []):
+                            code_ann_count[code] = code_ann_count.get(code, 0) + 1
+
+                    # ── Binary Judges ─────────────────────────────────────
                     if targets:
-                        ui.label("Binary Judges (from Paradigm Model)").style(
-                            "font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); "
-                            "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
-                        )
+                        with ui.row().classes("items-center gap-2").style("margin-bottom: 10px"):
+                            ui.label("Binary Judges (from Paradigm Model)").style(
+                                "font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); "
+                                "text-transform: uppercase; letter-spacing: 0.04em"
+                            )
+                            ui.html(
+                                '<span style="font-size:0.62rem;padding:2px 8px;border-radius:99px;'
+                                'background:var(--bg-surface-1);color:var(--text-muted);border:1px solid var(--border-subtle)">'
+                                'TRUE / FALSE · instant · no LLM call</span>'
+                            )
+
+                        with ui.element("div").style(
+                            "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                            "border-radius: 10px; padding: 10px 12px; margin-bottom: 12px; font-size: 0.72rem; "
+                            "color: var(--text-tertiary); line-height: 1.5"
+                        ):
+                            ui.html(
+                                f'Each judge below asks a single yes/no question: <em>"Does this response exhibit this failure pattern?"</em> '
+                                f'They are derived directly from your Paradigm Model — the <strong style="color:var(--text-secondary)">'
+                                f'phenomenon</strong> field names the failure, <strong style="color:var(--text-secondary)">causal conditions</strong> '
+                                f'explain why it happens, and <strong style="color:var(--text-secondary)">consequences</strong> ground the user impact. '
+                                f'Use these as fast binary signals in your automated eval pipeline.'
+                            )
+
                         for target in targets:
+                            # Find related annotations for data trail
+                            related_count = code_ann_count.get(target, 0)
+                            # Also check partial matches (e.g. "Policy Hallucination" in codebook
+                            if not related_count:
+                                for code_name, cnt in code_ann_count.items():
+                                    if target.lower() in code_name.lower() or code_name.lower() in target.lower():
+                                        related_count = cnt
+                                        break
+
                             prompt = (
                                 f"You are evaluating whether a response exhibits {target.upper()}.\n\n"
                                 f"Triggered by: {causal}\n"
+                                f"Context: {context_text}\n"
                                 f"Manifests as: {strategies_text}\n"
                                 f"User impact: {consequences_text}\n\n"
+                                f"<query>{{query}}</query>\n"
                                 f"<response>{{response}}</response>\n\n"
                                 f"Think step by step. Score TRUE if the response exhibits this pattern. Score FALSE otherwise."
                             )
@@ -507,36 +624,128 @@ def report_page():
                                 "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
                                 "border-radius: var(--radius-lg); padding: 12px; margin-bottom: 10px"
                             ):
-                                with ui.row().classes("items-center justify-between w-full"):
-                                    ui.label(f"Judge: {target}").style(
-                                        "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
-                                    )
+                                with ui.row().classes("items-center justify-between w-full").style("margin-bottom: 8px"):
+                                    with ui.row().classes("items-center gap-2"):
+                                        ui.label(f"Judge: {target}").style(
+                                            "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
+                                        )
+                                        if related_count:
+                                            ui.html(
+                                                f'<span style="font-size:0.6rem;padding:2px 7px;border-radius:99px;'
+                                                f'background:var(--accent-tint, rgba(94,106,210,0.12));color:var(--accent-bright);'
+                                                f'border:1px solid rgba(94,106,210,0.2)">'
+                                                f'{related_count} annotated example{"s" if related_count != 1 else ""}</span>'
+                                            )
                                     ui.button("Copy", icon="content_copy", on_click=lambda _, p=prompt: ui.run_javascript(
                                         f"navigator.clipboard.writeText({json.dumps(p)})"
                                     )).props("flat size=sm").style("color: var(--text-tertiary)")
+                                # Data trail: annotation → code → phenomenon → judge
+                                with ui.row().classes("items-center gap-1").style("margin-bottom: 8px"):
+                                    trail_items = [
+                                        (f"{n_anns_coded} annotations", "var(--text-muted)"),
+                                        ("→", "var(--text-muted)"),
+                                        (f"{n_codes} error codes", "var(--text-muted)"),
+                                        ("→", "var(--text-muted)"),
+                                        ("Paradigm Model", "var(--accent-bright)"),
+                                        ("→", "var(--text-muted)"),
+                                        ("This judge", "var(--green-bright)"),
+                                    ]
+                                    for item, color in trail_items:
+                                        ui.label(item).style(f"font-size: 0.62rem; color: {color}")
                                 with ui.element("pre").style(
                                     "background: var(--bg-base); border: 1px solid var(--border-subtle); "
-                                    "border-radius: var(--radius-md); padding: 10px; margin-top: 8px; "
+                                    "border-radius: var(--radius-md); padding: 10px; "
                                     "font-size: 0.7rem; color: var(--text-secondary); white-space: pre-wrap; "
-                                    "line-height: 1.5; max-height: 180px; overflow-y: auto; font-family: monospace"
+                                    "line-height: 1.5; max-height: 200px; overflow-y: auto; font-family: monospace"
                                 ):
                                     ui.label(prompt)
 
-                    # Full rubric-based judge (if generated)
+                    # ── Intermediate: Error Code → Dimension Mapping ───────
+                    mappings_data = judge_mappings or storage.get("_judge_mappings", [])
+                    if mappings_data:
+                        ui.separator().style("opacity: 0.1; margin: 16px 0")
+                        with ui.row().classes("items-center gap-2").style("margin-bottom: 10px"):
+                            ui.label("Error Code → Evaluation Dimension Mapping").style(
+                                "font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); "
+                                "text-transform: uppercase; letter-spacing: 0.04em"
+                            )
+                            ui.html(
+                                '<span style="font-size:0.62rem;padding:2px 8px;border-radius:99px;'
+                                'background:var(--green-tint);color:var(--green-bright);border:1px solid rgba(39,166,68,0.2)">'
+                                'AI-generated</span>'
+                            )
+                        ui.label(
+                            "Each error code from your Open Coding was analyzed by an LLM and mapped to a standard evaluation "
+                            "dimension. These mappings become the criteria of your Full Rubric Judge."
+                        ).style("font-size: 0.72rem; color: var(--text-tertiary); margin-bottom: 10px; line-height: 1.5")
+
+                        dim_color = {
+                            "accuracy": "var(--red)", "quality": "var(--accent-bright)",
+                            "completeness": "var(--yellow)", "tone": "var(--green-bright)",
+                            "instruction_following": "var(--accent-bright)", "safety": "var(--red)",
+                            "brand_relevance": "var(--yellow)", "bias": "var(--red)",
+                        }
+                        with ui.element("div").style(
+                            "border: 1px solid var(--border-subtle); border-radius: 10px; overflow: hidden"
+                        ):
+                            # Header row
+                            with ui.row().style(
+                                "background: var(--bg-surface-2); padding: 6px 12px; gap: 0; border-bottom: 1px solid var(--border-subtle)"
+                            ):
+                                ui.label("Error Code").style("font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); flex: 1")
+                                ui.label("Dimension").style("font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); width: 140px")
+                                ui.label("Rationale").style("font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); flex: 2")
+                            for i, m in enumerate(mappings_data):
+                                bg = "var(--bg-surface-1)" if i % 2 == 0 else "var(--bg-base)"
+                                dim = m.get("primary_category", m.get("dimension", ""))
+                                with ui.row().style(
+                                    f"background: {bg}; padding: 7px 12px; gap: 0; align-items: flex-start; "
+                                    f"border-bottom: 1px solid var(--border-subtle)"
+                                ):
+                                    ui.label(m.get("error_code", "")).style(
+                                        "font-size: 0.72rem; color: var(--text-secondary); flex: 1; font-weight: 500"
+                                    )
+                                    color = dim_color.get(dim, "var(--accent-bright)")
+                                    ui.html(
+                                        f'<span style="font-size:0.62rem;padding:2px 7px;border-radius:99px;'
+                                        f'background:rgba(0,0,0,0.2);color:{color};width:140px;display:inline-block;'
+                                        f'text-align:center;flex-shrink:0">{dim.replace("_"," ").title()}</span>'
+                                    )
+                                    ui.label(m.get("rationale", "")).style(
+                                        "font-size: 0.68rem; color: var(--text-tertiary); flex: 2; line-height: 1.4; margin-left: 8px"
+                                    )
+
+                    # ── Full Rubric Judge ──────────────────────────────────
                     if judge_prompt:
                         ui.separator().style("opacity: 0.1; margin: 16px 0")
-                        ui.label("Full Rubric Judge (grounded in error analysis)").style(
-                            "font-size: 0.72rem; font-weight: 600; color: var(--green-bright); "
-                            "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
-                        )
+                        with ui.row().classes("items-center gap-2").style("margin-bottom: 8px"):
+                            ui.label("Full Rubric Judge (grounded in error analysis)").style(
+                                "font-size: 0.72rem; font-weight: 600; color: var(--green-bright); "
+                                "text-transform: uppercase; letter-spacing: 0.04em"
+                            )
+                            ui.html(
+                                '<span style="font-size:0.62rem;padding:2px 8px;border-radius:99px;'
+                                'background:var(--green-tint);color:var(--green-bright);border:1px solid rgba(39,166,68,0.2)">'
+                                'scored 1–5 per dimension</span>'
+                            )
+                        ui.label(
+                            "This multi-criteria rubric judge evaluates responses on every evaluation dimension your error analysis surfaced. "
+                            "Each criterion includes the specific failure patterns observed, so scores are grounded in real data — "
+                            "not generic heuristics. Plug this prompt into any automated eval pipeline."
+                        ).style("font-size: 0.72rem; color: var(--text-tertiary); margin-bottom: 10px; line-height: 1.5")
                         with ui.element("div").style(
                             "background: var(--bg-surface-1); border: 1px solid var(--green); "
                             "border-radius: var(--radius-lg); padding: 12px"
                         ):
                             with ui.row().classes("items-center justify-between w-full"):
-                                ui.label("Multi-criterion rubric judge").style(
-                                    "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
-                                )
+                                with ui.row().classes("items-center gap-2"):
+                                    ui.label("Multi-criterion rubric judge").style(
+                                        "font-weight: 600; font-size: 0.85rem; color: var(--text-primary)"
+                                    )
+                                    ui.html(
+                                        '<span style="font-size:0.6rem;padding:2px 7px;border-radius:99px;'
+                                        'background:var(--green-tint);color:var(--green-bright)">Ready to use</span>'
+                                    )
                                 ui.button("Copy", icon="content_copy", on_click=lambda: ui.run_javascript(
                                     f"navigator.clipboard.writeText({json.dumps(judge_prompt)})"
                                 )).props("flat size=sm").style("color: var(--text-tertiary)")
@@ -547,7 +756,10 @@ def report_page():
                                 ):
                                     ui.label(judge_prompt)
 
-            _render_judge_prompts(storage.get("_generated_judge_prompt"))
+            _render_judge_prompts(
+                storage.get("_generated_judge_prompt"),
+                storage.get("_judge_mappings"),
+            )
 
             async def generate_full_judge():
                 if not codebook:
@@ -560,7 +772,7 @@ def report_page():
                     from grounded_evals.models.core import Code, CodeType
 
                     gen_btn.props("loading")
-                    ui.notify("Mapping errors to dimensions...", type="info")
+                    ui.notify("Step 1/2 — Mapping error codes to evaluation dimensions...", type="info")
 
                     codes = [Code(label=c["name"], definition=c.get("definition", ""), code_type=CodeType.DESCRIPTIVE) for c in codebook]
                     mappings = await asyncio.to_thread(map_errors_to_categories, codes)
@@ -569,12 +781,21 @@ def report_page():
                         gen_btn.props(remove="loading")
                         return
 
+                    # Persist mappings so the UI can show the intermediate step
+                    mappings_data = [
+                        {"error_code": m.error_code, "primary_category": m.primary_category,
+                         "rationale": m.rationale}
+                        for m in mappings
+                    ]
+                    storage["_judge_mappings"] = mappings_data
+
+                    ui.notify("Step 2/2 — Building rubric judge from mappings...", type="info")
                     rubric = generate_rubric(mappings)
                     judge_prompt = generate_judge_prompt(rubric, agent_name, agent_description)
                     storage["_generated_judge_prompt"] = judge_prompt
 
-                    ui.notify("Full judge prompt generated ✓", type="positive")
-                    _render_judge_prompts(judge_prompt)
+                    ui.notify("Full rubric judge generated ✓", type="positive")
+                    _render_judge_prompts(judge_prompt, mappings_data)
                 except Exception as e:
                     ui.notify(f"Error generating judge: {e}", type="negative")
                 finally:
@@ -583,8 +804,12 @@ def report_page():
             gen_btn = ui.button(
                 "Generate Full Rubric Judge (AI)", icon="auto_fix_high", on_click=generate_full_judge
             ).props("size=sm").style(
-                "margin-top: 12px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+                "margin-top: 14px; background: var(--accent); color: white; border-radius: var(--radius-md)"
             )
+            ui.label(
+                "Uses an LLM to map your error codes to standard evaluation dimensions, "
+                "then generates a scored rubric judge grounded in your research."
+            ).style("font-size: 0.68rem; color: var(--text-muted); margin-top: 6px")
 
         # ── Calibration ────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
