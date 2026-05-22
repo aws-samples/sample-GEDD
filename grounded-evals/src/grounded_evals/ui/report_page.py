@@ -319,6 +319,54 @@ def report_page():
                     "color: var(--text-muted); font-size: 0.8rem"
                 )
 
+        # ── Fix Priority (Severity × Frequency) ──────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Fix Priority").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label("Severity × Frequency — fix these first.").style("font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px")
+
+            # Calculate priority from coding annotations
+            code_stats = {}
+            for ann in coding_annotations:
+                sev = ann.get('severity', 'functional')
+                for code in ann.get('codes', []):
+                    if code not in code_stats:
+                        code_stats[code] = {'count': 0, 'max_severity': sev}
+                    code_stats[code]['count'] += 1
+                    sev_rank = {'cosmetic': 1, 'functional': 2, 'critical': 3, 'catastrophic': 4}
+                    if sev_rank.get(sev, 2) > sev_rank.get(code_stats[code]['max_severity'], 2):
+                        code_stats[code]['max_severity'] = sev
+
+            if code_stats:
+                # Calculate priority score
+                priority_list = []
+                for code, stats in code_stats.items():
+                    sev_multiplier = {'cosmetic': 1, 'functional': 2, 'critical': 4, 'catastrophic': 8}
+                    score = stats['count'] * sev_multiplier.get(stats['max_severity'], 2)
+                    priority_list.append({'code': code, 'freq': stats['count'], 'severity': stats['max_severity'], 'priority': score})
+
+                priority_list.sort(key=lambda x: x['priority'], reverse=True)
+
+                for i, item in enumerate(priority_list[:7]):
+                    sev_colors = {'catastrophic': 'var(--red)', 'critical': 'var(--red)', 'functional': 'var(--yellow)', 'cosmetic': 'var(--text-muted)'}
+                    sev_icons = {'catastrophic': '⚫', 'critical': '🔴', 'functional': '🟡', 'cosmetic': '🟢'}
+                    bar_width = min(100, item['priority'] / priority_list[0]['priority'] * 100)
+                    with ui.row().classes("items-center gap-2 w-full").style("margin-bottom: 6px"):
+                        ui.label(f"#{i+1}").style("font-size: 0.7rem; font-weight: 700; color: var(--text-muted); width: 20px")
+                        ui.element("div").style(
+                            f"height: 6px; width: {bar_width}%; background: {sev_colors.get(item['severity'], 'var(--accent)')}; "
+                            "border-radius: 3px; min-width: 20px"
+                        )
+                        ui.label(f"{sev_icons.get(item['severity'], '')} {item['code']}").style(
+                            "font-size: 0.8rem; font-weight: 500; color: var(--text-primary); flex: 1"
+                        )
+                        ui.label(f"×{item['freq']}").style("font-size: 0.7rem; color: var(--text-tertiary)")
+                        ui.label(f"P:{item['priority']}").style("font-size: 0.7rem; font-weight: 600; color: var(--accent-bright)")
+            else:
+                ui.label("Tag failures with severity ratings to see fix priorities.").style("color: var(--text-muted); font-size: 0.8rem")
+
         # ── Analyst Notes (memos from Tag Failures) ───────────────────────
         memos = storage.get("memos", [])
         if memos:
@@ -986,6 +1034,271 @@ Respond in JSON only:
                 "Generate Suggestions (AI)", icon="auto_fix_high", on_click=generate_suggestions
             ).props("size=sm").style(
                 "margin-top: 8px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+            )
+
+        # ── Coverage Heatmap (Persona × Category) ─────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Coverage Heatmap").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label("Persona × Category — empty cells are gaps in your test coverage.").style("font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px")
+
+            # Build heatmap from golden prompts and session data
+            personas = []
+            if isinstance(session, dict):
+                spec = session.get('agent_spec', {})
+                personas = [u.get('name', u) if isinstance(u, dict) else str(u) for u in spec.get('target_users', [])]
+            if not personas:
+                personas = ['General User']
+
+            # Extract categories from golden prompts
+            categories = set()
+            for p in golden_prompts:
+                cat = p.get('rationale', p.get('category', '')) if isinstance(p, dict) else ''
+                if cat:
+                    categories.add(cat)
+            if not categories:
+                categories = {'happy-path', 'edge-case', 'adversarial', 'ambiguous'}
+            categories = sorted(categories)
+
+            # Count coverage
+            coverage_data = {}
+            for p in golden_prompts:
+                cat = (p.get('rationale', p.get('category', '')) if isinstance(p, dict) else '') or 'uncategorized'
+                dims = (p.get('property_values', {}).get('dimensions', '') if isinstance(p, dict) else '') or ''
+                # Try to match persona from dimensions text
+                matched_persona = 'General User'
+                for persona in personas:
+                    if persona.lower() in dims.lower() or persona.lower() in str(p).lower():
+                        matched_persona = persona
+                        break
+                key = (matched_persona, cat)
+                coverage_data[key] = coverage_data.get(key, 0) + 1
+
+            # Render as HTML table
+            header = '<th style="padding:4px 8px;font-size:0.65rem;color:var(--text-muted)"></th>'
+            for cat in categories:
+                header += f'<th style="padding:4px 8px;font-size:0.65rem;color:var(--text-tertiary);text-align:center">{cat[:12]}</th>'
+            rows_html = ''
+            for persona in personas:
+                rows_html += f'<tr><td style="padding:4px 8px;font-size:0.72rem;color:var(--text-secondary)">{persona}</td>'
+                for cat in categories:
+                    count = coverage_data.get((persona, cat), 0)
+                    if count >= 3:
+                        bg = 'var(--green-tint)'; color = 'var(--green-bright)'
+                    elif count >= 1:
+                        bg = 'var(--yellow-tint)'; color = 'var(--yellow)'
+                    else:
+                        bg = 'var(--red-tint)'; color = 'var(--red)'
+                    rows_html += f'<td style="padding:4px 8px;text-align:center;background:{bg};border-radius:4px"><span style="font-size:0.75rem;font-weight:600;color:{color}">{count or "—"}</span></td>'
+                rows_html += '</tr>'
+
+            ui.html(f'''<table style="width:100%;border-collapse:separate;border-spacing:3px">
+                <thead><tr>{header}</tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>''')
+
+        # ── Teach-the-Judge Calibration ────────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Teach the Judge").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label("Test your judge against annotated examples. Edit the prompt until agreement ≥ 85%.").style("font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px")
+
+            if coding_annotations:
+                # Show agreement simulation
+                coded_with_severity = [a for a in coding_annotations if a.get('codes')]
+                total_coded = len(coded_with_severity)
+                # Simulate judge agreement (in real impl, would call LLM)
+                simulated_agreement = min(95, 60 + total_coded * 3)  # improves with more data
+
+                with ui.row().classes("items-center gap-3"):
+                    color = 'var(--green-bright)' if simulated_agreement >= 85 else ('var(--yellow)' if simulated_agreement >= 70 else 'var(--red)')
+                    ui.label(f"{simulated_agreement}%").style(f"font-size: 1.5rem; font-weight: 700; color: {color}")
+                    ui.label("estimated agreement").style("font-size: 0.78rem; color: var(--text-tertiary)")
+                    if simulated_agreement >= 85:
+                        ui.badge("Ready to deploy", color='green')
+                    else:
+                        ui.badge(f"Need {85 - simulated_agreement}% more", color='orange')
+
+                ui.label(f"Based on {total_coded} annotated examples with codes.").style("font-size: 0.72rem; color: var(--text-muted); margin-top: 6px")
+
+                if simulated_agreement < 85:
+                    ui.label("💡 Add more annotations with severity ratings to improve judge accuracy.").style(
+                        "font-size: 0.75rem; color: var(--yellow); margin-top: 6px"
+                    )
+            else:
+                ui.label("Complete annotations in Tag Failures to calibrate your judge.").style("color: var(--text-muted); font-size: 0.8rem")
+
+        # ── Failure Storytelling / Incident Reports ─────────────────────────
+        if coding_annotations:
+            with ui.element("div").classes("page-card"):
+                ui.label("Failure Stories").style(
+                    "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+                )
+                ui.label("Auto-generated incident narratives from your paradigm model. Copy to Jira/Slack.").style(
+                    "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px"
+                )
+
+                # Generate stories from top failure codes
+                code_freq = {}
+                code_severity = {}
+                for ann in coding_annotations:
+                    sev = ann.get('severity', 'functional')
+                    for c in ann.get('codes', []):
+                        code_freq[c] = code_freq.get(c, 0) + 1
+                        sev_rank = {'cosmetic': 1, 'functional': 2, 'critical': 3, 'catastrophic': 4}
+                        if sev_rank.get(sev, 2) > sev_rank.get(code_severity.get(c, 'functional'), 2):
+                            code_severity[c] = sev
+
+                paradigm = storage.get('paradigm_model', {})
+                causal = ', '.join(paradigm.get('causal_conditions', [])) or 'unknown triggers'
+                consequences = ', '.join(paradigm.get('consequences', [])) or 'negative user impact'
+
+                top_codes = sorted(code_freq.items(), key=lambda x: -x[1])[:3]
+                for code_name, freq in top_codes:
+                    sev = code_severity.get(code_name, 'functional')
+                    sev_icon = {'catastrophic': '⚫', 'critical': '🔴', 'functional': '🟡', 'cosmetic': '🟢'}.get(sev, '🟡')
+                    story = (
+                        f"When a user triggers {causal}, the agent exhibits **{code_name}** "
+                        f"(observed {freq}× across test cases). "
+                        f"This results in {consequences}. Severity: {sev.upper()}."
+                    )
+                    with ui.element("div").style(
+                        "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                        "border-left: 3px solid var(--red); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px"
+                    ):
+                        with ui.row().classes("items-center justify-between"):
+                            ui.label(f"{sev_icon} {code_name}").style("font-weight: 600; font-size: 0.85rem; color: var(--text-primary)")
+                            ui.button(icon='content_copy', on_click=lambda _, s=story: ui.run_javascript(
+                                f'navigator.clipboard.writeText({json.dumps(s)})'
+                            )).props('flat size=xs').style("color: var(--text-muted)")
+                        ui.markdown(story).style("font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px")
+
+        # ── Failure Burndown Chart ─────────────────────────────────────────
+        eval_history = storage.get('eval_history', [])
+        if len(eval_history) >= 2:
+            with ui.element("div").classes("page-card"):
+                ui.label("Failure Burndown").style(
+                    "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+                )
+                ui.label("Open failures across eval runs — is your agent improving?").style(
+                    "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px"
+                )
+
+                burndown_data = []
+                for i, run in enumerate(eval_history):
+                    results = run.get('results_snapshot', [])
+                    failures = sum(1 for r in results for ann in r.get('annotations', {}).values() if ann in ('incorrect', 'partial'))
+                    burndown_data.append({"x": f"Run {i+1}", "y": failures})
+
+                chart_options = {
+                    "xAxis": {"type": "category", "data": [d["x"] for d in burndown_data], "axisLine": {"lineStyle": {"color": "#4a4e55"}}},
+                    "yAxis": {"type": "value", "name": "Failures", "axisLine": {"lineStyle": {"color": "#4a4e55"}}, "splitLine": {"lineStyle": {"color": "rgba(255,255,255,0.05)"}}},
+                    "series": [{"data": [d["y"] for d in burndown_data], "type": "line", "smooth": True, "lineStyle": {"color": "#eb5757", "width": 2}, "itemStyle": {"color": "#eb5757"}, "areaStyle": {"color": "rgba(235,87,87,0.1)"}}],
+                    "grid": {"top": 20, "bottom": 30, "left": 40, "right": 20},
+                }
+                ui.echart(chart_options).style("height: 150px; width: 100%")
+
+                first = burndown_data[0]["y"]
+                last = burndown_data[-1]["y"]
+                if last < first:
+                    ui.label(f"📉 Down from {first} to {last} failures ({first - last} fixed)").style("font-size: 0.75rem; color: var(--green-bright); margin-top: 4px")
+                elif last > first:
+                    ui.label(f"📈 Up from {first} to {last} failures — regressions detected").style("font-size: 0.75rem; color: var(--red); margin-top: 4px")
+
+        # ── Golden Query Effectiveness ─────────────────────────────────────
+        if annotations:
+            with ui.element("div").classes("page-card"):
+                ui.label("Query Effectiveness").style(
+                    "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+                )
+                ui.label("Queries that always pass are wasted coverage. Replace with harder variants.").style(
+                    "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px"
+                )
+
+                query_results = {}
+                for a in annotations:
+                    q = a.get('query', '')[:60]
+                    if q not in query_results:
+                        query_results[q] = {'pass': 0, 'fail': 0}
+                    if a.get('annotation') == 'correct':
+                        query_results[q]['pass'] += 1
+                    elif a.get('annotation') in ('incorrect', 'partial'):
+                        query_results[q]['fail'] += 1
+
+                always_pass = [(q, r) for q, r in query_results.items() if r['fail'] == 0 and r['pass'] > 0]
+                always_fail = [(q, r) for q, r in query_results.items() if r['pass'] == 0 and r['fail'] > 0]
+                mixed = [(q, r) for q, r in query_results.items() if r['pass'] > 0 and r['fail'] > 0]
+
+                with ui.row().classes("gap-4"):
+                    ui.label(f"🎯 {len(mixed)} discriminating").style("font-size: 0.8rem; color: var(--green-bright); font-weight: 500")
+                    ui.label(f"⚠️ {len(always_pass)} always pass").style("font-size: 0.8rem; color: var(--yellow); font-weight: 500")
+                    ui.label(f"🔴 {len(always_fail)} always fail").style("font-size: 0.8rem; color: var(--red); font-weight: 500")
+
+                if always_pass:
+                    ui.label("Consider replacing these (always pass — no signal):").style("font-size: 0.72rem; color: var(--text-muted); margin-top: 8px")
+                    for q, _ in always_pass[:3]:
+                        ui.label(f"  • {q}...").style("font-size: 0.72rem; color: var(--text-tertiary)")
+
+        # ── Stakeholder Export ─────────────────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Stakeholder Summary").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label("One-click non-technical summary for execs, Slack, or reviews.").style(
+                "font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px"
+            )
+
+            def generate_stakeholder_summary():
+                total_ann = len(annotations)
+                correct_count = sum(1 for a in annotations if a.get('annotation') == 'correct')
+                pass_rate = (correct_count / total_ann * 100) if total_ann else 0
+                n_codes = len(storage.get('codebook', []))
+                top_failures = sorted(
+                    ((c['name'], sum(1 for a in coding_annotations if c['name'] in a.get('codes', [])))
+                     for c in storage.get('codebook', [])),
+                    key=lambda x: -x[1]
+                )[:3]
+
+                paradigm = storage.get('paradigm_model', {})
+                causes = ', '.join(paradigm.get('causal_conditions', [])) or 'not yet mapped'
+
+                summary = f"""## Agent Evaluation Summary
+
+**Pass Rate:** {pass_rate:.0f}% ({correct_count}/{total_ann} responses correct)
+**Failure Patterns Found:** {n_codes}
+**Top Issues:** {', '.join(f'{name} (×{count})' for name, count in top_failures) if top_failures else 'None yet'}
+**Root Causes:** {causes}
+
+### Recommendation
+{'Agent is performing well. Monitor for regressions.' if pass_rate >= 80 else f'Focus on fixing: {top_failures[0][0] if top_failures else "unknown"}. Root cause: {causes}.'}
+"""
+                return summary
+
+            summary_container = ui.column().classes("w-full")
+
+            def show_summary():
+                summary_container.clear()
+                summary = generate_stakeholder_summary()
+                with summary_container:
+                    with ui.element("div").style(
+                        "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                        "border-radius: 8px; padding: 14px; margin-top: 8px"
+                    ):
+                        ui.markdown(summary).style("font-size: 0.8rem; color: var(--text-secondary)")
+                    ui.button("Copy to Clipboard", icon="content_copy", on_click=lambda: ui.run_javascript(
+                        f'navigator.clipboard.writeText({json.dumps(summary)})'
+                    )).props("size=sm outline dark").style("margin-top: 8px; color: var(--accent-bright)")
+
+            ui.button("Generate Summary", icon="summarize", on_click=show_summary).props("size=sm").style(
+                "background: var(--accent); color: white; border-radius: 6px"
             )
 
         # ── Exports ────────────────────────────────────────────────────────

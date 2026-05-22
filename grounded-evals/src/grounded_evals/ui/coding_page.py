@@ -144,7 +144,7 @@ def coding_page():
     with ui.row().classes('w-full justify-around q-mb-md max-w-5xl mx-auto') as stats_container:
         pass
 
-    # Saturation Discovery Curve
+    # Saturation Discovery Curve (with severity weighting)
     def render_saturation_curve():
         curve_container.clear()
         with curve_container:
@@ -159,6 +159,28 @@ def coding_page():
                 for c in ann.get('codes', []):
                     seen_codes.add(c)
                 discovery_points.append({"x": i + 1, "y": len(seen_codes)})
+
+            # Weighted saturation: critical codes need more observations
+            severity_weights = {'catastrophic': 6, 'critical': 5, 'functional': 3, 'cosmetic': 2}
+            code_severities = {}
+            for ann in annotations_list:
+                sev = ann.get('severity', 'functional')
+                for c in ann.get('codes', []):
+                    if c not in code_severities or severity_weights.get(sev, 3) > severity_weights.get(code_severities[c], 3):
+                        code_severities[c] = sev
+
+            # Calculate weighted saturation
+            total_weight = 0
+            saturated_weight = 0
+            for code in seen_codes:
+                sev = code_severities.get(code, 'functional')
+                threshold = severity_weights.get(sev, 3)
+                weight = threshold
+                total_weight += weight
+                count = sum(1 for a in annotations_list if code in a.get('codes', []))
+                saturated_weight += min(weight, weight * count / threshold)
+
+            weighted_pct = (saturated_weight / total_weight * 100) if total_weight > 0 else 0
 
             recent_new = 0
             if len(annotations_list) >= 3:
@@ -180,14 +202,48 @@ def coding_page():
             }
             ui.echart(chart_options).style("height: 140px; width: 100%")
 
+            # Weighted saturation indicator
+            with ui.row().classes("items-center gap-3").style("margin-top: 6px"):
+                ui.linear_progress(value=weighted_pct / 100).props("size=6px color=green").style("flex: 1")
+                ui.label(f"{weighted_pct:.0f}% weighted").style("font-size: 0.72rem; color: var(--text-tertiary)")
+
             if len(annotations_list) >= 3 and recent_new == 0:
                 ui.label("🎯 Saturation reached — last 3 annotations revealed no new codes.").style(
-                    "font-size: 0.75rem; color: var(--green-bright); font-weight: 500; margin-top: 6px"
+                    "font-size: 0.75rem; color: var(--green-bright); font-weight: 500; margin-top: 4px"
+                )
+            elif weighted_pct < 50:
+                ui.label(f"⚠️ Critical failures need deeper exploration ({weighted_pct:.0f}% weighted coverage).").style(
+                    "font-size: 0.75rem; color: var(--yellow); margin-top: 4px"
                 )
             else:
                 ui.label(f"📈 Still discovering — {len(seen_codes)} codes from {len(annotations_list)} annotations.").style(
-                    "font-size: 0.75rem; color: var(--yellow); margin-top: 6px"
+                    "font-size: 0.75rem; color: var(--yellow); margin-top: 4px"
                 )
+
+            # Feature 9: Saturation Forecasting (power-law extrapolation)
+            if len(discovery_points) >= 4:
+                # Simple forecast: fit y = k * N^alpha using last few points
+                import math
+                n = len(discovery_points)
+                y_last = discovery_points[-1]["y"]
+                y_half = discovery_points[n // 2]["y"]
+                n_last = discovery_points[-1]["x"]
+                n_half = discovery_points[n // 2]["x"]
+                if y_half > 0 and n_half > 0 and y_last > y_half:
+                    alpha = math.log(y_last / max(y_half, 1)) / math.log(n_last / max(n_half, 1))
+                    alpha = min(alpha, 0.9)  # cap to avoid unrealistic projections
+                    # Estimate annotations needed for next code discovery
+                    if alpha > 0 and alpha < 1:
+                        # Predict when next code appears: solve k*(N+x)^alpha = y_last + 1
+                        k = y_last / (n_last ** alpha) if n_last > 0 else 1
+                        try:
+                            n_needed = int(((y_last + 1) / k) ** (1 / alpha)) - n_last
+                            n_needed = max(1, min(n_needed, 50))
+                            ui.label(f"🔮 Forecast: ~{n_needed} more annotation(s) until next new code (α={alpha:.2f})").style(
+                                "font-size: 0.72rem; color: var(--accent-bright); margin-top: 4px"
+                            )
+                        except (ValueError, ZeroDivisionError, OverflowError):
+                            pass
 
     with ui.column().classes('w-full max-w-5xl mx-auto q-mb-md') as curve_container:
         pass
@@ -256,6 +312,24 @@ def coding_page():
             # Memo
             memo_input = ui.textarea(placeholder='Memo / analytic note...').classes('w-full q-mt-sm').props("dense outlined dark")
 
+            # Impact Severity
+            ui.label('Impact Severity').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 8px")
+            severity_options = {'cosmetic': '🟢 Cosmetic — user notices but isn\'t blocked',
+                                'functional': '🟡 Functional — user has to retry or work around',
+                                'critical': '🔴 Critical — wrong info, loses money/trust',
+                                'catastrophic': '⚫ Catastrophic — safety, legal, data breach'}
+            existing_severity = existing.get('severity', 'functional') if existing else 'functional'
+            severity_select = ui.select(
+                options=severity_options, value=existing_severity, label='How bad if this reaches a user?'
+            ).props("dense outlined dark").classes("w-full").style("margin-top: 4px")
+
+            # Annotation Confidence
+            confidence_options = {'high': '✓ High — clearly a failure', 'medium': '~ Medium — probably a failure', 'low': '? Low — not sure'}
+            existing_confidence = existing.get('confidence', 'high') if existing else 'high'
+            confidence_select = ui.select(
+                options=confidence_options, value=existing_confidence, label='How confident are you?'
+            ).props("dense outlined dark").classes("w-full").style("margin-top: 4px")
+
             # Save
             def save_annotation():
                 ann = {
@@ -264,6 +338,8 @@ def coding_page():
                     'response': item.get('response', ''),
                     'codes': list(selected_codes['value']),
                     'memo': memo_input.value or '',
+                    'severity': severity_select.value,
+                    'confidence': confidence_select.value,
                     'annotator': storage.get('username', 'anonymous'),
                     'timestamp': datetime.now().isoformat(),
                 }
@@ -284,6 +360,40 @@ def coding_page():
                 render_saturation_curve()
                 render_right()
                 render_left()
+
+                # Feature 2: Reflection prompt every 5 annotations
+                n_anns = len(storage['coding_annotations'])
+                if n_anns > 0 and n_anns % 5 == 0:
+                    with ui.dialog() as reflection_dlg:
+                        reflection_dlg.open()
+                        with ui.card().style(
+                            "min-width: 400px; padding: 1.5rem; background: var(--bg-surface-2); "
+                            "border: 1px solid var(--border-subtle); border-radius: 12px"
+                        ):
+                            ui.label("🪞 Quick Reflection").style("font-size: 1rem; font-weight: 600; color: var(--text-primary)")
+                            ui.label(f"You've completed {n_anns} annotations. Take 30 seconds:").style(
+                                "font-size: 0.8rem; color: var(--text-tertiary); margin: 6px 0 12px"
+                            )
+                            r_input1 = ui.input(placeholder="What pattern is emerging that you didn't expect?").classes("w-full").props("dense outlined dark")
+                            r_input2 = ui.input(placeholder="Any failure you expected to see but haven't?").classes("w-full").props("dense outlined dark")
+
+                            def save_reflection():
+                                texts = [r_input1.value, r_input2.value]
+                                combined = ' | '.join(t for t in texts if t.strip())
+                                if combined:
+                                    storage['memos'].append({
+                                        'id': str(uuid4()),
+                                        'text': f"[Reflection @{n_anns}] {combined}",
+                                        'codes': [],
+                                        'timestamp': datetime.now().isoformat(),
+                                    })
+                                reflection_dlg.close()
+                                ui.notify("Reflection saved ✓", type="positive")
+                                render_right()
+
+                            with ui.row().classes("gap-2").style("margin-top: 12px"):
+                                ui.button("Save & Continue", on_click=save_reflection).props("size=sm").style("background: var(--accent); color: white")
+                                ui.button("Skip", on_click=reflection_dlg.close).props("flat size=sm").style("color: var(--text-muted)")
 
             with ui.row().classes("gap-2 items-center").style("margin-top: 10px"):
                 ui.button('Save', icon='save', on_click=save_annotation).props('color=primary size=sm')
@@ -357,6 +467,50 @@ def coding_page():
             for m in reversed(memos):
                 with ui.element('div').classes('memo-box').style("margin-top: 6px"):
                     ui.label(m.get('text', '')).style("font-size: 0.78rem; color: var(--text-secondary)")
+
+            # ── Error Pattern Clustering (AI-suggested merges) ─────────────
+            if len(storage['codebook']) >= 4:
+                ui.separator().style("opacity:0.12; margin:14px 0")
+                ui.label('Suggested Merges').style(
+                    "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px"
+                )
+
+                # Find codes that might be the same underlying issue (n-gram similarity)
+                from grounded_evals.ui.coding_page import _is_similar
+                merge_suggestions = []
+                codes = storage['codebook']
+                for i2 in range(len(codes)):
+                    for j in range(i2 + 1, len(codes)):
+                        if _is_similar(codes[i2]['name'], codes[j]['name']):
+                            merge_suggestions.append((codes[i2]['name'], codes[j]['name']))
+
+                # Also check codes with same usage patterns (co-occur on same annotations)
+                code_cooccurrence = {}
+                for ann in storage['coding_annotations']:
+                    ann_codes = ann.get('codes', [])
+                    for c1 in ann_codes:
+                        for c2 in ann_codes:
+                            if c1 < c2:
+                                pair = (c1, c2)
+                                code_cooccurrence[pair] = code_cooccurrence.get(pair, 0) + 1
+
+                # Pairs that always co-occur might be the same thing
+                for pair, count in code_cooccurrence.items():
+                    if count >= 2 and pair not in merge_suggestions:
+                        merge_suggestions.append(pair)
+
+                if merge_suggestions:
+                    for c1, c2 in merge_suggestions[:3]:
+                        with ui.element("div").style(
+                            "background: var(--accent-tint); border: 1px solid rgba(94,106,210,0.2); "
+                            "border-radius: 6px; padding: 6px 10px; margin-bottom: 4px"
+                        ):
+                            ui.label(f"🔗 \"{c1}\" ↔ \"{c2}\" — same issue?").style(
+                                "font-size: 0.72rem; color: var(--accent-bright)"
+                            )
+                else:
+                    ui.label("No merge suggestions yet. Keep coding!").style("font-size: 0.72rem; color: var(--text-muted)")
 
             # ── Export / Share / Import ──────────────────────────────────
             ui.separator().style("opacity:0.12; margin:14px 0")
