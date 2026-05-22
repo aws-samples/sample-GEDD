@@ -612,6 +612,39 @@ def main_page() -> None:
 
                 refresh_query_table()
 
+                # ── Add query manually ────────────────────────────────────────
+                ui.separator().style("opacity:0.12; margin:8px 0")
+                with ui.row().classes("gap-2 items-end flex-wrap").style("margin-top:4px"):
+                    new_q_input = ui.input(
+                        label="Add query",
+                        placeholder="Type a new golden query…"
+                    ).props("dense outlined dark").style("flex:1; min-width:200px; font-size:0.82rem")
+                    new_cat_input = ui.input(
+                        label="Category",
+                        placeholder="e.g. edge_case"
+                    ).props("dense outlined dark").style("width:140px; font-size:0.82rem")
+
+                    def add_manual_query():
+                        text = new_q_input.value.strip()
+                        if not text:
+                            ui.notify("Enter a query first", type="warning")
+                            return
+                        from grounded_evals.models.core import GoldenPrompt
+                        cur2 = _user_session()
+                        cur2.golden_prompts.append(GoldenPrompt(
+                            prompt_text=text,
+                            rationale=new_cat_input.value.strip() or "manual",
+                        ))
+                        _save_user_session(cur2)
+                        new_q_input.set_value("")
+                        new_cat_input.set_value("")
+                        refresh_query_table()
+                        ui.notify("Query added ✓", type="positive")
+
+                    ui.button(
+                        icon="add", on_click=add_manual_query
+                    ).props("size=sm color=primary round dense").tooltip("Add query")
+
             # Category saturation coverage
             with ui.expansion("Coverage by Category", icon="donut_large").classes("w-full").style(
                 "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "

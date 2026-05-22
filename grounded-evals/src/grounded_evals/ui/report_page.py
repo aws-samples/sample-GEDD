@@ -300,20 +300,66 @@ def report_page():
                     })
                 ui.table(columns=columns, rows=rows, row_key="model").classes("w-full").props("dark dense flat")
 
-        # ── Failure Patterns (from Open Coding) ───────────────────────────
+        # ── Failure Patterns (from Open Coding) — clickable drill-down ──────
         with ui.element("div").classes("page-card"):
             ui.label("Failure Patterns").style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
             )
             if patterns:
-                columns = [
-                    {"name": "name", "label": "Pattern", "field": "name", "align": "left"},
-                    {"name": "frequency", "label": "Freq", "field": "frequency"},
-                    {"name": "severity", "label": "Severity", "field": "severity"},
-                    {"name": "definition", "label": "Definition", "field": "definition", "align": "left"},
-                ]
-                ui.table(columns=columns, rows=patterns, row_key="name").classes("w-full").props("dark dense flat")
+                ui.label("Click a pattern to see the queries tagged with it.").style(
+                    "font-size: 0.72rem; color: var(--text-muted); margin-bottom: 10px"
+                )
+                sev_colors = {"high": "var(--red)", "medium": "var(--yellow)", "low": "var(--green)"}
+                for p in patterns:
+                    sev_col = sev_colors.get(p["severity"], "var(--text-tertiary)")
+                    tagged = [
+                        ca for ca in coding_annotations
+                        if p["name"] in ca.get("codes", [])
+                    ]
+                    header = (
+                        f"{p['name']}  ·  "
+                        f"<span style='color:{sev_col}'>{p['severity'].upper()}</span>"
+                        f"  ·  {p['frequency']}×"
+                    )
+                    with ui.expansion(header).classes("w-full").style(
+                        f"background:var(--bg-surface-1); border-radius:8px; margin-bottom:5px; "
+                        f"border:1px solid var(--border-subtle); border-left:3px solid {sev_col}"
+                    ):
+                        if p.get("definition"):
+                            ui.label(p["definition"]).style(
+                                "font-size:0.75rem; color:var(--text-tertiary); "
+                                "margin-bottom:8px; font-style:italic"
+                            )
+                        if tagged:
+                            ui.label(
+                                f"{len(tagged)} response{'s' if len(tagged) != 1 else ''} tagged:"
+                            ).style("font-size:0.72rem; color:var(--text-secondary); margin-bottom:6px")
+                            for ca in tagged[:10]:
+                                with ui.element("div").style(
+                                    "background:var(--bg-base); border-radius:6px; padding:8px 10px; "
+                                    "margin-bottom:4px; border:1px solid var(--border-subtle)"
+                                ):
+                                    ui.label(ca.get("query", "")[:100]).style(
+                                        "font-size:0.75rem; color:var(--text-primary); margin-bottom:3px"
+                                    )
+                                    resp = ca.get("response", "")
+                                    if resp:
+                                        ui.label(
+                                            (resp[:130] + "…") if len(resp) > 130 else resp
+                                        ).style("font-size:0.7rem; color:var(--text-tertiary); line-height:1.4")
+                                    if ca.get("memo"):
+                                        ui.label(f"Note: {ca['memo']}").style(
+                                            "font-size:0.68rem; color:var(--yellow); margin-top:3px; font-style:italic"
+                                        )
+                            if len(tagged) > 10:
+                                ui.label(f"… and {len(tagged) - 10} more").style(
+                                    "font-size:0.7rem; color:var(--text-muted)"
+                                )
+                        else:
+                            ui.label(
+                                "No annotations yet — complete the Tag Failures step to see examples."
+                            ).style("font-size:0.75rem; color:var(--text-muted)")
             else:
                 ui.label("Complete the Tag Failures step to see patterns here.").style(
                     "color: var(--text-muted); font-size: 0.8rem"
