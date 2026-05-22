@@ -135,6 +135,10 @@ def _save_eval_snapshot(selected_models: list[str], eval_results: list[dict]) ->
         "total_annotated": total_ann,
         "correct": correct,
         "pass_rate": f"{correct / total_ann * 100:.0f}%" if total_ann else "—",
+        "query_verdicts": [
+            {"query": r.get("query", ""), "annotations": dict(r.get("annotations", {}))}
+            for r in eval_results
+        ],
     })
     app.storage.user["eval_history"] = history[-10:]
 
@@ -195,6 +199,9 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
         return
 
     variants = prompt_variants or []
+
+    # Shared state dict so keyboard handler can reach render_results' inner functions
+    kb_state: dict = {"go": None, "annotate": None}
 
     # ── Annotation Labels Manager ─────────────────────────────────────────────
     labels_panel_container = ui.column().classes("w-full")
@@ -372,7 +379,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                 f"Done! {total} queries × {len(sel)} models = {total * len(sel)} responses"
             )
             run_btn.props(remove="loading")
-            render_results(results_container, sel, annotations_list)
+            render_results(results_container, sel, annotations_list, kb_state)
             _save_eval_snapshot(sel, eval_results_store)
 
         run_btn = ui.button(
@@ -383,7 +390,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
     existing_results = _get_eval_results()
     existing_sel = _get_selected_models()
     if existing_results and existing_sel:
-        render_results(results_container, existing_sel, annotations_list)
+        render_results(results_container, existing_sel, annotations_list, kb_state)
 
     # ── Run History ───────────────────────────────────────────────────────────
     with ui.expansion("Run History", icon="history").classes("w-full").style(
@@ -428,6 +435,128 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                         f"{q_count} queries · {', '.join(model_names)} · "
                         f"{run.get('total_annotated', 0)}/{q_count * n_models} annotated"
                     ).style("font-size:0.72rem; color:var(--text-tertiary); margin-top:2px")
+
+    # ── A/B Compare Runs ─────────────────────────────────────────────────────
+    _ab_history = app.storage.user.get("eval_history", [])
+    if len(_ab_history) >= 2:
+        with ui.expansion("Compare Runs", icon="compare_arrows").classes("w-full").style(
+            "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-top:1rem"
+        ):
+            ui.label(
+                "Select two runs to see which queries improved or regressed between them."
+            ).style("font-size:0.78rem; color:var(--text-tertiary); margin-bottom:10px")
+
+            _run_labels = {
+                i: f"Run #{i + 1}  ·  {run['timestamp'][:16].replace('T', ' ')}  ·  {run.get('pass_rate', '—')}"
+                for i, run in enumerate(_ab_history)
+            }
+            compare_container = ui.column().classes("w-full")
+
+            with ui.row().classes("gap-2 items-end flex-wrap").style("margin-bottom:8px"):
+                sel_a = ui.select(
+                    options=_run_labels, value=len(_ab_history) - 2, label="Run A (baseline)"
+                ).props("dense outlined dark").style("width:280px")
+                sel_b = ui.select(
+                    options=_run_labels, value=len(_ab_history) - 1, label="Run B (compare)"
+                ).props("dense outlined dark").style("width:280px")
+
+                def show_comparison():
+                    run_a = _ab_history[sel_a.value]
+                    run_b = _ab_history[sel_b.value]
+                    verdicts_a = {v["query"]: v["annotations"] for v in run_a.get("query_verdicts", [])}
+                    verdicts_b = {v["query"]: v["annotations"] for v in run_b.get("query_verdicts", [])}
+
+                    all_queries = list(dict.fromkeys(list(verdicts_a) + list(verdicts_b)))
+                    improved = regressed = unchanged = changed = 0
+                    rows: list[dict] = []
+                    for q in all_queries:
+                        ann_a = verdicts_a.get(q, {})
+                        ann_b = verdicts_b.get(q, {})
+                        all_models = list(dict.fromkeys(list(ann_a) + list(ann_b)))
+                        for m in all_models:
+                            v_a = ann_a.get(m, "—")
+                            v_b = ann_b.get(m, "—")
+                            if v_a == "incorrect" and v_b == "correct":
+                                delta, delta_color = "↑ improved", "var(--green-bright)"
+                                improved += 1
+                            elif v_a == "correct" and v_b == "incorrect":
+                                delta, delta_color = "↓ regressed", "var(--red)"
+                                regressed += 1
+                            elif v_a == v_b:
+                                delta, delta_color = "= same", "var(--text-muted)"
+                                unchanged += 1
+                            else:
+                                delta = f"{v_a} → {v_b}"
+                                delta_color = "var(--yellow)"
+                                changed += 1
+                            rows.append({
+                                "query": q[:65],
+                                "model": m.split(".")[-1][:18],
+                                "v_a": v_a, "v_b": v_b,
+                                "delta": delta, "color": delta_color,
+                            })
+
+                    compare_container.clear()
+                    with compare_container:
+                        if not rows:
+                            ui.label(
+                                "No per-query verdicts in these runs — runs must be from v9+ to compare."
+                            ).style("font-size:0.78rem; color:var(--text-muted)")
+                            return
+                        with ui.row().classes("gap-4 items-center").style("margin-bottom:10px"):
+                            for label, val, col in [
+                                (f"↑ Improved", improved, "var(--green-bright)"),
+                                (f"↓ Regressed", regressed, "var(--red)"),
+                                (f"~ Changed", changed, "var(--yellow)"),
+                                (f"= Same", unchanged, "var(--text-muted)"),
+                            ]:
+                                ui.html(
+                                    f'<span style="font-size:1rem; font-weight:700; color:{col}">{val}</span>'
+                                    f'<span style="font-size:0.7rem; color:var(--text-tertiary); margin-left:3px">{label}</span>'
+                                )
+                        for row in rows:
+                            a_col = _label_css_color(row["v_a"]) if row["v_a"] != "—" else "var(--text-muted)"
+                            b_col = _label_css_color(row["v_b"]) if row["v_b"] != "—" else "var(--text-muted)"
+                            with ui.element("div").style(
+                                "display:flex; align-items:baseline; gap:10px; padding:5px 0; "
+                                "border-bottom:1px solid var(--border-subtle)"
+                            ):
+                                ui.label(row["query"]).style(
+                                    "font-size:0.74rem; color:var(--text-secondary); flex:1; "
+                                    "overflow:hidden; text-overflow:ellipsis; white-space:nowrap"
+                                )
+                                ui.label(row["model"]).style(
+                                    "font-size:0.64rem; color:var(--text-tertiary); white-space:nowrap"
+                                )
+                                ui.html(f'<span style="font-size:0.68rem; color:{a_col}; white-space:nowrap">A: {row["v_a"]}</span>')
+                                ui.html(f'<span style="font-size:0.68rem; color:{b_col}; white-space:nowrap">B: {row["v_b"]}</span>')
+                                ui.html(
+                                    f'<span style="font-size:0.68rem; color:{row["color"]}; '
+                                    f'font-weight:600; white-space:nowrap">{row["delta"]}</span>'
+                                )
+
+                ui.button("Compare", icon="compare_arrows", on_click=show_comparison).props("size=sm color=primary")
+
+    # ── Keyboard shortcuts ────────────────────────────────────────────────────
+    ui.html(
+        '<div style="font-size:0.62rem; color:var(--text-muted); margin-top:6px; text-align:center">'
+        '← → navigate &nbsp;·&nbsp; 1 / 2 / 3 quick-annotate all models with first / second / third label'
+        '</div>'
+    )
+
+    def _handle_eval_kb(e):
+        key = e.key
+        if key == "ArrowLeft" and kb_state.get("go"):
+            kb_state["go"](-1)
+        elif key == "ArrowRight" and kb_state.get("go"):
+            kb_state["go"](1)
+        elif key in ("1", "2", "3") and kb_state.get("annotate"):
+            label_idx = int(key) - 1
+            labels = _get_all_labels()
+            if label_idx < len(labels):
+                kb_state["annotate"](labels[label_idx]["key"])
+
+    ui.keyboard(on_key=_handle_eval_kb, ignore=["input", "select", "textarea", "button"])
 
     # ── Import / Share Panel ──────────────────────────────────────────────────
     with ui.expansion("Import or Share Annotations", icon="share").classes("w-full").style(
@@ -629,7 +758,8 @@ def _render_imported_annotations(container, data: dict) -> None:
 
 
 def render_results(
-    container, selected_models: list[str], annotations_list: list[dict]
+    container, selected_models: list[str], annotations_list: list[dict],
+    kb_state: dict | None = None,
 ) -> None:
     """Render the eval results with annotation controls."""
     container.clear()
@@ -757,6 +887,50 @@ def render_results(
 
         render_filter_bar()
 
+        # ── Category saturation ───────────────────────────────────────────────
+        sat_container = ui.column().classes("w-full")
+
+        def render_sat_indicator():
+            sat_container.clear()
+            cats: dict[str, dict] = {}
+            for r in eval_results:
+                cat = r.get("category", "") or "general"
+                if cat not in cats:
+                    cats[cat] = {"total": 0, "annotated": 0}
+                cats[cat]["total"] += 1
+                if any(r["annotations"].get(m) for m in selected_models):
+                    cats[cat]["annotated"] += 1
+            if len(cats) <= 1:
+                return
+            with sat_container:
+                with ui.element("div").style(
+                    "background:var(--bg-surface-1); border-radius:8px; padding:8px 12px; "
+                    "margin-bottom:8px; border:1px solid var(--border-subtle)"
+                ):
+                    ui.label("Category Coverage").style(
+                        "font-size:0.65rem; font-weight:600; color:var(--text-tertiary); "
+                        "text-transform:uppercase; letter-spacing:0.04em; margin-bottom:5px"
+                    )
+                    for cat, stats in sorted(cats.items()):
+                        pct = stats["annotated"] / max(stats["total"], 1)
+                        color = (
+                            "var(--green-bright)" if pct >= 0.8
+                            else "var(--yellow)" if pct >= 0.4
+                            else "var(--text-muted)"
+                        )
+                        with ui.row().classes("items-center gap-2").style("margin-bottom:3px"):
+                            ui.label(cat[:22]).style(
+                                "font-size:0.67rem; color:var(--text-secondary); "
+                                "width:130px; overflow:hidden; text-overflow:ellipsis; "
+                                "white-space:nowrap; flex-shrink:0"
+                            )
+                            ui.linear_progress(value=pct).props("size=3px").style("flex:1")
+                            ui.label(f"{stats['annotated']}/{stats['total']}").style(
+                                f"font-size:0.65rem; color:{color}; white-space:nowrap"
+                            )
+
+        render_sat_indicator()
+
         # System prompt from storage (needed for retry)
         _session_data = app.storage.user.get("session_data", {})
         _stored_system_prompt = (
@@ -881,6 +1055,7 @@ def render_results(
                                         })
                                         render_current()
                                         render_filter_bar()
+                                        render_sat_indicator()
                                     return annotate
 
                                 for lbl in all_labels:
@@ -946,5 +1121,31 @@ def render_results(
                 return
             position["value"] = max(0, min(len(fi) - 1, position["value"] + delta))
             render_current()
+
+        def annotate_current(label_key: str) -> None:
+            """Bulk-apply label_key to all selected models on the current query (keyboard shortcut)."""
+            fi = get_filtered_indices()
+            if not fi:
+                return
+            pos = min(position["value"], len(fi) - 1)
+            idx = fi[pos]
+            result = eval_results[idx]
+            for m_id in selected_models:
+                result["annotations"][m_id] = label_key
+                annotations_list.append({
+                    "query": result["query"],
+                    "response": result["responses"].get(m_id, ""),
+                    "annotation": label_key,
+                    "model": model_labels.get(m_id, m_id),
+                    "error_code": "",
+                    "notes": result.get("notes", ""),
+                })
+            render_current()
+            render_filter_bar()
+            render_sat_indicator()
+
+        if kb_state is not None:
+            kb_state["go"] = go
+            kb_state["annotate"] = annotate_current
 
         render_current()
