@@ -78,10 +78,99 @@ DEMO_HYPOTHESES = [
     {"text": "Agent will fail to escalate edge cases to human agents", "status": "confirmed"},
 ]
 
+DEMO_JUDGE_MAPPINGS = [
+    {"error_code": "Policy Hallucination", "primary_category": "accuracy", "rationale": "Agent states a policy that is factually incorrect — a direct accuracy failure. The response contains verifiably false claims."},
+    {"error_code": "Incomplete Response", "primary_category": "completeness", "rationale": "Agent omits explicitly requested information. The query was partially answered but key parts were skipped."},
+    {"error_code": "Context Miss", "primary_category": "instruction_following", "rationale": "Agent fails to use available context (booking history, profile). The system prompt instructs the agent to leverage customer data."},
+    {"error_code": "Data Fabrication", "primary_category": "accuracy", "rationale": "Agent generates specific data points (prices, flight numbers) without a verified source — a hallucination of factual data."},
+    {"error_code": "Escalation Failure", "primary_category": "instruction_following", "rationale": "System prompt explicitly lists escalation triggers. Agent ignoring them is a direct instruction-following failure."},
+    {"error_code": "Assumption Error", "primary_category": "quality", "rationale": "Making unstated assumptions degrades overall response quality and can lead the user down the wrong path."},
+]
+
+DEMO_JUDGE_PROMPT = """You are an expert evaluator assessing TravelBot AI Agent responses. Score each response on the following criteria, using the 1-5 scale defined for each.
+
+## Evaluation Criteria
+
+### Accuracy
+**What it measures:** Accuracy — factual correctness, no hallucinations, verifiable claims. Observed issues: Policy Hallucination; Data Fabrication
+**Weight:** 1.0
+**Scoring:**
+  - 5/5: Excellent — no issues observed in this dimension
+  - 4/5: Good — minor issues that don't impact core value
+  - 3/5: Acceptable — noticeable issues but functional
+  - 2/5: Poor — significant issues impacting usefulness
+  - 1/5: Failing — critical failures in this dimension
+
+### Completeness
+**What it measures:** Completeness — addresses all parts of the query, no missing info. Observed issues: Incomplete Response
+**Weight:** 1.0
+**Scoring:**
+  - 5/5: Excellent — no issues observed in this dimension
+  - 4/5: Good — minor issues that don't impact core value
+  - 3/5: Acceptable — noticeable issues but functional
+  - 2/5: Poor — significant issues impacting usefulness
+  - 1/5: Failing — critical failures in this dimension
+
+### Instruction Following
+**What it measures:** Instruction Following — adherence to system prompt constraints. Observed issues: Context Miss; Escalation Failure
+**Weight:** 1.0
+**Scoring:**
+  - 5/5: Excellent — no issues observed in this dimension
+  - 4/5: Good — minor issues that don't impact core value
+  - 3/5: Acceptable — noticeable issues but functional
+  - 2/5: Poor — significant issues impacting usefulness
+  - 1/5: Failing — critical failures in this dimension
+
+### Quality
+**What it measures:** Quality of Response — coherence, helpfulness, depth, structure. Observed issues: Assumption Error
+**Weight:** 1.0
+**Scoring:**
+  - 5/5: Excellent — no issues observed in this dimension
+  - 4/5: Good — minor issues that don't impact core value
+  - 3/5: Acceptable — noticeable issues but functional
+  - 2/5: Poor — significant issues impacting usefulness
+  - 1/5: Failing — critical failures in this dimension
+
+## Scoring Instructions
+
+For each criterion:
+1. Read the user query and agent response carefully
+2. Consider the specific failure patterns identified for each criterion
+3. Assign a score from 1-5 using the rubric
+4. Provide a brief justification (1-2 sentences)
+
+## Output Format
+
+For each query-response pair, output:
+```json
+{
+  "scores": {
+    "accuracy": <1-5>,
+    "completeness": <1-5>,
+    "instruction_following": <1-5>,
+    "quality": <1-5>
+  },
+  "justifications": {
+    "accuracy": "<reason>",
+    "completeness": "<reason>",
+    "instruction_following": "<reason>",
+    "quality": "<reason>"
+  },
+  "overall_score": <weighted average>,
+  "pass": <true if overall >= 3.5, false otherwise>,
+  "summary": "<one sentence overall assessment>"
+}
+```
+
+## Context
+Agent Name: TravelBot
+Agent Description: Conversational flight booking assistant for SkyPath Travel
+"""
+
 DEMO_EVAL_HISTORY = [
-    {"timestamp": "2025-04-15T14:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 6, "pass_rate": "25%", "results_snapshot": []},
-    {"timestamp": "2025-05-01T10:30:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "50%", "results_snapshot": []},
-    {"timestamp": "2025-05-15T16:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "75%", "results_snapshot": []},
+    {"timestamp": "2025-04-15T14:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 6, "pass_rate": "25%", "query_verdicts": []},
+    {"timestamp": "2025-05-01T10:30:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "50%", "query_verdicts": []},
+    {"timestamp": "2025-05-15T16:00:00", "models": ["us.anthropic.claude-haiku-4-5-20251001-v1:0"], "query_count": 8, "total_annotated": 8, "pass_rate": "75%", "query_verdicts": []},
 ]
 
 
@@ -106,3 +195,5 @@ def load_demo_data(storage: dict) -> None:
     storage["user_needs"] = DEMO_USER_NEEDS
     storage["hypotheses"] = DEMO_HYPOTHESES
     storage["eval_history"] = DEMO_EVAL_HISTORY
+    storage["_judge_mappings"] = DEMO_JUDGE_MAPPINGS
+    storage["_generated_judge_prompt"] = DEMO_JUDGE_PROMPT

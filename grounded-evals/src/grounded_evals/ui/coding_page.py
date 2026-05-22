@@ -113,6 +113,7 @@ def coding_page():
     responses = _build_responses(storage)
     current_idx = {'value': 0}
     selected_codes = {'value': []}
+    kb_refs: dict = {'save': None}
 
     def get_annotation_for(idx):
         if not responses:
@@ -394,6 +395,8 @@ def coding_page():
                             with ui.row().classes("gap-2").style("margin-top: 12px"):
                                 ui.button("Save & Continue", on_click=save_reflection).props("size=sm").style("background: var(--accent); color: white")
                                 ui.button("Skip", on_click=reflection_dlg.close).props("flat size=sm").style("color: var(--text-muted)")
+
+            kb_refs['save'] = save_annotation
 
             with ui.row().classes("gap-2 items-center").style("margin-top: 10px"):
                 ui.button('Save', icon='save', on_click=save_annotation).props('color=primary size=sm')
@@ -703,29 +706,8 @@ def coding_page():
         elif key == 'ArrowLeft':
             nav(-1)
         elif key.lower() == 's':
-            # Trigger save by clicking the save button equivalent
-            idx = current_idx['value']
-            if responses:
-                item = responses[idx]
-                existing = get_annotation_for(idx)
-                ann = {
-                    'id': str(uuid4()),
-                    'query': item.get('query', ''),
-                    'response': item.get('response', ''),
-                    'codes': list(selected_codes['value']),
-                    'memo': '',
-                    'annotator': storage.get('username', 'anonymous'),
-                    'timestamp': datetime.now().isoformat(),
-                }
-                storage['coding_annotations'] = [
-                    a for a in storage['coding_annotations']
-                    if not (a['query'] == ann['query'] and a['response'] == ann['response'])
-                ]
-                storage['coding_annotations'].append(ann)
-                ui.notify('Saved ✓', type='positive', timeout=1500)
-                render_stats()
-                render_saturation_curve()
-                render_left()
+            if kb_refs.get('save'):
+                kb_refs['save']()
         elif key in ('1', '2', '3'):
             # Quick annotation verdict from codebook (1=first code, 2=second, 3=third)
             codebook = storage.get('codebook', [])

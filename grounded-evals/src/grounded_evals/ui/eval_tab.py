@@ -756,56 +756,6 @@ def _render_imported_annotations(container, data: dict) -> None:
                     "font-size:0.72rem; color:var(--text-muted)"
                 )
 
-    # ── Regression Detection ──────────────────────────────────────────────────
-    history = app.storage.user.get("eval_history", [])
-    if len(history) >= 2:
-        with ui.expansion("🔄 Regression Detection", icon="compare_arrows").classes("w-full").style(
-            "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-top:1rem"
-        ):
-            prev_run = history[-2]
-            curr_run = history[-1]
-            prev_results = prev_run.get("results_snapshot", [])
-            curr_results = curr_run.get("results_snapshot", [])
-
-            # Compare by query
-            prev_by_query = {}
-            for r in prev_results:
-                for mid, ann in r.get("annotations", {}).items():
-                    prev_by_query[(r.get("query", ""), mid)] = ann
-
-            curr_by_query = {}
-            for r in curr_results:
-                for mid, ann in r.get("annotations", {}).items():
-                    curr_by_query[(r.get("query", ""), mid)] = ann
-
-            fixed = []
-            regressed = []
-            unchanged = []
-            for key in set(prev_by_query.keys()) | set(curr_by_query.keys()):
-                prev_ann = prev_by_query.get(key, "")
-                curr_ann = curr_by_query.get(key, "")
-                if prev_ann in ("incorrect", "partial") and curr_ann == "correct":
-                    fixed.append(key)
-                elif prev_ann == "correct" and curr_ann in ("incorrect", "partial"):
-                    regressed.append(key)
-                else:
-                    unchanged.append(key)
-
-            with ui.row().classes("gap-4"):
-                ui.label(f"✅ {len(fixed)} fixed").style("font-size: 0.85rem; font-weight: 600; color: var(--green-bright)")
-                ui.label(f"⚠️ {len(regressed)} regressed").style("font-size: 0.85rem; font-weight: 600; color: var(--red)")
-                ui.label(f"— {len(unchanged)} unchanged").style("font-size: 0.85rem; font-weight: 600; color: var(--text-muted)")
-
-            if regressed:
-                ui.label("Regressions:").style("font-size: 0.72rem; font-weight: 600; color: var(--red); margin-top: 8px")
-                for query, model in regressed[:5]:
-                    ui.label(f"• {query[:60]}...").style("font-size: 0.75rem; color: var(--text-secondary); margin-left: 8px")
-
-            if not fixed and not regressed:
-                ui.label("No changes detected between runs. Run a new evaluation after modifying your agent.").style(
-                    "font-size: 0.78rem; color: var(--text-muted); margin-top: 6px"
-                )
-
 
 def render_results(
     container, selected_models: list[str], annotations_list: list[dict],
