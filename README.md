@@ -207,31 +207,38 @@ Errors are mapped to these categories:
 
 ## Phase 3: Judge Builder (Selective Coding)
 
-The final phase transforms your qualitative analysis into a deployable automated judge.
+The final phase transforms your qualitative analysis into a deployable automated judge — using ML research techniques grounded in your own annotations.
 
 ```mermaid
 flowchart TD
     subgraph Inputs["From Axial Coding"]
         EM[Error Mappings<br/><i>errors → 8 dimensions</i>]
         PM[Paradigm Model<br/><i>causal relationships</i>]
+        ANN[Human Annotations<br/><i>coded examples + severity</i>]
     end
 
-    subgraph Build["Judge Construction"]
-        EM --> RUB[generate_rubric]
+    subgraph Build["Judge Construction — 3 ML Modes"]
+        EM --> RUB[generate_rubric<br/><i>paradigm-enriched criteria</i>]
         PM --> RUB
-        RUB --> RUBRIC[Judge Rubric<br/><i>criteria + 5-point scales</i>]
-        RUBRIC --> GEN[generate_judge_prompt]
-        GEN --> PROMPT[Judge System Prompt<br/><i>deployable LLM-as-Judge</i>]
+        RUB --> RUBRIC[Judge Rubric<br/><i>weighted by severity</i>]
+
+        RUBRIC --> STD[Standard Judge<br/><i>zero-shot rubric</i>]
+        ANN --> FS[Few-Shot Judge<br/><i>Prometheus-style<br/>Kim et al. 2023</i>]
+        RUBRIC --> FS
+        RUBRIC --> GE[G-EVAL Judge<br/><i>chain-of-thought<br/>Liu et al. 2023</i>]
+        ANN --> CONST[Constitutional Judge<br/><i>principle-by-principle<br/>Bai et al. 2022</i>]
+        PM --> CONST
     end
 
-    subgraph Calibrate["Calibration Loop"]
-        PROMPT --> RUN[Judge Scores Responses]
-        RUN --> CAL[calibrate]
+    subgraph Calibrate["Calibration + Active Learning"]
+        STD & FS & GE & CONST --> RUN[Judge Scores Responses]
+        RUN --> ENS[Ensemble / Self-Consistency<br/><i>Wang et al. 2023</i>]
+        ENS --> CAL[Cohen's Kappa Calibration<br/><i>weighted κ + 95% CI</i>]
         HUMAN[Human PM Scores] --> CAL
-        CAL --> AGR{Agreement<br/>≥ 85%?}
+        CAL --> AGR{κ ≥ 0.80?}
         AGR -->|Yes| DEPLOY[Deploy Judge ✓]
-        AGR -->|No| REFINE[Refine Rubric]
-        REFINE --> RUB
+        AGR -->|No| AL[Active Learning<br/><i>margin sampling → next<br/>annotations to collect</i>]
+        AL --> ANN
     end
 
     style Inputs fill:#f3e5f5
@@ -239,17 +246,39 @@ flowchart TD
     style Calibrate fill:#fff3e0
 ```
 
+### ML Techniques Used
+
+| Technique | Paper | What It Does |
+|---|---|---|
+| **Few-Shot / Prometheus** | Kim et al. 2023 | Injects your highest-confidence annotated examples into the judge prompt — the model sees what a Policy Hallucination looks like before evaluating. Typical κ improvement: +0.15–0.25. |
+| **G-EVAL Chain-of-Thought** | Liu et al. 2023 | Forces step-by-step reasoning per criterion (structured sub-questions) before scoring. Reduces anchoring bias and improves inter-rater reliability. |
+| **Constitutional AI** | Bai et al. 2022, Anthropic | Converts each error code into an independent principle. Judge checks each principle sequentially — no overall-score anchoring. Produces per-principle verdicts traceable to your Open Coding. |
+| **Self-Consistency Ensemble** | Wang et al. 2023 | Runs the same judge N times at temperature 0.7, aggregates via majority vote (binary) / median score (rubric). Identifies borderline responses where the judge disagrees with itself. |
+| **Active Learning** | Settles 2009 | Margin sampling: finds responses whose judge score is closest to the 3.5 pass/fail boundary — highest information gain for the next annotation round. Also reports coverage gaps per error code. |
+| **Cohen's Weighted Kappa** | Cohen 1968 | Replaces naive agreement % with a statistically principled inter-rater measure. Weighted κ accounts for ordinal distance (a score-diff of 4 is penalised more than 1). Reports 95% CI and per-criterion breakdown. |
+
 ### Generated Rubric Structure
 
-Each criterion gets a 5-point scoring scale grounded in observed failures:
+Each criterion is enriched with Paradigm Model context and severity-weighted:
 
 ```
-5 — Excellent: No issues observed
-4 — Good: Minor issues, acceptable
-3 — Adequate: Some issues, borderline
-2 — Poor: Significant issues matching observed error patterns
-1 — Failing: Critical failures (e.g., hallucinated_pricing, ignored_constraints)
+5 — Excellent: No issues observed in this dimension
+4 — Good: Minor issues, core value delivered
+3 — Acceptable: Noticeable issues but functional
+2 — Poor: Significant issues matching observed error patterns (root causes embedded)
+1 — Failing: Critical failure — e.g., Policy Hallucination, Data Fabrication
 ```
+
+Dimension weights reflect real-world severity:
+
+| Dimension | Weight |
+|---|---|
+| Safety | 2.0× |
+| Accuracy / Bias | 1.5× |
+| Instruction Following | 1.3× |
+| Completeness | 1.2× |
+| Quality | 1.0× |
+| Tone / Brand Relevance | 0.8× |
 
 The judge outputs structured JSON:
 ```json
@@ -258,6 +287,7 @@ The judge outputs structured JSON:
   "justifications": {"accuracy": "Minor imprecision in...", ...},
   "overall_score": 4.0,
   "pass": true,
+  "confidence": "high",
   "summary": "Response meets criteria with minor accuracy gap."
 }
 ```
@@ -342,10 +372,25 @@ The app guides domain experts through a numbered workflow:
 - **"Suggest Categories from Agent Spec"** button calls `fracture_domain()` on your saved agent spec and seeds the codebook with AI-generated failure categories — ready to assign codes to the Paradigm Model slots.
 
 ### Report — Full Judge Pipeline
-- **One-click pipeline** — "Generate Full Rubric Judge (AI)" chains `map_errors_to_categories → generate_rubric → generate_judge_prompt` automatically. The resulting judge prompt is displayed and available for export.
-- **Calibration UI** — Score a sample of responses manually (1–5 per dimension), then run the generated judge over the same set. The tool reports agreement % and flags dimension-level disagreements so you can refine your rubric before deploying.
-- **Export judge prompt** — Download the generated judge system prompt as a plain `.txt` file.
-- **Failure pattern analytics** — The report page computes frequency and severity of each failure code from your coding annotations, so you know which patterns dominate.
+
+The Report page is the culmination of the GEDD workflow — it takes all your qualitative analysis and produces a calibrated, deployable automated judge.
+
+**Pipeline visualisation** — A 4-step status panel shows exactly where your data came from: Open Coding annotations → Axial Coding Paradigm Model → Binary Judges → Full Rubric Judge. Each step shows live counts (N annotations, M error codes, P paradigm dimensions).
+
+**Intermediate mapping table** — After generating a judge, a table shows how each error code was mapped to an evaluation dimension (accuracy, completeness, etc.) and the LLM's rationale for that mapping — full transparency into the generation process.
+
+**Binary judges (always available)** — One TRUE/FALSE judge per Paradigm Model phenomenon, generated instantly without an LLM call. Each shows an annotation count badge ("2 examples contributed") and a data-trail breadcrumb tracing the lineage from raw annotations through to the judge prompt.
+
+**ML-Enhanced generation (3 modes):**
+- **Few-Shot / Prometheus** — Selects your best annotated examples (ranked by severity + confidence) and injects them as in-context demonstrations. The judge sees domain-specific failures before evaluating new responses. Most impactful technique when you have ≥3 examples per error code.
+- **G-EVAL Chain-of-Thought** — Adds structured sub-questions per criterion (e.g., "Does the response make verifiable factual claims?" before scoring Accuracy). Forces deliberate reasoning rather than holistic impression.
+- **Constitutional** — Converts each error code into an independent principle with causal trigger and discriminating example. Judge checks them sequentially, producing per-principle verdicts fully traceable to your Open Coding.
+
+**Calibration with Cohen's Kappa** — Score a sample of responses manually (1–5 per dimension), run the generated judge, and get: weighted Cohen's κ with 95% confidence interval, Landis & Koch interpretation label, and per-criterion kappa breakdown so you know exactly which criterion to fix first.
+
+**Active Learning recommendations** — After calibration, the tool uses margin sampling to identify which responses are closest to the pass/fail boundary (highest information gain for the next annotation round). Also shows coverage gaps: error codes with fewer than 2 annotated examples that will limit few-shot judge quality.
+
+**Export** — Download the generated judge system prompt as `.txt`, or export a full JSON report including the rubric, all annotations, paradigm model, and judge prompt.
 
 ---
 
@@ -365,9 +410,14 @@ pip install -e ".[dev]"
 python -m grounded_evals.app
 ```
 
-The app runs at `http://localhost:8080`. Login with password `playground2024` (or set `ADMIN_PASSWORD`).
+The app runs at `http://localhost:8080`. Set `ADMIN_PASSWORD` before starting:
 
-The home page shows an interactive demo of the full GEDD methodology using a TravelBot example — click through all 5 steps to understand the workflow before starting your own evaluation.
+```bash
+export ADMIN_PASSWORD=your-password
+python -m grounded_evals.app
+```
+
+The home page shows an interactive demo of the full GEDD methodology using a TravelBot example — click through all 5 steps to understand the workflow before starting your own evaluation. Load demo data from the Home page to see the complete judge pipeline (binary judges + error mappings + full rubric) pre-populated without requiring any LLM calls.
 
 ---
 
@@ -485,12 +535,12 @@ Open `http://localhost:8080` and log in.
 | `AWS_REGION` | AWS region for Bedrock | `us-east-1` |
 | `BEDROCK_MODEL_ID` | Model ID for coaching agent | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `ANTHROPIC_API_KEY` | Direct Anthropic API key (bypasses Bedrock) | — |
-| `ADMIN_PASSWORD` | Login password | `playground2024` |
+| `ADMIN_PASSWORD` | Login password (required) | — (must be set; app rejects all logins if unset and Cognito is not configured) |
 | `HOST` | Server bind address | `0.0.0.0` |
 | `PORT` | Server port | `8080` |
 | `COGNITO_USER_POOL_ID` | Cognito User Pool (production auth) | — |
 | `COGNITO_CLIENT_ID` | Cognito App Client ID | — |
-| `STORAGE_SECRET` | Secret key for session persistence (set a strong random string in production) | `dev-secret-change-me` |
+| `STORAGE_SECRET` | Secret key for session persistence (set a strong random string in production) | auto-generated random 32-byte hex per startup |
 | `AGENTCORE_AGENT_ID` | Remote AgentCore agent ID | — |
 | `LANGSMITH_API_KEY` | LangSmith tracing key (optional) | — |
 | `LANGSMITH_PROJECT` | LangSmith project name | `agent-playground` |
@@ -503,7 +553,7 @@ Open `http://localhost:8080` and log in.
 | `NoCredentialProviders` | Run `aws configure` or set `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
 | Wrong region error | Ensure `AWS_REGION` matches where you enabled Bedrock models |
 | Models not responding | Check that the specific model ID is available in your region |
-| Login not working | Default password is `playground2024` or set `ADMIN_PASSWORD` |
+| Login not working | Set `ADMIN_PASSWORD` env var before starting the app |
 
 ---
 
@@ -519,10 +569,14 @@ grounded-evals/
 │   ├── axial_coding/       # Phase 2: Relate patterns
 │   │   ├── mapper.py       #   Errors → 8 standard dimensions
 │   │   └── paradigm.py     #   Build Paradigm Model
-│   ├── judge_builder/      # Phase 3: Build judge
-│   │   ├── rubric.py       #   Generate scoring rubric
-│   │   ├── prompt_gen.py   #   Generate judge system prompt
-│   │   └── calibrate.py    #   Human vs judge agreement
+│   ├── judge_builder/      # Phase 3: Build judge (ML-enhanced)
+│   │   ├── rubric.py       #   Generate rubric (paradigm-enriched, severity-weighted)
+│   │   ├── prompt_gen.py   #   3 modes: standard / few-shot / G-EVAL CoT
+│   │   ├── calibrate.py    #   Cohen's weighted κ + per-criterion breakdown
+│   │   ├── few_shot.py     #   Prometheus-style exemplar selection + injection
+│   │   ├── constitutional.py #  Principle-by-principle evaluation (Const. AI)
+│   │   ├── ensemble.py     #   Self-consistency judging (majority vote / median)
+│   │   └── active_learning.py # Margin sampling + coverage gap detection
 │   ├── agent/              # Conversational coach
 │   │   ├── handler.py      #   Tool-use loop
 │   │   ├── tools.py        #   Coaching tools
