@@ -399,11 +399,24 @@ def home_page():
                 "font-size: 0.82rem; color: var(--text-secondary); font-weight: 500"
             )
 
+        # Load Demo Data
+        def load_demo():
+            from grounded_evals.ui.demo_data import load_demo_data
+            load_demo_data(app.storage.user)
+            ui.notify("Demo data loaded! Explore each page to see it in action.", type="positive")
+            ui.navigate.to("/coach")
+
+        with ui.row().classes("items-center gap-2").style("margin-top: 1.5rem"):
+            ui.button("Load Demo Data (TravelBot)", icon="science", on_click=load_demo).props("size=sm").style(
+                "background: var(--accent); color: white; border-radius: 6px"
+            )
+            ui.label("Pre-populates all pages with realistic sample data").style("font-size: 0.72rem; color: var(--text-muted)")
+
         # Logout
         def logout():
             app.storage.user["authenticated"] = False
             ui.navigate.to("/login")
 
         ui.button("Logout", icon="logout", on_click=logout).props("flat size=sm").style(
-            "color: var(--text-muted); margin-top: 1rem"
+            "color: var(--text-muted); margin-top: 0.5rem"
         )
