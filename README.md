@@ -17,6 +17,7 @@ GEDD flips this: **observe first, theorize second.**
 ## How It Works — The GEDD Pipeline
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d1f3d'}}}%%
 flowchart TD
     A[Define Agent Spec] --> B[Fracture Domain]
     B --> C[Write Golden Queries]
@@ -29,19 +30,20 @@ flowchart TD
     I --> J[Calibrate Judge vs Human]
     J -->|Low Agreement| K[Refine & Iterate]
     K --> E
-    J -->|High Agreement| L[Deploy Automated Judge]
+    J -->|High Agreement| L[Deploy Automated Judge ✓]
 
-    style A fill:#e8f5e9
-    style B fill:#e8f5e9
-    style C fill:#e8f5e9
-    style D fill:#fff3e0
-    style E fill:#fff3e0
-    style F fill:#e3f2fd
-    style G fill:#e3f2fd
-    style H fill:#fce4ec
-    style I fill:#fce4ec
-    style J fill:#fce4ec
-    style L fill:#c8e6c9
+    style A fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
+    style B fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
+    style C fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
+    style D fill:#2d2a1a,stroke:#d4a017,color:#fde68a
+    style E fill:#2d2a1a,stroke:#d4a017,color:#fde68a
+    style F fill:#1a2a3a,stroke:#4a7fa5,color:#93c5fd
+    style G fill:#1a2a3a,stroke:#4a7fa5,color:#93c5fd
+    style H fill:#3a1a2a,stroke:#a855f7,color:#e9d5ff
+    style I fill:#3a1a2a,stroke:#a855f7,color:#e9d5ff
+    style J fill:#3a1a2a,stroke:#a855f7,color:#e9d5ff
+    style K fill:#2d1a1a,stroke:#ef4444,color:#fca5a5
+    style L fill:#0f2a1a,stroke:#22c55e,color:#86efac
 ```
 
 ---
@@ -51,6 +53,7 @@ flowchart TD
 GEDD maps three phases of Grounded Theory to LLM evaluation:
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'lineColor': '#64b5f6'}}}%%
 flowchart LR
     subgraph GT["Grounded Theory"]
         OC[Open Coding] --> AC[Axial Coding] --> SC[Selective Coding]
@@ -64,8 +67,8 @@ flowchart LR
     AC -.->|maps to| AC2
     SC -.->|maps to| SC2
 
-    style GT fill:#f3e5f5
-    style GEDD fill:#e8f5e9
+    style GT fill:#2d1f3d,stroke:#a855f7,color:#e9d5ff
+    style GEDD fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
 ```
 
 | Grounded Theory Concept | GEDD Implementation |
@@ -84,6 +87,7 @@ flowchart LR
 Open Coding is the inductive discovery phase. You break the agent's domain into testable pieces, then observe what actually happens.
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d2a1a'}}}%%
 flowchart TD
     subgraph Fracture["1. Domain Fracturing"]
         AS[Agent Spec<br/><i>name, capabilities, users</i>] --> FD[fracture_domain]
@@ -107,9 +111,9 @@ flowchart TD
         ANN --> ERR[Error Codes Emerge<br/><i>in-vivo from failures</i>]
     end
 
-    style Fracture fill:#e8f5e9
-    style Golden fill:#fff3e0
-    style Observe fill:#e3f2fd
+    style Fracture fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
+    style Golden fill:#2d2a1a,stroke:#d4a017,color:#fde68a
+    style Observe fill:#1a2a3a,stroke:#4a7fa5,color:#93c5fd
 ```
 
 ### Key Concepts
@@ -122,6 +126,7 @@ flowchart TD
 ### Saturation Model
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6'}}}%%
 stateDiagram-v2
     [*] --> UNSATURATED: < 2 prompts
     UNSATURATED --> APPROACHING: 2 prompts
@@ -140,6 +145,7 @@ stateDiagram-v2
 Axial Coding connects the error patterns you discovered into a causal model. It answers: *why* do failures happen?
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d1f3d'}}}%%
 flowchart TD
     subgraph Input["Discovered Error Codes"]
         E1[hallucinated_pricing]
@@ -182,10 +188,10 @@ flowchart TD
         AS2 --> CON
     end
 
-    style Input fill:#fff3e0
-    style Mapping fill:#e3f2fd
-    style Paradigm fill:#f3e5f5
-    style MODEL fill:#fce4ec
+    style Input fill:#2d2a1a,stroke:#d4a017,color:#fde68a
+    style Mapping fill:#1a2a3a,stroke:#4a7fa5,color:#93c5fd
+    style Paradigm fill:#2d1f3d,stroke:#a855f7,color:#e9d5ff
+    style MODEL fill:#3a1a2a,stroke:#ec4899,color:#fbcfe8
 ```
 
 ### The 8 Standard Evaluation Dimensions
@@ -210,6 +216,7 @@ Errors are mapped to these categories:
 The final phase transforms your qualitative analysis into a deployable automated judge — using ML research techniques grounded in your own annotations.
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d1f3d'}}}%%
 flowchart TD
     subgraph Inputs["From Axial Coding"]
         EM[Error Mappings<br/><i>errors → 8 dimensions</i>]
@@ -241,9 +248,9 @@ flowchart TD
         AL --> ANN
     end
 
-    style Inputs fill:#f3e5f5
-    style Build fill:#e8f5e9
-    style Calibrate fill:#fff3e0
+    style Inputs fill:#2d1f3d,stroke:#a855f7,color:#e9d5ff
+    style Build fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
+    style Calibrate fill:#2d2a1a,stroke:#d4a017,color:#fde68a
 ```
 
 ### ML Techniques Used
@@ -297,6 +304,7 @@ The judge outputs structured JSON:
 ## Architecture
 
 ```mermaid
+%%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d1f3d'}}}%%
 flowchart TD
     subgraph UI["NiceGUI Web App (Dark Mode)"]
         HOME[Home + Interactive Demo]
@@ -335,10 +343,10 @@ flowchart TD
     COG --> ECS
     AC --> REMOTE
 
-    style UI fill:#e8f5e9
-    style Core fill:#e3f2fd
-    style Agent fill:#fff3e0
-    style Infra fill:#fce4ec
+    style UI fill:#1a3a2a,stroke:#27a644,color:#a7f3c1
+    style Core fill:#1a2a3a,stroke:#4a7fa5,color:#93c5fd
+    style Agent fill:#2d2a1a,stroke:#d4a017,color:#fde68a
+    style Infra fill:#3a1a2a,stroke:#ec4899,color:#fbcfe8
 ```
 
 ### Step-by-Step User Flow
