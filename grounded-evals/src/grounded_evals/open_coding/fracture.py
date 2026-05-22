@@ -65,7 +65,7 @@ def fracture_domain(agent_spec: AgentSpec) -> list[Category]:
 
     message = client.messages.create(
         model=model_id,
-        max_tokens=4096,
+        max_tokens=8192,
         messages=[{"role": "user", "content": prompt}],
     )
 

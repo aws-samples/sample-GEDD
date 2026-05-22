@@ -32,14 +32,10 @@ def serve(host: str, port: int, reload: bool) -> None:
 @click.option("--output", "-o", default="-", help="Output file (default: stdout)")
 def fracture(spec: str, output: str) -> None:
     """Fracture an agent domain into testable prompt categories (Open Coding)."""
-    import yaml
-
-    from grounded_evals.ingest.models import AgentSpec
+    from grounded_evals.ingest.parser import parse_agent_spec
     from grounded_evals.open_coding.fracture import fracture_domain
 
-    raw = Path(spec).read_text()
-    data = yaml.safe_load(raw) if spec.endswith((".yaml", ".yml")) else json.loads(raw)
-    agent_spec = AgentSpec(**data)
+    agent_spec = parse_agent_spec(spec)
 
     click.echo(f"Fracturing domain for: {agent_spec.name}", err=True)
     categories = fracture_domain(agent_spec)
@@ -49,7 +45,10 @@ def fracture(spec: str, output: str) -> None:
             "name": c.name,
             "definition": c.definition,
             "properties": [
-                {"name": p.name, "dimensions": p.dimensions}
+                {
+                    "name": p.name,
+                    "dimensions": [d.model_dump() for d in p.dimensions],
+                }
                 for p in c.properties
             ],
         }
@@ -71,50 +70,66 @@ def fracture(spec: str, output: str) -> None:
               help="Categories JSON (output of fracture). If omitted, inferred from dataset.")
 def check_saturation(dataset: str, categories: str | None) -> None:
     """Check whether a golden dataset has reached theoretical saturation."""
+    from uuid import uuid4
+
     from grounded_evals.models.core import Category, GoldenPrompt
     from grounded_evals.open_coding.saturation import check_overall_saturation
 
-    prompts: list[GoldenPrompt] = []
+    raw_rows: list[dict] = []
     with Path(dataset).open() as f:
         for line in f:
             line = line.strip()
             if not line:
                 continue
-            obj = json.loads(line)
-            prompts.append(GoldenPrompt(
-                prompt_text=obj.get("prompt_text") or obj.get("prompt") or obj.get("query", ""),
-                category_id=obj.get("category_id", ""),
-                rationale=obj.get("category") or obj.get("rationale", ""),
-            ))
+            raw_rows.append(json.loads(line))
 
     if categories:
         cats_data = json.loads(Path(categories).read_text())
         cats = [Category(name=c["name"], definition=c.get("definition", "")) for c in cats_data]
+        cat_by_name = {c.name: c for c in cats}
+        prompts = [
+            GoldenPrompt(
+                prompt_text=r.get("prompt_text") or r.get("prompt") or r.get("query", ""),
+                category_id=cat_by_name[r["category"]].id if r.get("category") in cat_by_name else uuid4(),
+                rationale=r.get("category") or r.get("rationale", ""),
+            )
+            for r in raw_rows
+        ]
     else:
         # Infer categories from dataset rationale fields
         seen: dict[str, Category] = {}
-        for p in prompts:
-            key = p.rationale or p.category_id or "uncategorized"
+        prompts = []
+        for r in raw_rows:
+            key = r.get("category") or r.get("rationale") or "uncategorized"
             if key not in seen:
-                from uuid import uuid4
-                seen[key] = Category(id=str(uuid4()), name=key, definition="")
-            p.category_id = seen[key].id
+                seen[key] = Category(name=key, definition="")
+            prompts.append(GoldenPrompt(
+                prompt_text=r.get("prompt_text") or r.get("prompt") or r.get("query", ""),
+                category_id=seen[key].id,
+                rationale=key,
+            ))
         cats = list(seen.values())
 
+    from grounded_evals.models.core import SaturationStatus
+    from grounded_evals.open_coding.saturation import check_category_saturation
+
     report = check_overall_saturation(cats, prompts)
+    statuses = [check_category_saturation(c, prompts) for c in cats]
+    approaching = sum(1 for s in statuses if s == SaturationStatus.APPROACHING)
+    unsaturated = sum(1 for s in statuses if s == SaturationStatus.UNSATURATED)
 
     click.echo(f"\nSaturation Report — {Path(dataset).name}")
     click.echo(f"  Total prompts  : {len(prompts)}")
     click.echo(f"  Categories     : {len(cats)}")
-    click.echo(f"  Saturated      : {report.saturated_count}")
-    click.echo(f"  Approaching    : {report.approaching_count}")
-    click.echo(f"  Unsaturated    : {report.unsaturated_count}")
-    click.echo(f"  Coverage       : {report.overall_coverage:.0%}")
+    click.echo(f"  Saturated      : {report.saturated_categories}")
+    click.echo(f"  Approaching    : {approaching}")
+    click.echo(f"  Unsaturated    : {unsaturated}")
+    click.echo(f"  Coverage       : {report.saturation_score:.0%}")
     if report.gaps:
-        click.echo(f"\n  Gaps (need more prompts):")
+        click.echo("\n  Gaps (need more prompts):")
         for gap in report.gaps:
             click.echo(f"    • {gap}")
-    saturated = report.overall_coverage >= 0.8
+    saturated = report.saturation_score >= 0.8
     status = "SATURATED" if saturated else "NOT YET SATURATED"
     click.echo(f"\n  Status: {status}\n")
     sys.exit(0 if saturated else 1)
@@ -154,6 +169,8 @@ def coverage(dataset: str) -> None:
 @click.option("--new-prompt", "-p", required=True, help="New candidate prompt text")
 def compare(dataset: str, new_prompt: str) -> None:
     """Run constant comparison on a new prompt against an existing golden dataset."""
+    from uuid import uuid4
+
     from grounded_evals.models.core import GoldenPrompt
     from grounded_evals.open_coding.compare import constant_comparison
 
@@ -166,6 +183,7 @@ def compare(dataset: str, new_prompt: str) -> None:
             obj = json.loads(line)
             prompts.append(GoldenPrompt(
                 prompt_text=obj.get("prompt_text") or obj.get("prompt") or obj.get("query", ""),
+                category_id=uuid4(),
                 rationale=obj.get("category") or obj.get("rationale", ""),
             ))
 

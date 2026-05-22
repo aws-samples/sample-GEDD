@@ -730,8 +730,9 @@ def main_page() -> None:
                     with adversarial_container:
                         ui.label("Generating...").style("color: var(--text-muted); font-size: 0.8rem")
                     try:
-                        from grounded_evals.llm.client import get_default_client
+                        from grounded_evals.llm.client import get_default_client, get_model_id
                         client = get_default_client()
+                        model_id = get_model_id()
                         prompt_text = session.agent_spec.system_prompt[:500]
                         agent_name = session.agent_spec.name or "the agent"
                         adv_prompt = (
@@ -741,10 +742,16 @@ def main_page() -> None:
                             f"ambiguous requests that exploit gaps, and attempts to override rules.\n"
                             f"Return ONLY the 5 queries, one per line, numbered 1-5."
                         )
-                        response = await asyncio.to_thread(client.generate, adv_prompt)
+                        message = await asyncio.to_thread(
+                            client.messages.create,
+                            model=model_id,
+                            max_tokens=512,
+                            messages=[{"role": "user", "content": adv_prompt}],
+                        )
+                        response_text = message.content[0].text
                         adversarial_container.clear()
                         with adversarial_container:
-                            for line in response.strip().split('\n'):
+                            for line in response_text.strip().split('\n'):
                                 line = line.strip()
                                 if line and line[0].isdigit():
                                     with ui.element("div").style(
