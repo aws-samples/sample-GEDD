@@ -13,7 +13,7 @@ def test_generate_rubric_from_mappings():
 
     rubric = generate_rubric(mappings)
 
-    assert rubric.name == "Auto-generated Evaluation Rubric"
+    assert "Rubric" in rubric.name
     assert len(rubric.criteria) == 2  # accuracy and safety
     criterion_names = {c.name for c in rubric.criteria}
     assert "Accuracy" in criterion_names

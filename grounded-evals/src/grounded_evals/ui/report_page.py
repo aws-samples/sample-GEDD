@@ -811,6 +811,220 @@ def report_page():
                 "then generates a scored rubric judge grounded in your research."
             ).style("font-size: 0.68rem; color: var(--text-muted); margin-top: 6px")
 
+        # ── ML-Enhanced Judge Generation ──────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("ML-Enhanced Judge Generation").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label(
+                "Apply ML research techniques to teach the judge your specific error modes — "
+                "grounded in your qualitative annotations, not generic heuristics."
+            ).style("font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px")
+
+            # Technique cards (educational + actionable)
+            ml_techniques = [
+                ("few_shot", "Few-Shot (Prometheus)", "auto_awesome",
+                 "var(--accent)", "var(--accent-tint, rgba(94,106,210,0.12))",
+                 "Injects your annotated examples directly into the judge prompt. "
+                 "The judge sees what a Policy Hallucination looks like before evaluating. "
+                 "Directly based on Kim et al. 2023 (Prometheus). Highest-impact technique for domain-specific calibration.",
+                 "Best when: you have ≥3 annotated examples per error code. Typical kappa improvement: +0.15–0.25."),
+                ("geval", "G-EVAL (Chain-of-Thought)", "account_tree",
+                 "var(--yellow)", "rgba(240,191,0,0.10)",
+                 "Forces step-by-step reasoning per criterion before scoring. "
+                 "Each criterion gets structured sub-questions derived from your rubric. "
+                 "Based on Liu et al. 2023 (G-EVAL). Reduces anchoring bias on overall score.",
+                 "Best when: your rubric has complex, multi-aspect criteria. Adds ~3× more tokens per evaluation."),
+                ("constitutional", "Constitutional (Principle-based)", "gavel",
+                 "var(--green-bright)", "var(--green-tint)",
+                 "Converts each error code into an independent check (principle). "
+                 "Inspired by Constitutional AI (Bai et al. 2022, Anthropic). "
+                 "Judge evaluates each principle sequentially — no anchoring to overall score.",
+                 "Best when: you want per-principle verdicts and full traceback to error codes."),
+            ]
+
+            with ui.row().classes("w-full gap-3").style("margin-bottom: 16px; flex-wrap: wrap"):
+                for mode, title, icon_name, color, bg, desc, usage in ml_techniques:
+                    with ui.element("div").style(
+                        f"flex: 1; min-width: 220px; background: {bg}; border: 1px solid {color}30; "
+                        f"border-radius: 12px; padding: 12px"
+                    ):
+                        with ui.row().classes("items-center gap-2").style("margin-bottom: 6px"):
+                            ui.icon(icon_name).style(f"color: {color}; font-size: 1rem")
+                            ui.label(title).style(f"font-size: 0.78rem; font-weight: 600; color: {color}")
+                        ui.label(desc).style("font-size: 0.7rem; color: var(--text-tertiary); line-height: 1.5; margin-bottom: 6px")
+                        ui.label(usage).style(
+                            f"font-size: 0.65rem; color: {color}; line-height: 1.4; "
+                            f"background: {color}20; border-radius: 6px; padding: 4px 8px"
+                        )
+
+            ml_mode = {"value": "few_shot"}
+            ml_mode_select = ui.select(
+                options={
+                    "few_shot": "Few-Shot / Prometheus-style",
+                    "geval": "G-EVAL Chain-of-Thought",
+                    "constitutional": "Constitutional (Principle-by-Principle)",
+                },
+                value="few_shot",
+                label="Generation mode",
+                on_change=lambda e: ml_mode.update({"value": e.value}),
+            ).props("dense outlined dark").style("width: 300px; margin-bottom: 12px")
+
+            ml_output_container = ui.column().classes("w-full")
+
+            async def generate_ml_judge():
+                if not codebook:
+                    ui.notify("Complete Tag Failures step first — need error codes", type="warning")
+                    return
+                ml_btn.props("loading")
+                try:
+                    from grounded_evals.axial_coding.mapper import map_errors_to_categories
+                    from grounded_evals.judge_builder.few_shot import select_exemplars
+                    from grounded_evals.judge_builder.prompt_gen import (
+                        generate_few_shot_judge_prompt,
+                        generate_geval_judge_prompt,
+                        generate_judge_prompt,
+                    )
+                    from grounded_evals.judge_builder.rubric import generate_rubric
+                    from grounded_evals.models.core import Code, CodeType
+
+                    mode = ml_mode["value"]
+                    codes = [Code(label=c["name"], definition=c.get("definition", ""), code_type=CodeType.DESCRIPTIVE) for c in codebook]
+
+                    ui.notify("Mapping error codes to evaluation dimensions...", type="info")
+                    mappings = await asyncio.to_thread(map_errors_to_categories, codes)
+                    if not mappings:
+                        ui.notify("Could not map error codes — check LLM connectivity", type="warning")
+                        ml_btn.props(remove="loading")
+                        return
+
+                    mappings_data = [
+                        {"error_code": m.error_code, "primary_category": m.primary_category, "rationale": m.rationale}
+                        for m in mappings
+                    ]
+                    storage["_judge_mappings"] = mappings_data
+
+                    rubric = generate_rubric(mappings, paradigm_dict=paradigm)
+                    ui.notify(f"Building {mode} judge prompt...", type="info")
+
+                    if mode == "few_shot":
+                        exemplar_set = select_exemplars(coding_annotations, codebook)
+                        storage["_exemplar_coverage"] = exemplar_set.coverage
+                        storage["_n_exemplars"] = len(exemplar_set.exemplars)
+                        judge_prompt_ml = generate_few_shot_judge_prompt(rubric, exemplar_set, agent_name, agent_description)
+                    elif mode == "geval":
+                        judge_prompt_ml = generate_geval_judge_prompt(rubric, agent_name, agent_description)
+                    elif mode == "constitutional":
+                        from grounded_evals.judge_builder.constitutional import (
+                            build_constitutional_judge_prompt,
+                            build_constitutional_principles,
+                        )
+                        principles = build_constitutional_principles(codebook, paradigm, coding_annotations, mappings_data)
+                        judge_prompt_ml = build_constitutional_judge_prompt(principles, agent_name, agent_description)
+                        storage["_constitutional_principles"] = [
+                            {"code": p.code_name, "definition": p.definition, "causal_trigger": p.causal_trigger}
+                            for p in principles
+                        ]
+                    else:
+                        judge_prompt_ml = generate_judge_prompt(rubric, agent_name, agent_description)
+
+                    storage["_generated_judge_prompt"] = judge_prompt_ml
+                    storage["_judge_mode"] = mode
+
+                    ml_output_container.clear()
+                    with ml_output_container:
+                        _render_ml_output(judge_prompt_ml, mode, mappings_data)
+
+                    ui.notify(f"{mode.replace('_', ' ').title()} judge generated ✓", type="positive")
+                except Exception as e:
+                    ui.notify(f"Error: {e}", type="negative")
+                finally:
+                    ml_btn.props(remove="loading")
+
+            def _render_ml_output(judge_prompt_ml: str, mode: str, mappings_data: list):
+                ml_output_container.clear()
+                with ml_output_container:
+                    mode_labels = {
+                        "few_shot": ("Few-Shot Calibrated Judge", "var(--accent-bright)"),
+                        "geval": ("G-EVAL Chain-of-Thought Judge", "var(--yellow)"),
+                        "constitutional": ("Constitutional Judge", "var(--green-bright)"),
+                    }
+                    label, color = mode_labels.get(mode, ("ML Judge", "var(--text-primary)"))
+
+                    with ui.element("div").style(
+                        f"border: 1px solid {color}; border-radius: 12px; padding: 14px; margin-top: 4px"
+                    ):
+                        with ui.row().classes("items-center justify-between w-full").style("margin-bottom: 8px"):
+                            with ui.column().style("gap: 2px"):
+                                ui.label(label).style(f"font-size: 0.85rem; font-weight: 600; color: {color}")
+                                if mode == "few_shot":
+                                    n_ex = storage.get("_n_exemplars", 0)
+                                    cov = storage.get("_exemplar_coverage", [])
+                                    if n_ex:
+                                        ui.label(
+                                            f"{n_ex} annotated examples injected · covers: {', '.join(cov[:3])}"
+                                        ).style("font-size: 0.65rem; color: var(--text-muted)")
+                                elif mode == "constitutional":
+                                    n_princ = len(storage.get("_constitutional_principles", []))
+                                    ui.label(f"{n_princ} constitutional principles derived from error codes").style(
+                                        "font-size: 0.65rem; color: var(--text-muted)"
+                                    )
+                            ui.button("Copy", icon="content_copy", on_click=lambda: ui.run_javascript(
+                                f"navigator.clipboard.writeText({json.dumps(judge_prompt_ml)})"
+                            )).props("flat size=sm").style("color: var(--text-tertiary)")
+
+                        # Constitutional principles breakdown
+                        if mode == "constitutional":
+                            principles = storage.get("_constitutional_principles", [])
+                            if principles:
+                                ui.label("Principles derived:").style(
+                                    "font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); margin-bottom: 4px"
+                                )
+                                for p in principles[:6]:
+                                    with ui.row().classes("items-start gap-2").style("margin-bottom: 3px"):
+                                        ui.html('<span style="color:var(--green-bright);font-size:0.7rem">✓</span>')
+                                        ui.label(f"{p['code']}: {p['definition'][:80]}").style(
+                                            "font-size: 0.68rem; color: var(--text-secondary); line-height: 1.3"
+                                        )
+
+                        # Few-shot exemplar summary
+                        if mode == "few_shot":
+                            cov = storage.get("_exemplar_coverage", [])
+                            if cov:
+                                ui.label("Injected examples cover:").style(
+                                    "font-size: 0.65rem; font-weight: 600; color: var(--text-tertiary); margin-bottom: 4px"
+                                )
+                                with ui.row().classes("gap-1 flex-wrap").style("margin-bottom: 8px"):
+                                    for code_name in cov:
+                                        ui.html(
+                                            f'<span style="font-size:0.62rem;padding:2px 7px;border-radius:99px;'
+                                            f'background:var(--accent-tint, rgba(94,106,210,0.15));color:var(--accent-bright)">'
+                                            f'{code_name}</span>'
+                                        )
+
+                        with ui.scroll_area().style("max-height: 250px; width: 100%; margin-top: 8px"):
+                            with ui.element("pre").style(
+                                "font-size: 0.68rem; color: var(--text-secondary); white-space: pre-wrap; "
+                                "line-height: 1.5; font-family: monospace"
+                            ):
+                                ui.label(judge_prompt_ml)
+
+            # Render any previously generated ML judge
+            prev_ml = storage.get("_generated_judge_prompt")
+            prev_mode = storage.get("_judge_mode")
+            if prev_ml and prev_mode and prev_mode != "standard":
+                _render_ml_output(prev_ml, prev_mode, storage.get("_judge_mappings", []))
+
+            ml_btn = ui.button(
+                "Generate ML-Enhanced Judge", icon="psychology", on_click=generate_ml_judge
+            ).props("size=sm").style(
+                "margin-top: 10px; background: var(--accent); color: white; border-radius: var(--radius-md)"
+            )
+            ui.label(
+                "Generates a judge prompt using the selected ML technique, grounded in your coding annotations and Paradigm Model."
+            ).style("font-size: 0.68rem; color: var(--text-muted); margin-top: 6px")
+
         # ── Calibration ────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
             ui.label("Judge Calibration").style(
@@ -937,25 +1151,57 @@ def report_page():
 
                             cal_result_container.clear()
                             with cal_result_container:
-                                color = "var(--green-bright)" if result.agreement_score >= 0.85 else (
-                                    "var(--yellow)" if result.agreement_score >= 0.7 else "var(--red)"
+                                kappa = result.weighted_kappa or result.cohens_kappa
+                                color = "var(--green-bright)" if kappa >= 0.80 else (
+                                    "var(--yellow)" if kappa >= 0.61 else "var(--red)"
                                 )
                                 with ui.element("div").style(
                                     f"background: var(--bg-surface-2); border: 1px solid {color}; "
                                     f"border-radius: var(--radius-lg); padding: 14px; margin-top: 12px"
                                 ):
-                                    ui.label(f"Agreement: {result.agreement_score:.0%}").style(
-                                        f"font-size: 1.1rem; font-weight: 700; color: {color}"
+                                    with ui.row().classes("gap-6 items-start").style("margin-bottom: 8px"):
+                                        with ui.column().style("gap: 2px"):
+                                            ui.label(f"κ = {kappa:.3f}").style(
+                                                f"font-size: 1.2rem; font-weight: 700; color: {color}"
+                                            )
+                                            ui.label("Weighted Cohen's Kappa").style(
+                                                "font-size: 0.62rem; color: var(--text-tertiary)"
+                                            )
+                                        with ui.column().style("gap: 2px"):
+                                            ui.label(f"{result.agreement_score:.0%}").style(
+                                                "font-size: 1.0rem; font-weight: 600; color: var(--text-secondary)"
+                                            )
+                                            ui.label("Raw ±1 agreement").style(
+                                                "font-size: 0.62rem; color: var(--text-tertiary)"
+                                            )
+                                        if result.kappa_ci_low != result.kappa_ci_high:
+                                            with ui.column().style("gap: 2px"):
+                                                ui.label(f"[{result.kappa_ci_low:.2f}, {result.kappa_ci_high:.2f}]").style(
+                                                    "font-size: 0.82rem; color: var(--text-muted)"
+                                                )
+                                                ui.label("95% CI").style("font-size: 0.62rem; color: var(--text-tertiary)")
+                                    ui.label(result.kappa_interpretation).style(
+                                        f"font-size: 0.78rem; color: {color}; font-weight: 500; margin-bottom: 4px"
                                     )
                                     ui.label(result.recommendation).style(
-                                        "font-size: 0.82rem; color: var(--text-secondary); margin-top: 4px"
+                                        "font-size: 0.78rem; color: var(--text-secondary)"
                                     )
+                                    if result.per_criterion_kappa:
+                                        ui.label("Kappa per criterion:").style(
+                                            "font-size: 0.68rem; color: var(--text-tertiary); margin-top: 10px; font-weight: 600"
+                                        )
+                                        for crit, ck in sorted(result.per_criterion_kappa.items(), key=lambda x: x[1]):
+                                            ck_color = "var(--green-bright)" if ck >= 0.8 else ("var(--yellow)" if ck >= 0.6 else "var(--red)")
+                                            weakest_marker = " ← fix this" if crit == result.weakest_criterion else ""
+                                            ui.label(f"• {crit}: κ={ck:.2f}{weakest_marker}").style(
+                                                f"font-size: 0.68rem; color: {ck_color}"
+                                            )
                                     if result.disagreements:
                                         ui.label("Disagreements:").style(
-                                            "font-size: 0.72rem; color: var(--text-tertiary); margin-top: 8px; font-weight: 600"
+                                            "font-size: 0.68rem; color: var(--text-tertiary); margin-top: 8px; font-weight: 600"
                                         )
                                         for d in result.disagreements[:5]:
-                                            ui.label(f"• {d}").style("font-size: 0.72rem; color: var(--red)")
+                                            ui.label(f"• {d}").style("font-size: 0.68rem; color: var(--red)")
 
                         except Exception as e:
                             ui.notify(f"Calibration error: {e}", type="negative")
@@ -976,16 +1222,18 @@ def report_page():
                         try:
                             result = calibrate([m for m in prev_manual if m], prev_judge)
                             with cal_result_container:
-                                color = "var(--green-bright)" if result.agreement_score >= 0.85 else (
-                                    "var(--yellow)" if result.agreement_score >= 0.7 else "var(--red)"
+                                kappa = result.weighted_kappa or result.cohens_kappa
+                                color = "var(--green-bright)" if kappa >= 0.80 else (
+                                    "var(--yellow)" if kappa >= 0.61 else "var(--red)"
                                 )
                                 with ui.element("div").style(
                                     f"background: var(--bg-surface-2); border: 1px solid {color}; "
                                     f"border-radius: var(--radius-lg); padding: 14px; margin-top: 12px"
                                 ):
-                                    ui.label(f"Last calibration: {result.agreement_score:.0%} agreement").style(
+                                    ui.label(f"Last calibration: κ={kappa:.3f} ({result.agreement_score:.0%} raw agreement)").style(
                                         f"font-size: 0.9rem; font-weight: 600; color: {color}"
                                     )
+                                    ui.label(result.kappa_interpretation).style(f"font-size: 0.72rem; color: {color}")
                                     ui.label(result.recommendation).style(
                                         "font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px"
                                     )
@@ -993,6 +1241,96 @@ def report_page():
                             pass
 
             render_calibration()
+
+        # ── Active Learning Recommendations ───────────────────────────────
+        with ui.element("div").classes("page-card"):
+            ui.label("Active Learning — What to Annotate Next").style(
+                "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
+            )
+            ui.label(
+                "Human annotation is the bottleneck. Uncertainty sampling identifies which responses "
+                "would most improve judge calibration if annotated next."
+            ).style("font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px")
+
+            from grounded_evals.judge_builder.active_learning import _find_coverage_gaps
+
+            coverage_gaps = _find_coverage_gaps(coding_annotations, codebook)
+
+            if coverage_gaps:
+                with ui.element("div").style(
+                    "background: rgba(240,191,0,0.08); border: 1px solid rgba(240,191,0,0.25); "
+                    "border-radius: 10px; padding: 10px 12px; margin-bottom: 12px"
+                ):
+                    ui.label("Coverage Gaps — error codes with < 2 annotated examples").style(
+                        "font-size: 0.65rem; font-weight: 700; letter-spacing: 0.06em; color: var(--yellow); margin-bottom: 6px"
+                    )
+                    ui.label(
+                        "These error codes don't have enough examples for the few-shot judge to learn from. "
+                        "Adding 1–2 clear examples each will have the highest calibration impact."
+                    ).style("font-size: 0.7rem; color: var(--text-tertiary); margin-bottom: 8px; line-height: 1.4")
+                    with ui.row().classes("gap-2 flex-wrap"):
+                        for gap in coverage_gaps:
+                            ui.html(
+                                f'<span style="font-size:0.68rem;padding:3px 10px;border-radius:99px;'
+                                f'background:rgba(240,191,0,0.15);color:var(--yellow);border:1px solid rgba(240,191,0,0.3)">'
+                                f'⚠ {gap}</span>'
+                            )
+                    ui.label(
+                        f"→ Go to Tag Failures and annotate examples that exhibit: {', '.join(coverage_gaps[:3])}."
+                    ).style("font-size: 0.7rem; color: var(--yellow); margin-top: 8px; font-weight: 500")
+
+            # Margin sampling from any existing judge scores
+            prev_judge_scores = storage.get("_calibration_judge", [])
+            prev_anns = annotations[:len(prev_judge_scores)] if prev_judge_scores else []
+
+            if prev_judge_scores and prev_anns:
+                from grounded_evals.judge_builder.active_learning import recommend_from_judge_scores
+                al_report = recommend_from_judge_scores(
+                    prev_anns, prev_judge_scores, top_k=3,
+                    coding_annotations=coding_annotations, codebook=codebook,
+                )
+                if al_report.top_uncertain:
+                    with ui.element("div").style(
+                        "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                        "border-radius: 10px; padding: 12px; margin-bottom: 10px"
+                    ):
+                        ui.label("Most Uncertain Responses (margin sampling)").style(
+                            "font-size: 0.68rem; font-weight: 600; color: var(--text-tertiary); "
+                            "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
+                        )
+                        ui.label(
+                            "These responses scored closest to the pass/fail boundary — "
+                            "the judge is least confident here. Human annotation has highest information gain."
+                        ).style("font-size: 0.7rem; color: var(--text-tertiary); margin-bottom: 10px; line-height: 1.4")
+
+                        for u in al_report.top_uncertain:
+                            uncertainty_pct = int(u.uncertainty_score * 100)
+                            bar_color = "var(--red)" if uncertainty_pct > 70 else ("var(--yellow)" if uncertainty_pct > 40 else "var(--text-muted)")
+                            with ui.element("div").style("margin-bottom: 10px"):
+                                with ui.row().classes("items-center gap-2").style("margin-bottom: 3px"):
+                                    ui.element("div").style(
+                                        f"width: {uncertainty_pct}px; max-width: 120px; height: 3px; "
+                                        f"background: {bar_color}; border-radius: 2px"
+                                    )
+                                    ui.label(f"{uncertainty_pct}% uncertain").style(f"font-size: 0.62rem; color: {bar_color}")
+                                    if u.judge_score:
+                                        ui.label(f"· judge score: {u.judge_score:.1f}/5").style("font-size: 0.62rem; color: var(--text-muted)")
+                                ui.label(u.query[:100] + ("…" if len(u.query) > 100 else "")).style(
+                                    "font-size: 0.72rem; color: var(--text-secondary); line-height: 1.4"
+                                )
+                                ui.label(u.uncertainty_reason).style(
+                                    "font-size: 0.65rem; color: var(--text-tertiary); margin-top: 2px"
+                                )
+
+                    ui.label(
+                        f"→ Annotation priority: {al_report.annotation_priority}"
+                    ).style("font-size: 0.72rem; color: var(--accent-bright); font-weight: 500")
+            elif not coverage_gaps:
+                ui.label(
+                    "Run calibration above (with human + judge scores) to get margin-sampling recommendations. "
+                    "Or check back after generating and running your judge on the eval set."
+                ).style("font-size: 0.78rem; color: var(--text-muted)")
 
         # ── Interactive Judge Test ─────────────────────────────────────────
         with ui.element("div").classes("page-card"):
