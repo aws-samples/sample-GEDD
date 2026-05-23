@@ -253,7 +253,10 @@ def coding_page():
         left_panel.clear()
         with left_panel:
             if not responses:
-                ui.label('No responses to code yet. Run an evaluation in the Eval tab first.').style("color: var(--text-tertiary)")
+                with ui.column().classes("items-start gap-2"):
+                    ui.label('No responses to code yet. Run an evaluation first.').style("color: var(--text-tertiary)")
+                    ui.button("Go to Eval", icon="arrow_forward",
+                              on_click=lambda: ui.navigate.to("/eval")).props("size=sm color=primary")
                 return
 
             idx = current_idx['value']

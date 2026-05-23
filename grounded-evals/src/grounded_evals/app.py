@@ -24,7 +24,7 @@ import grounded_evals.ui.report_page  # noqa: F401
 from grounded_evals.agent import StateBundle, run_agent_turn
 from grounded_evals.agentcore_client import get_agentcore_client
 from grounded_evals.guide.session import Session
-from grounded_evals.ui.layout import BRAND_CSS
+from grounded_evals.ui.layout import BRAND_CSS, page_layout
 
 # --- Authentication via Cognito ---
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")
@@ -222,36 +222,13 @@ def _apply_agentcore_state(updated_state: dict) -> None:
 
 @ui.page("/coach")
 def main_page() -> None:
-    ui.add_head_html(f"<style>{BRAND_CSS}</style>")
+    page_layout("Coach")
 
     s = _user_state()
     session = _user_session()
     messages = s["messages"]
 
-    # Header
-    def logout():
-        app.storage.user["authenticated"] = False
-        ui.navigate.to("/login")
-
-    def new_agent():
-        s = _user_state()
-        s["session_data"] = Session().model_dump(mode="json")
-        s["current_step"] = 1
-        s["annotations"] = []
-        s["messages"] = []
-        s["prompt_variants"] = []
-        ui.navigate.to("/coach")
-
-    with ui.row().classes("w-full items-center").style("padding: 0.5rem 1rem 0"):
-        ui.button("New Agent", icon="restart_alt", on_click=new_agent).props("flat dense size=sm").style("color: var(--text-tertiary)").tooltip("Start over")
-        ui.html(
-            '<div style="text-align:center; flex:1">'
-            '<div class="brand-title">GEDD Coach</div>'
-            '<div class="brand-subtitle">Define your agent & system prompt</div></div>'
-        )
-        ui.button(icon="logout", on_click=logout).props("flat round size=sm").style("color: var(--text-muted)").tooltip("Logout")
-
-    # Progress: 3 steps
+    # Progress: 4 steps
     with ui.column().classes("w-full items-center").style("max-width: 720px; margin: 0.75rem auto 0"):
         progress_container = ui.element("div").classes("w-full")
 
@@ -273,96 +250,6 @@ def main_page() -> None:
 
         refresh_progress()
 
-        # Feature 3: Underserved Needs (Importance × Satisfaction)
-        s.setdefault('user_needs', [])
-        with ui.expansion("📋 User Needs (Importance × Satisfaction)", icon="priority_high").classes("w-full").style(
-            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-            "border-radius: 10px; margin-top: 10px; color: var(--text-primary)"
-        ):
-            ui.label("What does your user NEED this agent to do well? Rate each need so golden queries focus on what matters most.").style(
-                "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
-            )
-            needs_container = ui.column().classes("w-full gap-1")
-
-            def render_needs():
-                needs_container.clear()
-                with needs_container:
-                    for i, need in enumerate(s['user_needs']):
-                        imp_color = {'critical': 'var(--red)', 'high': 'var(--yellow)', 'medium': 'var(--text-secondary)', 'low': 'var(--text-muted)'}
-                        sat_color = {'poor': 'var(--red)', 'ok': 'var(--yellow)', 'good': 'var(--green-bright)'}
-                        with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
-                            ui.label(need['description']).style(f"flex: 1; font-size: 0.8rem; color: var(--text-primary)")
-                            ui.badge(need['importance'], color='grey').props('outline').style(f"color: {imp_color.get(need['importance'], '')}")
-                            ui.badge(need['satisfaction'], color='grey').props('outline').style(f"color: {sat_color.get(need['satisfaction'], '')}")
-
-                            def remove_need(idx=i):
-                                s['user_needs'].pop(idx)
-                                render_needs()
-                            ui.button(icon='close', on_click=remove_need).props('flat round size=xs').style("color: var(--text-muted)")
-
-            render_needs()
-
-            # Add new need
-            with ui.row().classes("w-full items-end gap-2").style("margin-top: 8px"):
-                need_input = ui.input(placeholder="e.g. Get accurate flight prices").classes("flex-grow").props("dense outlined dark")
-                imp_select = ui.select(options=['low', 'medium', 'high', 'critical'], value='high', label='Importance').props("dense outlined dark").style("width: 100px")
-                sat_select = ui.select(options=['poor', 'ok', 'good'], value='poor', label='Satisfaction').props("dense outlined dark").style("width: 90px")
-
-                def add_need():
-                    if not need_input.value.strip():
-                        return
-                    s['user_needs'].append({
-                        'description': need_input.value.strip(),
-                        'importance': imp_select.value,
-                        'satisfaction': sat_select.value,
-                    })
-                    need_input.set_value('')
-                    render_needs()
-
-                ui.button(icon='add', on_click=add_need).props("flat round size=sm").style("color: var(--accent-bright)")
-
-        # Feature 2: Before/After Hypothesis Tracker
-        s.setdefault('hypotheses', [])
-        with ui.expansion("🎯 Hypotheses (What do you think will fail?)", icon="psychology").classes("w-full").style(
-            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-            "border-radius: 10px; margin-top: 8px; color: var(--text-primary)"
-        ):
-            ui.label("Write your predictions BEFORE testing. After coding, you'll see what you got right vs. what surprised you.").style(
-                "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
-            )
-            hyp_container = ui.column().classes("w-full gap-1")
-
-            def render_hypotheses():
-                hyp_container.clear()
-                with hyp_container:
-                    for i, h in enumerate(s['hypotheses']):
-                        status_icons = {'active': '🔵', 'confirmed': '✅', 'invalidated': '❌', 'revised': '🔄'}
-                        with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
-                            ui.label(status_icons.get(h.get('status', 'active'), '🔵')).style("font-size: 0.9rem")
-                            ui.label(h['text']).style("flex: 1; font-size: 0.8rem; color: var(--text-primary)")
-
-                            def cycle_status(idx=i):
-                                statuses = ['active', 'confirmed', 'invalidated', 'revised']
-                                cur = s['hypotheses'][idx].get('status', 'active')
-                                nxt = statuses[(statuses.index(cur) + 1) % len(statuses)]
-                                s['hypotheses'][idx]['status'] = nxt
-                                render_hypotheses()
-                            ui.button(icon='swap_horiz', on_click=cycle_status).props('flat round size=xs').style("color: var(--text-muted)")
-
-            render_hypotheses()
-
-            with ui.row().classes("w-full items-center gap-2").style("margin-top: 6px"):
-                hyp_input = ui.input(placeholder="e.g. I think it will hallucinate prices").classes("flex-grow").props("dense outlined dark")
-
-                def add_hypothesis():
-                    if not hyp_input.value.strip():
-                        return
-                    s['hypotheses'].append({'text': hyp_input.value.strip(), 'status': 'active'})
-                    hyp_input.set_value('')
-                    render_hypotheses()
-
-                ui.button(icon='add', on_click=add_hypothesis).props("flat round size=sm").style("color: var(--accent-bright)")
-
         # Chat card
         with ui.card().classes("w-full chat-card").style("padding: 1.5rem; margin-top: 0.75rem"):
             chat_container = ui.column().classes("w-full").style(
@@ -381,11 +268,12 @@ def main_page() -> None:
                     if step == 1:
                         welcome = (
                             '<div class="msg-ai"><strong>Hey! 👋 I\'m your eval coach.</strong><br><br>'
-                            'I\'ll guide you through 3 steps:<br>'
+                            'I\'ll guide you through 4 steps:<br>'
                             '1. <strong>Define your agent</strong> — name, capabilities, users<br>'
                             '2. <strong>Craft a system prompt</strong><br>'
-                            '3. <strong>Generate golden test queries</strong> using Open Coding<br><br>'
-                            'Then you\'ll move to Eval to run them. <strong>What AI agent are you building?</strong></div>'
+                            '3. <strong>Generate golden test queries</strong><br>'
+                            '4. <strong>Review responses</strong> and tag failure patterns<br><br>'
+                            'Then we\'ll head to Eval to run them. <strong>What AI agent are you building?</strong></div>'
                         )
                     elif step == 2:
                         welcome = (
@@ -488,6 +376,97 @@ def main_page() -> None:
                 ui.button("Queries (JSONL)", icon="download", on_click=_download_queries_jsonl).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Export Session", icon="save", on_click=_export_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Import Session", icon="upload_file", on_click=_import_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+
+        # Feature 3: Underserved Needs (Importance × Satisfaction)
+        # Rendered after the chat card so first-time users see the conversation first.
+        s.setdefault('user_needs', [])
+        with ui.expansion("📋 User Needs (Importance × Satisfaction)", icon="priority_high").classes("w-full").style(
+            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
+            "border-radius: 10px; margin-top: 10px; color: var(--text-primary)"
+        ):
+            ui.label("What does your user NEED this agent to do well? Rate each need so golden queries focus on what matters most.").style(
+                "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
+            )
+            needs_container = ui.column().classes("w-full gap-1")
+
+            def render_needs():
+                needs_container.clear()
+                with needs_container:
+                    for i, need in enumerate(s['user_needs']):
+                        imp_color = {'critical': 'var(--red)', 'high': 'var(--yellow)', 'medium': 'var(--text-secondary)', 'low': 'var(--text-muted)'}
+                        sat_color = {'poor': 'var(--red)', 'ok': 'var(--yellow)', 'good': 'var(--green-bright)'}
+                        with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
+                            ui.label(need['description']).style(f"flex: 1; font-size: 0.8rem; color: var(--text-primary)")
+                            ui.badge(need['importance'], color='grey').props('outline').style(f"color: {imp_color.get(need['importance'], '')}")
+                            ui.badge(need['satisfaction'], color='grey').props('outline').style(f"color: {sat_color.get(need['satisfaction'], '')}")
+
+                            def remove_need(idx=i):
+                                s['user_needs'].pop(idx)
+                                render_needs()
+                            ui.button(icon='close', on_click=remove_need).props('flat round size=xs').style("color: var(--text-muted)")
+
+            render_needs()
+
+            # Add new need
+            with ui.row().classes("w-full items-end gap-2").style("margin-top: 8px"):
+                need_input = ui.input(placeholder="e.g. Get accurate flight prices").classes("flex-grow").props("dense outlined dark")
+                imp_select = ui.select(options=['low', 'medium', 'high', 'critical'], value='high', label='Importance').props("dense outlined dark").style("width: 100px")
+                sat_select = ui.select(options=['poor', 'ok', 'good'], value='poor', label='Satisfaction').props("dense outlined dark").style("width: 90px")
+
+                def add_need():
+                    if not need_input.value.strip():
+                        return
+                    s['user_needs'].append({
+                        'description': need_input.value.strip(),
+                        'importance': imp_select.value,
+                        'satisfaction': sat_select.value,
+                    })
+                    need_input.set_value('')
+                    render_needs()
+
+                ui.button(icon='add', on_click=add_need).props("flat round size=sm").style("color: var(--accent-bright)")
+
+        # Feature 2: Before/After Hypothesis Tracker
+        s.setdefault('hypotheses', [])
+        with ui.expansion("🎯 Hypotheses (What do you think will fail?)", icon="psychology").classes("w-full").style(
+            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
+            "border-radius: 10px; margin-top: 8px; color: var(--text-primary)"
+        ):
+            ui.label("Write your predictions BEFORE testing. After coding, you'll see what you got right vs. what surprised you.").style(
+                "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
+            )
+            hyp_container = ui.column().classes("w-full gap-1")
+
+            def render_hypotheses():
+                hyp_container.clear()
+                with hyp_container:
+                    for i, h in enumerate(s['hypotheses']):
+                        status_icons = {'active': '🔵', 'confirmed': '✅', 'invalidated': '❌', 'revised': '🔄'}
+                        with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
+                            ui.label(status_icons.get(h.get('status', 'active'), '🔵')).style("font-size: 0.9rem")
+                            ui.label(h['text']).style("flex: 1; font-size: 0.8rem; color: var(--text-primary)")
+
+                            def cycle_status(idx=i):
+                                statuses = ['active', 'confirmed', 'invalidated', 'revised']
+                                cur = s['hypotheses'][idx].get('status', 'active')
+                                nxt = statuses[(statuses.index(cur) + 1) % len(statuses)]
+                                s['hypotheses'][idx]['status'] = nxt
+                                render_hypotheses()
+                            ui.button(icon='swap_horiz', on_click=cycle_status).props('flat round size=xs').style("color: var(--text-muted)")
+
+            render_hypotheses()
+
+            with ui.row().classes("w-full items-center gap-2").style("margin-top: 6px"):
+                hyp_input = ui.input(placeholder="e.g. I think it will hallucinate prices").classes("flex-grow").props("dense outlined dark")
+
+                def add_hypothesis():
+                    if not hyp_input.value.strip():
+                        return
+                    s['hypotheses'].append({'text': hyp_input.value.strip(), 'status': 'active'})
+                    hyp_input.set_value('')
+                    render_hypotheses()
+
+                ui.button(icon='add', on_click=add_hypothesis).props("flat round size=sm").style("color: var(--accent-bright)")
 
         # A/B prompt variant creator
         with ui.expansion("Create Prompt Variant (A/B)", icon="science").classes("w-full").style(
