@@ -183,6 +183,10 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             ui.label(
                 "Go to the Coach tab and generate golden queries first."
             ).style("font-size:0.85rem; color:var(--text-tertiary); margin-top:4px")
+            ui.button("Open Coach", icon="chat",
+                      on_click=lambda: ui.navigate.to("/coach")).props(
+                "color=primary"
+            ).style("margin-top:12px")
         return
 
     if not session.agent_spec.system_prompt:
@@ -196,6 +200,10 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             ui.label(
                 "Go to the Coach tab and create a system prompt first."
             ).style("font-size:0.85rem; color:var(--text-tertiary); margin-top:4px")
+            ui.button("Open Coach", icon="chat",
+                      on_click=lambda: ui.navigate.to("/coach")).props(
+                "color=primary"
+            ).style("margin-top:12px")
         return
 
     variants = prompt_variants or []
@@ -329,6 +337,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
 
         ui.separator().style("opacity:0.2; margin:12px 0")
 
+        progress_bar = ui.linear_progress(value=0, show_value=False).props("color=primary size=4px").style("margin-bottom:6px; opacity:0")
         progress_label = ui.label("").style("font-size:0.8rem; color:var(--text-tertiary)")
 
         async def run_eval():
@@ -356,10 +365,13 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             eval_results_store.clear()
 
             run_btn.props("loading")
+            progress_bar.style("opacity:1")
+            progress_bar.set_value(0)
             progress_label.set_text("Running queries...")
 
             total = len(session.golden_prompts)
             for idx, gp in enumerate(session.golden_prompts):
+                progress_bar.set_value(idx / total)
                 progress_label.set_text(f"Running query {idx + 1}/{total}...")
                 responses = {}
                 for model_id in sel:
@@ -375,6 +387,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                     "notes": "",
                 })
 
+            progress_bar.set_value(1.0)
             progress_label.set_text(
                 f"Done! {total} queries × {len(sel)} models = {total * len(sel)} responses"
             )
