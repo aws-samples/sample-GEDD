@@ -403,11 +403,20 @@ def home_page():
         def load_demo():
             from grounded_evals.ui.demo_data import load_demo_data
             load_demo_data(app.storage.user)
-            ui.notify("Demo data loaded! Explore each page to see it in action.", type="positive")
+            ui.notify("TravelBot demo loaded! Explore each page to see it in action.", type="positive")
             ui.navigate.to("/coach")
 
-        with ui.row().classes("items-center gap-2").style("margin-top: 1.5rem"):
+        def load_support_demo():
+            from grounded_evals.ui.support_bot_demo import load_support_bot_demo
+            load_support_bot_demo(app.storage.user)
+            ui.notify("SupportBot demo loaded! Explore each page to see it in action.", type="positive")
+            ui.navigate.to("/coach")
+
+        with ui.row().classes("items-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):
             ui.button("Load Demo Data (TravelBot)", icon="science", on_click=load_demo).props("size=sm").style(
+                "background: var(--accent); color: white; border-radius: 6px"
+            )
+            ui.button("Load Demo Data (SupportBot)", icon="support_agent", on_click=load_support_demo).props("size=sm").style(
                 "background: var(--accent); color: white; border-radius: 6px"
             )
             ui.label("Pre-populates all pages with realistic sample data").style("font-size: 0.72rem; color: var(--text-muted)")
