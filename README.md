@@ -1,8 +1,5 @@
 # GEDD — find what your AI agent gets wrong
 
-<img width="945" height="755" alt="Screenshot 2026-05-24 at 12 33 49 PM" src="https://github.com/user-attachments/assets/4ad588b7-e288-4990-be57-255b0410f05d" />
-
-
 
 **A Qualitative Analysis research Framework for Product Managers and Domain experts building AI Products.**
 
@@ -15,6 +12,9 @@ You shipped an AI agent. Now you have to tell your CEO whether it's good enough 
 GEDD is the tool for *before* you have a rubric.
 
 > **The eval pipeline is the product. The agent is just the thing it produces.**
+
+<img width="945" height="755" alt="Screenshot 2026-05-24 at 12 33 49 PM" src="https://github.com/user-attachments/assets/4ad588b7-e288-4990-be57-255b0410f05d" />
+
 
 📖 **Read the why:** [Why Grounded Theory? for reliable AI Agents](https://balachanderkeelapudi.substack.com/p/why-grounded-theory-for-reliable) — the long-form argument behind this repo.
 
