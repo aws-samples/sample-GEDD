@@ -20,6 +20,7 @@ import grounded_evals.ui.eval_page  # noqa: F401
 
 # Import new pages (registers their @ui.page routes)
 import grounded_evals.ui.home_page  # noqa: F401
+import grounded_evals.ui.judge_builder_page  # noqa: F401
 import grounded_evals.ui.report_page  # noqa: F401
 from grounded_evals.agent import StateBundle, run_agent_turn
 from grounded_evals.agentcore_client import get_agentcore_client

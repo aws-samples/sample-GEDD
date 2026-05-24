@@ -8,7 +8,8 @@ NAV_ITEMS = [
     {"path": "/eval", "label": "2. Eval", "icon": "science"},
     {"path": "/coding", "label": "3. Tag", "icon": "label"},
     {"path": "/analysis", "label": "4. Root Causes", "icon": "hub"},
-    {"path": "/report", "label": "5. Report", "icon": "assessment"},
+    {"path": "/judge", "label": "5. Build Judge", "icon": "gavel"},
+    {"path": "/report", "label": "6. Report", "icon": "assessment"},
 ]
 
 BRAND_CSS = """
