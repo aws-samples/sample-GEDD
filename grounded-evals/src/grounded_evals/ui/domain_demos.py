@@ -2664,36 +2664,20 @@ GAME_PARADIGM_MODEL = {
 }
 
 GAME_USER_NEEDS = [
-    {"need": "Accurate refund eligibility guidance per platform (PSN / Xbox / Steam / Epic)"},
-    {"need": "Clear ESRB content rating information before purchase or parental approval"},
-    {"need": "Honest, accurate ban appeal process expectations — no false hope"},
-    {"need": "Up-to-date anti-cheat compatibility guidance (not stale training data)"},
-    {"need": "Jurisdiction-aware monetization information (especially EU players)"},
-    {"need": "Safe, minimal-PII identity verification pathway for account recovery"},
-    {"need": "COPPA-compliant minor protection in all purchase and monetization flows"},
+    {"description": "Accurate refund eligibility guidance per platform (PSN / Xbox / Steam / Epic)", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Clear ESRB content rating information before purchase or parental approval", "importance": "high", "satisfaction": "poor"},
+    {"description": "Honest, accurate ban appeal process expectations — no false hope", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Up-to-date anti-cheat compatibility guidance (not stale training data)", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Jurisdiction-aware monetization information (especially EU players)", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Safe, minimal-PII identity verification pathway for account recovery", "importance": "high", "satisfaction": "ok"},
+    {"description": "COPPA-compliant minor protection in all purchase and monetization flows", "importance": "critical", "satisfaction": "poor"},
 ]
 
 GAME_HYPOTHESES = [
-    {
-        "hypothesis": "Operator incentive misalignment is the primary driver of failure severity",
-        "evidence": "6 of 8 failure modes involve agent behavior that protects publisher revenue (minimize legal risk, reduce refund approvals, deflect ban appeals) at the cost of player accuracy. This is a system prompt / training objective problem, not a model capability problem.",
-        "confidence": "high",
-    },
-    {
-        "hypothesis": "Anti-cheat clearance failures are structurally unresolvable without live RAG",
-        "evidence": "NexusShield rule updates every 2-4 weeks. Static training data guarantees staleness. Prompt engineering cannot fix a knowledge gap — only retrieval against a live policy source.",
-        "confidence": "high",
-    },
-    {
-        "hypothesis": "Jurisdictional ignorance failures will increase as EU digital regulation expands",
-        "evidence": "EU Digital Fairness Act draft (2025-2026) may add explicit loot box restrictions across 27 member states. The current 2-country problem (Belgium, Netherlands) becomes a 27-country problem. Jurisdiction-aware RAG is a prerequisite for EU compliance.",
-        "confidence": "medium",
-    },
-    {
-        "hypothesis": "Minor age-gating bypass will become the #1 regulatory liability within 24 months",
-        "evidence": "FTC is actively expanding COPPA enforcement post-Epic settlement. FTC blog post (Jan 2025) specifically named AI chatbots as a new COPPA compliance surface. The $275M Epic precedent sets the fine magnitude — a repeat violation with a chatbot would likely be higher.",
-        "confidence": "high",
-    },
+    {"text": "Operator incentive misalignment drives most failures — system prompt / training objective problem, not model capability", "status": "confirmed"},
+    {"text": "Anti-cheat clearance failures are structurally unresolvable without live RAG against NexusShield policy", "status": "confirmed"},
+    {"text": "Jurisdictional ignorance failures will increase as EU Digital Fairness Act extends to 27 member states", "status": "active"},
+    {"text": "Minor age-gating bypass will become the #1 regulatory liability — FTC specifically named AI chatbots as COPPA surface (Jan 2025)", "status": "confirmed"},
 ]
 
 GAME_JUDGE_MAPPINGS = {
@@ -3592,57 +3576,21 @@ CRYPTO_PARADIGM_MODEL = {
 }
 
 CRYPTO_USER_NEEDS = [
-    {"need": "Accurate, hedged guidance on crypto tax rules (especially wash sale exception for crypto vs. stocks)"},
-    {"need": "Immediate, unambiguous scam identification — especially seed phrase phishing via social media"},
-    {"need": "Honest characterization of token regulatory status without promotional framing"},
-    {"need": "Accurate FDIC/insurance scope — fiat vs. crypto holdings distinction"},
-    {"need": "Current OFAC sanctions awareness without operational guidance for sanctioned protocols"},
-    {"need": "Rug pull / DeFi fraud red-flag identification before investment"},
-    {"need": "KYC/AML compliance guidance without circumvention facilitation"},
-    {"need": "Consistent investment advice refusal under multi-turn social pressure"},
+    {"description": "Accurate, hedged guidance on crypto tax rules (especially wash sale exception for crypto vs. stocks)", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Immediate, unambiguous scam identification — especially seed phrase phishing via social media", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Honest characterization of token regulatory status without promotional framing", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Accurate FDIC/insurance scope — fiat vs. crypto holdings distinction", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Current OFAC sanctions awareness without operational guidance for sanctioned protocols", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Rug pull / DeFi fraud red-flag identification before investment", "importance": "high", "satisfaction": "poor"},
+    {"description": "KYC/AML compliance guidance without circumvention facilitation", "importance": "critical", "satisfaction": "ok"},
+    {"description": "Consistent investment advice refusal under multi-turn social pressure", "importance": "high", "satisfaction": "poor"},
 ]
 
 CRYPTO_HYPOTHESES = [
-    {
-        "hypothesis": "Promotional training data is the primary driver of securities promotion and solvency failures",
-        "evidence": (
-            "5 of 8 failures involve agent responses that favor exchange interests over user accuracy "
-            "(securities promotion, solvency false assurance, false APY, rug pull normalization, AML "
-            "routing guidance). These cluster around content where the exchange's commercial interest "
-            "diverges from user safety. Training data from exchange marketing materials creates this bias."
-        ),
-        "confidence": "high",
-    },
-    {
-        "hypothesis": "RAG with live data is a mandatory baseline — not a feature — for regulatory compliance",
-        "evidence": (
-            "OFAC sanctions status, litigation outcomes (XRP/Ripple), and APY rates all change on "
-            "timescales shorter than typical model training cycles. Three of eight failure modes are "
-            "directly caused by stale knowledge. Static training cannot be made safe through prompt "
-            "engineering alone when the factual ground truth is moving."
-        ),
-        "confidence": "high",
-    },
-    {
-        "hypothesis": "The wash sale failure will become more harmful as Form 1099-DA reporting begins in 2025",
-        "evidence": (
-            "IRS Form 1099-DA (crypto broker reporting, effective 2025) will create an IRS-visible "
-            "record of crypto transactions. Users who received incorrect wash-sale guidance and acted on "
-            "it may face IRS discrepancies when their 1099-DA shows same-day repurchases. The latency "
-            "of this harm (12-18 months to IRS audit trigger) makes it systematically underdiagnosed."
-        ),
-        "confidence": "medium",
-    },
-    {
-        "hypothesis": "Multi-turn social pressure is the primary attack vector for investment advice failures",
-        "evidence": (
-            "Single-turn investment advice refusals are relatively robust. The failure pattern emerges "
-            "across turns 3-4 when users reframe, appeal to AI 'opinion', or use hypothetical framing. "
-            "Constitutional AI principles alone are insufficient — explicit multi-turn calibration with "
-            "labeled examples of correct refusal under sustained pressure is required."
-        ),
-        "confidence": "high",
-    },
+    {"text": "Promotional training data drives securities promotion and solvency failures — 5 of 8 failures favor exchange interests over user accuracy", "status": "confirmed"},
+    {"text": "RAG with live data is a mandatory baseline for regulatory compliance — OFAC/litigation/APY data decays faster than training cycles", "status": "confirmed"},
+    {"text": "Wash sale misadvice harm will amplify when IRS Form 1099-DA reporting (effective 2025) creates audit-visible same-day repurchase records", "status": "active"},
+    {"text": "Multi-turn social pressure is the primary attack vector for investment advice failures — single-turn refusals are robust but capitulate by turn 3-4", "status": "confirmed"},
 ]
 
 CRYPTO_JUDGE_MAPPINGS = {
