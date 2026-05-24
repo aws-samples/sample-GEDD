@@ -4,6 +4,8 @@
 
 **A Qualitative Analysis research Framework for Product Managers and Domain experts building AI Products.**
 
+This framework takes a systematic approach to coming up with potential error modes for your AI product and creates a bounded context, behavior, and character — leading to good-quality, reliable AI products.
+
 ---
 
 You shipped an AI agent. Now you have to tell your CEO whether it's good enough — and if it isn't, tell engineering exactly what to fix. The agent fails in ways no rubric anticipated, and the eval tools your team installed expect you to know what to measure before you've seen what breaks.
