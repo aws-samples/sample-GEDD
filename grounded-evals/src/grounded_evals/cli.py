@@ -22,8 +22,17 @@ def serve(host: str, port: int, reload: bool) -> None:
     """Start the GEDD web UI."""
     import grounded_evals.app  # noqa: F401 — registers all pages
 
+    import os
+    import secrets
+
     from nicegui import ui
-    ui.run(host=host, port=port, reload=reload, title="GEDD")
+    ui.run(
+        host=host,
+        port=port,
+        reload=reload,
+        title="GEDD",
+        storage_secret=os.environ.get("STORAGE_SECRET") or secrets.token_hex(32),
+    )
 
 
 @main.command()
