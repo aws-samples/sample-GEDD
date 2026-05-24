@@ -1,6 +1,7 @@
 # GEDD — find what your AI agent gets wrong
 
-<img width="1176" height="710" alt="GEDD coach screenshot" src="https://github.com/user-attachments/assets/6cbd262f-6158-41d4-898e-6ad98b4c668a" />
+<img width="753" height="752" alt="Screenshot 2026-05-24 at 12 21 57 PM" src="https://github.com/user-attachments/assets/e29e47ed-3ce0-4fb2-9dde-216ba29aabab" />
+
 
 **A Qualitative Analysis research Framework for Product Managers and Domain experts building AI Products.**
 
