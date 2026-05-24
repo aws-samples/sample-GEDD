@@ -2,8 +2,7 @@
 
 <img width="1176" height="710" alt="GEDD coach screenshot" src="https://github.com/user-attachments/assets/6cbd262f-6158-41d4-898e-6ad98b4c668a" />
 
-**For:** product managers and domain experts shipping AI products.
-**Not for:** the engineering team setting up the SDK. (That's [SETUP.md](SETUP.md).)
+**A Qualitative Analysis research Framework for Product Managers and Domain experts building AI Products.**
 
 ---
 
