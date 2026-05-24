@@ -165,6 +165,113 @@ HOME_CSS = """
 .metric-row { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
 .metric-big { font-size: 1.5rem; font-weight: 700; color: var(--green-bright); font-variant-numeric: tabular-nums; }
 .metric-label { font-size: 0.78rem; color: var(--text-tertiary); }
+
+/* ── Marketing hero ─────────────────────────────────────────────────── */
+.mkt-hero { text-align: center; padding: 3.25rem 0 1.5rem; }
+.mkt-eyebrow {
+  display: inline-block; font-size: 0.7rem; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent-bright); background: var(--accent-tint);
+  padding: 4px 10px; border-radius: 99px; margin-bottom: 1rem;
+}
+.mkt-headline {
+  font-size: 2.4rem; font-weight: 700; color: var(--text-primary);
+  letter-spacing: -0.03em; line-height: 1.15; margin: 0 0 0.6rem;
+}
+.mkt-headline em { font-style: italic; color: var(--accent-bright); font-weight: 700; }
+.mkt-subhead {
+  font-size: 1rem; color: var(--text-secondary); margin: 0 auto;
+  max-width: 580px; line-height: 1.55;
+}
+.mkt-cta-row { display: flex; gap: 10px; justify-content: center; margin-top: 1.5rem; }
+
+/* ── Domain demo grid ──────────────────────────────────────────────── */
+.mkt-section-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  margin: 2.5rem 0 0.85rem;
+}
+.mkt-section-title {
+  font-size: 1.05rem; font-weight: 600; color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.mkt-section-sub { font-size: 0.78rem; color: var(--text-tertiary); }
+
+.domain-grid {
+  display: grid; grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.domain-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  padding: 14px; border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+  cursor: pointer; transition: all 150ms ease;
+  position: relative; overflow: hidden;
+}
+.domain-card:hover {
+  border-color: var(--accent);
+  background: var(--bg-surface-3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(94,106,210,0.08);
+}
+.domain-card .icon-wrap {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--accent-tint); display: flex;
+  align-items: center; justify-content: center; flex-shrink: 0;
+}
+.domain-card .body { flex: 1; min-width: 0; }
+.domain-card .name {
+  font-size: 0.88rem; font-weight: 600; color: var(--text-primary);
+  margin-bottom: 2px; line-height: 1.3;
+}
+.domain-card .desc {
+  font-size: 0.75rem; color: var(--text-tertiary);
+  line-height: 1.45;
+}
+.domain-card .arrow {
+  position: absolute; top: 14px; right: 14px;
+  color: var(--text-muted); font-size: 0.95rem;
+  transition: transform 150ms ease, color 150ms ease;
+}
+.domain-card:hover .arrow {
+  color: var(--accent-bright); transform: translateX(3px);
+}
+
+/* ── Outcome strip ─────────────────────────────────────────────────── */
+.outcome-strip {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 1px; background: var(--border-subtle);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-xl);
+  margin-top: 1.5rem; overflow: hidden;
+}
+.outcome-cell {
+  background: var(--bg-surface-2); padding: 16px 14px;
+  text-align: center;
+}
+.outcome-cell .num {
+  font-size: 1.6rem; font-weight: 700; color: var(--green-bright);
+  font-variant-numeric: tabular-nums; line-height: 1;
+}
+.outcome-cell .label {
+  font-size: 0.72rem; color: var(--text-tertiary);
+  margin-top: 6px; letter-spacing: 0.01em;
+}
+
+/* ── Continue card ─────────────────────────────────────────────────── */
+.continue-card {
+  background: linear-gradient(135deg, var(--accent-tint), transparent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px; margin-bottom: 1.5rem;
+}
+
+/* ── Methodology fold ──────────────────────────────────────────────── */
+.method-fold {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  margin-top: 1.5rem;
+  background: var(--bg-surface-1);
+}
 """
 
 
@@ -299,197 +406,281 @@ def home_page():
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
     ui.add_head_html(f"<style>{HOME_CSS}</style>")
 
-    with ui.column().classes("w-full items-center").style("max-width: 780px; margin: 0 auto; padding: 1.5rem"):
+    storage = app.storage.user
+    progress = _get_progress(storage)
+    session = storage.get("session_data") or {}
+    agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
+    agent_name_home = agent_spec.get("name", "") if isinstance(agent_spec, dict) else ""
+    n_queries = len(session.get("golden_prompts", []) if isinstance(session, dict) else [])
+    n_annotations = len(storage.get("coding_annotations", []))
+    done_count = sum(1 for s in progress.values() if s == "done")
 
-        # Hero
-        with ui.element("div").classes("home-hero animate-in stagger-1"):
-            ui.html('<h1>Grounded Eval-Driven<br>Development</h1>')
-            ui.html('<p>Build AI agent evaluations the right way — problem first, solution second</p>')
+    # Demo loaders — kept identical to previous implementation
+    def load_demo():
+        from grounded_evals.ui.demo_data import load_demo_data
+        load_demo_data(app.storage.user)
+        ui.notify("TravelBot demo loaded! Explore each page to see it in action.", type="positive")
+        ui.navigate.to("/coach")
 
-        # Demo
-        with ui.element("div").classes("w-full animate-in stagger-2"):
-            _render_demo()
+    def load_support_demo():
+        from grounded_evals.ui.support_bot_demo import load_support_bot_demo
+        load_support_bot_demo(app.storage.user)
+        ui.notify("SupportBot demo loaded!", type="positive")
+        ui.navigate.to("/coach")
 
-        # Workflow steps
-        storage = app.storage.user
-        progress = _get_progress(storage)
+    def load_clinical_demo():
+        from grounded_evals.ui.domain_demos import load_clinical_demo
+        load_clinical_demo(app.storage.user)
+        ui.notify("ClinicalBot demo loaded!", type="positive")
+        ui.navigate.to("/coach")
 
-        # Progress summary bar (if user has started)
-        session = storage.get("session_data") or {}
-        agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
-        agent_name_home = agent_spec.get("name", "") if isinstance(agent_spec, dict) else ""
-        n_queries = len(session.get("golden_prompts", []) if isinstance(session, dict) else [])
-        n_annotations = len(storage.get("coding_annotations", []))
-        done_count = sum(1 for s in progress.values() if s == "done")
+    def load_lex_demo():
+        from grounded_evals.ui.domain_demos import load_lex_demo
+        load_lex_demo(app.storage.user)
+        ui.notify("LexBot demo loaded!", type="positive")
+        ui.navigate.to("/coach")
 
+    def load_wealth_demo():
+        from grounded_evals.ui.domain_demos import load_wealth_demo
+        load_wealth_demo(app.storage.user)
+        ui.notify("WealthBot demo loaded!", type="positive")
+        ui.navigate.to("/coach")
+
+    def load_hr_demo():
+        try:
+            from grounded_evals.ui.domain_demos import load_hr_demo
+            load_hr_demo(app.storage.user)
+            ui.notify("HRBot demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+        except (ImportError, AttributeError):
+            ui.notify("HRBot demo not available", type="warning")
+
+    def load_edu_demo():
+        try:
+            from grounded_evals.ui.domain_demos import load_edu_demo
+            load_edu_demo(app.storage.user)
+            ui.notify("EduBot demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+        except (ImportError, AttributeError):
+            ui.notify("EduBot demo not available", type="warning")
+
+    def load_game_demo():
+        try:
+            from grounded_evals.ui.domain_demos import load_game_demo
+            load_game_demo(app.storage.user)
+            ui.notify("PixelGuard demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+        except (ImportError, AttributeError):
+            ui.notify("PixelGuard demo not available", type="warning")
+
+    def logout():
+        app.storage.user["authenticated"] = False
+        ui.navigate.to("/login")
+
+    DOMAIN_CARDS = [
+        ("LexBot", "gavel", load_lex_demo,
+         "Legal research — phantom citations, UPL boundary"),
+        ("ClinicalBot", "local_hospital", load_clinical_demo,
+         "Clinical triage — missed escalation, drug interactions"),
+        ("WealthBot", "trending_up", load_wealth_demo,
+         "Personal finance — suitability miss, insider tip"),
+        ("HRBot", "people", load_hr_demo,
+         "Hiring assistant — disparate impact, ADA limits"),
+        ("EduBot", "school", load_edu_demo,
+         "Ed-tech tutor — academic integrity, COPPA"),
+        ("PixelGuard", "sports_esports", load_game_demo,
+         "Gaming support — COPPA, loot-box law, anti-cheat"),
+        ("TravelBot", "flight", load_demo,
+         "Flight booking — hallucinated entities, policy miss"),
+        ("SupportBot", "support_agent", load_support_demo,
+         "E-commerce support — PII leakage, refund hallucination"),
+    ]
+
+    with ui.column().classes("w-full items-center").style(
+        "max-width: 820px; margin: 0 auto; padding: 1.25rem 1.5rem 2.5rem"
+    ):
+
+        # ── Resume bar (returning users only) ────────────────────────────
         if agent_name_home:
-            with ui.element("div").style(
-                "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-                "border-radius: var(--radius-xl); padding: 14px 16px; margin-bottom: 1.5rem"
-            ):
+            with ui.element("div").classes("continue-card animate-in stagger-1"):
                 with ui.row().classes("items-center justify-between w-full"):
                     with ui.column().style("gap: 2px"):
                         ui.label(f"Continuing: {agent_name_home}").style(
-                            "font-size: 0.85rem; font-weight: 600; color: var(--text-primary)"
+                            "font-size: 0.88rem; font-weight: 600; color: var(--text-primary)"
                         )
                         ui.label(
                             f"{n_queries} queries · {n_annotations} annotations · {done_count}/5 steps done"
-                        ).style("font-size: 0.75rem; color: var(--text-tertiary)")
-                    ui.button("Continue", icon="arrow_forward", on_click=lambda: ui.navigate.to(
-                        next((p for p, s in progress.items() if s == "current"), "/coach")
-                    )).props("size=sm color=primary")
+                        ).style("font-size: 0.74rem; color: var(--text-tertiary)")
+                    ui.button(
+                        "Continue", icon="arrow_forward",
+                        on_click=lambda: ui.navigate.to(
+                            next((p for p, s in progress.items() if s == "current"), "/coach")
+                        ),
+                    ).props("size=sm color=primary")
 
-        with ui.column().classes("w-full").style("margin-top: 1rem"):
-            # Problem space
-            with ui.row().classes("items-center gap-2").style("margin-bottom: 10px"):
-                ui.html('<span class="section-badge" style="background: var(--accent-tint); color: var(--accent-bright)">PROBLEM SPACE</span>')
-                ui.label("Understand what fails — and why").style("font-size: 0.78rem; color: var(--text-tertiary)")
+        # ── Hero ────────────────────────────────────────────────────────
+        with ui.element("div").classes("mkt-hero animate-in stagger-1"):
+            ui.html('<div class="mkt-eyebrow">Qualitative Eval Framework</div>')
+            ui.html(
+                '<h1 class="mkt-headline">'
+                "Find what your AI gets wrong. <em>Before your customers do.</em>"
+                "</h1>"
+            )
+            ui.html(
+                '<p class="mkt-subhead">'
+                "GEDD helps product managers and domain experts systematically discover "
+                "failure modes, then turn them into a deployable LLM-as-judge — in your "
+                "own vocabulary, not generic 'helpfulness 1–5'."
+                "</p>"
+            )
+            with ui.row().classes("mkt-cta-row"):
+                ui.button(
+                    "Try a 90-second demo",
+                    icon="play_arrow",
+                    on_click=lambda: ui.run_javascript(
+                        "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
+                    ),
+                ).props("color=primary size=md unelevated").style(
+                    "font-weight: 600; letter-spacing: -0.01em; padding: 8px 18px"
+                )
+                ui.button(
+                    "Start your own agent",
+                    icon="chat",
+                    on_click=lambda: ui.navigate.to("/coach"),
+                ).props("flat size=md").style(
+                    "color: var(--text-secondary); font-weight: 500"
+                )
 
-            for step in PROBLEM_STEPS:
-                status = progress.get(step["path"], "todo")
-                is_done = status == "done"
-                is_current = status == "current"
-                icon_color = "var(--green-bright)" if is_done else ("var(--accent-bright)" if is_current else "var(--text-muted)")
-                text_color = "var(--text-primary)" if not status == "todo" else "var(--text-muted)"
-                with ui.element("div").classes("workflow-card").on("click", lambda _, p=step["path"]: ui.navigate.to(p)):
-                    with ui.row().classes("items-center gap-3 w-full"):
-                        ui.icon("check_circle" if is_done else step["icon"]).style(f"color: {icon_color}; font-size: 1.2rem")
-                        with ui.column().style("gap: 1px; flex: 1"):
-                            ui.label(step["title"]).style(f"font-size: 0.9rem; font-weight: 600; color: {text_color}")
-                            ui.label(step["desc"]).style("font-size: 0.78rem; color: var(--text-tertiary)")
-                        if is_done:
-                            ui.html('<span style="font-size:0.65rem;background:var(--green-tint);color:var(--green-bright);padding:2px 9px;border-radius:99px;font-weight:600;white-space:nowrap">Done</span>')
-                        elif is_current:
-                            ui.html('<span style="font-size:0.65rem;background:var(--accent-tint);color:var(--accent-bright);padding:2px 9px;border-radius:99px;font-weight:600;white-space:nowrap">→ Next</span>')
+        # ── Outcome strip (social-proof shaped) ──────────────────────────
+        with ui.element("div").classes("outcome-strip animate-in stagger-2"):
+            with ui.element("div").classes("outcome-cell"):
+                ui.html('<div class="num">8</div>')
+                ui.html('<div class="label">domain personas, pre-loaded</div>')
+            with ui.element("div").classes("outcome-cell"):
+                ui.html('<div class="num">~90 min</div>')
+                ui.html('<div class="label">to your first deployable judge</div>')
+            with ui.element("div").classes("outcome-cell"):
+                ui.html('<div class="num">κ ≥ 0.80</div>')
+                ui.html('<div class="label">judge-vs-human calibration target</div>')
 
-            # Divider
-            with ui.row().classes("w-full items-center").style("margin: 14px 0"):
-                ui.element("div").style("flex: 1; height: 1px; background: var(--border-subtle)")
-                ui.label("then").style("font-size: 0.7rem; color: var(--text-muted); padding: 0 10px")
-                ui.element("div").style("flex: 1; height: 1px; background: var(--border-subtle)")
-
-            # Solution space
-            with ui.row().classes("items-center gap-2").style("margin-bottom: 10px"):
-                ui.html('<span class="section-badge" style="background: var(--green-tint); color: var(--green-bright)">SOLUTION SPACE</span>')
-                ui.label("Build evaluation grounded in discovery").style("font-size: 0.78rem; color: var(--text-tertiary)")
-
-            for step in SOLUTION_STEPS:
-                status = progress.get(step["path"], "todo")
-                is_done = status == "done"
-                is_current = status == "current"
-                with ui.element("div").classes("workflow-card").on("click", lambda _, p=step["path"]: ui.navigate.to(p)):
-                    with ui.row().classes("items-center gap-3 w-full"):
-                        ui.icon("check_circle" if is_done else step["icon"]).style(
-                            f"color: {'var(--green-bright)' if is_done else 'var(--accent-bright)'}; font-size: 1.2rem"
-                        )
-                        with ui.column().style("gap: 1px; flex: 1"):
-                            ui.label(step["title"]).style("font-size: 0.9rem; font-weight: 600; color: var(--text-primary)")
-                            ui.label(step["desc"]).style("font-size: 0.78rem; color: var(--text-tertiary)")
-                        if is_done:
-                            ui.html('<span style="font-size:0.65rem;background:var(--green-tint);color:var(--green-bright);padding:2px 9px;border-radius:99px;font-weight:600">Done</span>')
-                        elif is_current:
-                            ui.html('<span style="font-size:0.65rem;background:var(--green-tint);color:var(--green-bright);padding:2px 9px;border-radius:99px;font-weight:600">→ Next</span>')
-
-        # Footer
-        with ui.element("div").style(
-            "margin-top: 2rem; padding: 14px; border-radius: var(--radius-xl); "
-            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); text-align: center"
-        ):
-            ui.label("Most eval tools skip straight to rubrics. GEDD makes you earn the right to build one.").style(
-                "font-size: 0.82rem; color: var(--text-secondary); font-weight: 500"
+        # ── Domain demo grid (the hero asset) ────────────────────────────
+        ui.html('<div id="domain-section"></div>')
+        with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
+            with ui.column().style("gap: 2px"):
+                ui.html('<div class="mkt-section-title">Pick the agent closest to yours</div>')
+                ui.html(
+                    '<div class="mkt-section-sub">'
+                    "Each demo loads a complete eval session — golden queries, "
+                    "real failure annotations, paradigm model, generated judge prompt."
+                    "</div>"
+                )
+            ui.button(
+                "View all →", icon="open_in_new",
+                on_click=lambda: ui.navigate.to("/demos"),
+            ).props("flat size=sm no-caps").style(
+                "color: var(--accent-bright); font-size: 0.78rem"
             )
 
-        # Load Demo Data
-        def load_demo():
-            from grounded_evals.ui.demo_data import load_demo_data
-            load_demo_data(app.storage.user)
-            ui.notify("TravelBot demo loaded! Explore each page to see it in action.", type="positive")
-            ui.navigate.to("/coach")
+        with ui.element("div").classes("domain-grid animate-in stagger-3"):
+            for name, icon, handler, desc in DOMAIN_CARDS:
+                with ui.element("div").classes("domain-card").on("click", handler):
+                    with ui.element("div").classes("icon-wrap"):
+                        ui.icon(icon).style("color: var(--accent-bright); font-size: 1.05rem")
+                    with ui.element("div").classes("body"):
+                        ui.html(f'<div class="name">{name}</div>')
+                        ui.html(f'<div class="desc">{desc}</div>')
+                    ui.html('<span class="arrow material-icons">arrow_forward</span>')
 
-        def load_support_demo():
-            from grounded_evals.ui.support_bot_demo import load_support_bot_demo
-            load_support_bot_demo(app.storage.user)
-            ui.notify("SupportBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
+        # ── Or build your own (workflow steps, demoted) ───────────────────
+        with ui.element("div").classes("mkt-section-head animate-in stagger-4"):
+            with ui.column().style("gap: 2px"):
+                ui.html('<div class="mkt-section-title">Or build your own from scratch</div>')
+                ui.html(
+                    '<div class="mkt-section-sub">'
+                    "5 steps. The coach guides every one. No YAML, no SDK, no Python."
+                    "</div>"
+                )
 
-        def load_clinical_demo():
-            from grounded_evals.ui.domain_demos import load_clinical_demo
-            load_clinical_demo(app.storage.user)
-            ui.notify("ClinicalBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
+        with ui.column().classes("w-full animate-in stagger-4").style("gap: 6px"):
+            for step in PROBLEM_STEPS + SOLUTION_STEPS:
+                status = progress.get(step["path"], "todo")
+                is_done = status == "done"
+                is_current = status == "current"
+                icon_color = (
+                    "var(--green-bright)" if is_done
+                    else "var(--accent-bright)" if is_current
+                    else "var(--text-muted)"
+                )
+                text_color = "var(--text-primary)" if status != "todo" else "var(--text-secondary)"
+                with ui.element("div").classes("workflow-card").on(
+                    "click", lambda _, p=step["path"]: ui.navigate.to(p)
+                ):
+                    with ui.row().classes("items-center gap-3 w-full"):
+                        ui.icon(
+                            "check_circle" if is_done else step["icon"]
+                        ).style(f"color: {icon_color}; font-size: 1.15rem")
+                        with ui.column().style("gap: 1px; flex: 1"):
+                            ui.label(step["title"]).style(
+                                f"font-size: 0.88rem; font-weight: 600; color: {text_color}"
+                            )
+                            ui.label(step["desc"]).style(
+                                "font-size: 0.76rem; color: var(--text-tertiary)"
+                            )
+                        if is_done:
+                            ui.html(
+                                '<span style="font-size:0.65rem;background:var(--green-tint);'
+                                'color:var(--green-bright);padding:2px 9px;border-radius:99px;'
+                                'font-weight:600;white-space:nowrap">Done</span>'
+                            )
+                        elif is_current:
+                            ui.html(
+                                '<span style="font-size:0.65rem;background:var(--accent-tint);'
+                                'color:var(--accent-bright);padding:2px 9px;border-radius:99px;'
+                                'font-weight:600;white-space:nowrap">→ Next</span>'
+                            )
 
-        def load_lex_demo():
-            from grounded_evals.ui.domain_demos import load_lex_demo
-            load_lex_demo(app.storage.user)
-            ui.notify("LexBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
+        # ── Methodology fold (deprioritized; for the curious buyer) ──────
+        with ui.expansion(
+            "How GEDD works under the hood — grounded theory for AI eval",
+            icon="psychology",
+        ).classes("w-full animate-in stagger-5").style(
+            "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+            "border-radius: var(--radius-xl); margin-top: 1.5rem; "
+            "color: var(--text-primary)"
+        ):
+            ui.html(
+                '<div style="font-size:0.84rem;color:var(--text-secondary);'
+                'line-height:1.6;margin-bottom:0.85rem">'
+                "GEDD applies <strong>Strauss & Corbin's grounded theory</strong> "
+                "(open coding → axial coding → selective coding) to AI evaluation. "
+                "Instead of guessing what to measure, you observe what fails, name "
+                "the patterns in your domain's vocabulary, and build a judge "
+                "calibrated against your own scoring."
+                "</div>"
+            )
+            _render_demo()
+            ui.html(
+                '<div style="font-size:0.74rem;color:var(--text-muted);'
+                'margin-top:0.85rem;text-align:center">'
+                "Walk through the full TravelBot example — Define → Observe → "
+                "Tag → Root Cause → Judge."
+                "</div>"
+            )
 
-        def load_wealth_demo():
-            from grounded_evals.ui.domain_demos import load_wealth_demo
-            load_wealth_demo(app.storage.user)
-            ui.notify("WealthBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
-
-        def load_hr_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_hr_demo
-                load_hr_demo(app.storage.user)
-                ui.notify("HRBot demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("HRBot demo not available", type="warning")
-
-        def load_edu_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_edu_demo
-                load_edu_demo(app.storage.user)
-                ui.notify("EduBot demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("EduBot demo not available", type="warning")
-
-        def load_game_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_game_demo
-                load_game_demo(app.storage.user)
-                ui.notify("PixelGuard demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("PixelGuard demo not available", type="warning")
-
-        with ui.row().classes("items-center justify-between w-full").style("margin-top: 1.5rem; margin-bottom: 6px"):
-            ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary)")
-            ui.button("View all domains →", icon="collections_bookmark", on_click=lambda: ui.navigate.to("/demos")).props(
-                "flat size=xs no-caps"
-            ).style("color: var(--accent-bright); font-size: 0.72rem")
-
-        DEMO_BUTTONS = [
-            ("TravelBot", "flight", load_demo, "Flight booking — hallucination, policy miss"),
-            ("ClinicalBot", "local_hospital", load_clinical_demo, "Clinical support — escalation miss, DDI"),
-            ("LexBot", "gavel", load_lex_demo, "Legal research — phantom citations, UPL"),
-            ("WealthBot", "trending_up", load_wealth_demo, "Finance — suitability miss, insider tip"),
-            ("HRBot", "people", load_hr_demo, "Hiring AI — disparate impact, ADA violations"),
-            ("EduBot", "school", load_edu_demo, "Ed-tech tutor — academic integrity, COPPA"),
-            ("PixelGuard", "sports_esports", load_game_demo, "Gaming AI — COPPA, loot box law, anti-cheat risk"),
-        ]
-
-        with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px"):
-            for label, icon, handler, desc in DEMO_BUTTONS:
-                with ui.element("div").style(
-                    "display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; "
-                    "border-radius: 10px; border: 1px solid var(--border-subtle); "
-                    "background: var(--bg-surface-2); cursor: pointer; transition: border-color 0.15s"
-                ).on("click", handler).on("mouseenter", lambda el: None):
-                    ui.icon(icon).style("color: var(--accent-bright); font-size: 1.1rem; margin-top: 2px; flex-shrink: 0")
-                    with ui.column().style("gap: 2px"):
-                        ui.label(label).style("font-size: 0.82rem; font-weight: 600; color: var(--text-primary)")
-                        ui.label(desc).style("font-size: 0.7rem; color: var(--text-muted); line-height: 1.4")
-
-        # Logout
-        def logout():
-            app.storage.user["authenticated"] = False
-            ui.navigate.to("/login")
+        # ── Closing positioning line ─────────────────────────────────────
+        with ui.element("div").style(
+            "margin-top: 2rem; padding: 14px 18px; border-radius: var(--radius-xl); "
+            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
+            "text-align: center"
+        ):
+            ui.label(
+                "Most eval tools skip straight to rubrics. "
+                "GEDD makes you earn the right to build one."
+            ).style(
+                "font-size: 0.84rem; color: var(--text-secondary); "
+                "font-weight: 500; letter-spacing: -0.005em"
+            )
 
         ui.button("Logout", icon="logout", on_click=logout).props("flat size=sm").style(
-            "color: var(--text-muted); margin-top: 0.5rem"
+            "color: var(--text-muted); margin-top: 1rem"
         )
