@@ -448,6 +448,15 @@ def home_page():
             except (ImportError, AttributeError):
                 ui.notify("EduBot demo not available", type="warning")
 
+        def load_game_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_game_demo
+                load_game_demo(app.storage.user)
+                ui.notify("PixelGuard demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("PixelGuard demo not available", type="warning")
+
         with ui.row().classes("items-center justify-between w-full").style("margin-top: 1.5rem; margin-bottom: 6px"):
             ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary)")
             ui.button("View all domains →", icon="collections_bookmark", on_click=lambda: ui.navigate.to("/demos")).props(
@@ -461,6 +470,7 @@ def home_page():
             ("WealthBot", "trending_up", load_wealth_demo, "Finance — suitability miss, insider tip"),
             ("HRBot", "people", load_hr_demo, "Hiring AI — disparate impact, ADA violations"),
             ("EduBot", "school", load_edu_demo, "Ed-tech tutor — academic integrity, COPPA"),
+            ("PixelGuard", "sports_esports", load_game_demo, "Gaming AI — COPPA, loot box law, anti-cheat risk"),
         ]
 
         with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px"):
