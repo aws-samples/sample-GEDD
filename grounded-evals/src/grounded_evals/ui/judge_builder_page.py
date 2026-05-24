@@ -38,16 +38,15 @@ def _init_state():
     if "_jb_step" not in app.storage.user:
         app.storage.user["_jb_step"] = 1
     if "_jb_mappings" not in app.storage.user:
-        # dim_id -> list of code names
         app.storage.user["_jb_mappings"] = {}
     if "_jb_rubrics" not in app.storage.user:
-        # dim_id -> {weight, guidance}
         app.storage.user["_jb_rubrics"] = {}
     if "_jb_hard_fails" not in app.storage.user:
-        # list of {condition, code}
         app.storage.user["_jb_hard_fails"] = []
     if "_jb_selected_dims" not in app.storage.user:
         app.storage.user["_jb_selected_dims"] = []
+    if "_jb_mode" not in app.storage.user:
+        app.storage.user["_jb_mode"] = "geval"
 
 
 def _failure_summary():
@@ -565,106 +564,162 @@ def judge_builder_page():
         def _step5_generate():
             _card_header(
                 "Step 5 of 5 — Generate Judge Prompt & Export",
-                "Generate a production-ready LLM-as-a-Judge prompt grounded in your research. "
-                "You can edit before exporting.",
+                "Choose a judge mode, generate your prompt, then calibrate against your annotated examples.",
             )
 
-            existing_prompt = _get("_generated_judge_prompt", "")
             selected_dims = _get("_jb_selected_dims", [])
-            rubrics = _get("_jb_rubrics", {})
-            hard_fails = _get("_jb_hard_fails", [])
-            mappings = _get("_jb_mappings", {})
-            codebook = _get("codebook", [])
+            rubrics      = _get("_jb_rubrics", {})
+            hard_fails   = _get("_jb_hard_fails", [])
+            mappings     = _get("_jb_mappings", {})
+            codebook     = _get("codebook", [])
+            coding_annotations = _get("coding_annotations", [])
             session_data = _get("session_data", {})
-            agent_name = session_data.get("agent_spec", {}).get("name", "the agent")
-            agent_desc = session_data.get("agent_spec", {}).get("description", "")
-            paradigm = _get("_get_paradigm", _get("paradigm_model", {}))
-
-            # Summary of what will be included
+            agent_name   = session_data.get("agent_spec", {}).get("name", "the agent")
+            agent_desc   = session_data.get("agent_spec", {}).get("description", "")
+            paradigm     = _get("paradigm_model", {})
+            existing_prompt = _get("_generated_judge_prompt", "")
             dim_map = {d[0]: d for d in EVAL_DIMENSIONS}
+
             _stat_row([
                 (str(len(selected_dims)), "Dimensions", "var(--accent-bright)"),
-                (str(len(hard_fails)), "Hard-Fail Rules", "var(--red)"),
-                (str(len(codebook)), "Error Codes", "var(--yellow)"),
+                (str(len(hard_fails)),    "Hard-Fail Rules", "var(--red)"),
+                (str(len(coding_annotations)), "Annotated Examples", "var(--yellow)"),
             ])
 
-            # Judge prompt textarea
+            # ── Mode picker ───────────────────────────────────────────────────
+            MODES = [
+                ("standard",      "Standard",       "ballot",
+                 "Zero-shot rubric. Fast, good baseline. No warm-up needed.",
+                 "var(--text-secondary)"),
+                ("geval",         "G-EVAL",          "psychology",
+                 "Chain-of-thought per criterion (Liu et al. 2023). Most reliable for complex responses.",
+                 "var(--accent-bright)"),
+                ("fewshot",       "Few-Shot",        "format_list_bulleted",
+                 "Injects your annotated PASS/FAIL examples (Prometheus). Best for niche domains.",
+                 "var(--yellow)"),
+                ("constitutional","Constitutional",  "security",
+                 "Per-principle checklist from each error code. Best for safety-critical agents.",
+                 "var(--red)"),
+            ]
+
+            mode_state = {"current": _get("_jb_mode", "geval")}
+            mode_card_els: dict[str, object] = {}
+
+            ui.html('<div style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">Judge Mode</div>')
+            with ui.row().classes("w-full gap-2 flex-wrap").style("margin-bottom:14px"):
+                for mid, mlabel, micon, mdesc, mcolor in MODES:
+                    is_sel = mode_state["current"] == mid
+                    card_el = ui.element("div").style(
+                        f"flex:1;min-width:160px;border:2px solid {'var(--accent)' if is_sel else 'var(--border-subtle)'};"
+                        f"border-radius:10px;padding:10px 12px;background:var(--bg-surface-2);"
+                        f"cursor:pointer;transition:border-color 150ms"
+                    )
+                    mode_card_els[mid] = card_el
+                    with card_el:
+                        with ui.row().classes("items-center gap-2").style("margin-bottom:4px"):
+                            ui.icon(micon).style(f"color:{mcolor};font-size:1rem")
+                            ui.html(f'<span style="font-size:0.82rem;font-weight:700;color:{"var(--text-primary)" if is_sel else "var(--text-secondary)"}">{mlabel}</span>')
+                            if is_sel:
+                                ui.html('<span style="font-size:0.58rem;padding:1px 6px;border-radius:99px;background:var(--accent-tint);color:var(--accent-bright);font-weight:600">SELECTED</span>')
+                        ui.html(f'<div style="font-size:0.7rem;color:var(--text-muted);line-height:1.4">{mdesc}</div>')
+
+                    def make_select(m=mid):
+                        def on_click():
+                            mode_state["current"] = m
+                            _set("_jb_mode", m)
+                            go_to(5)
+                        return on_click
+                    card_el.on("click", make_select())
+
+            # ── Prompt textarea ───────────────────────────────────────────────
             prompt_area = ui.textarea(
                 value=existing_prompt,
-                placeholder="Click 'Generate Judge Prompt' to create an AI-generated judge prompt grounded in your analysis...",
-            ).props("outlined dark rows=18").classes("w-full").style(
+                placeholder="Click 'Generate' to build your judge prompt instantly from your rubric...",
+            ).props("outlined dark rows=16").classes("w-full").style(
                 "font-size:0.78rem;font-family:monospace;background:var(--bg-surface-1);color:var(--text-primary)"
             )
 
-            async def generate_judge():
-                generate_btn.props("loading")
+            # ── Generation (uses backend functions — no LLM call) ─────────────
+            def generate_judge():
                 try:
-                    from grounded_evals.llm.client import get_default_client, get_model_id
-                    client = get_default_client()
-                    model_id = get_model_id()
+                    from grounded_evals.models.core import JudgeCriterion, JudgeRubric
+                    from grounded_evals.judge_builder.prompt_gen import (
+                        generate_judge_prompt,
+                        generate_geval_judge_prompt,
+                        generate_few_shot_judge_prompt,
+                    )
+                    from grounded_evals.judge_builder.constitutional import (
+                        build_constitutional_principles,
+                        build_constitutional_judge_prompt,
+                    )
 
-                    dim_sections = []
-                    for dim_id in selected_dims:
-                        if dim_id not in dim_map:
+                    # Build JudgeRubric from UI state
+                    criteria = []
+                    for did in selected_dims:
+                        if did not in dim_map:
                             continue
-                        _, dim_label, _, _ = dim_map[dim_id]
-                        r = rubrics.get(dim_id, {})
-                        weight = r.get("weight", 2)
-                        score1 = r.get("score1", "Response fails to meet the criteria")
-                        score5 = r.get("score5", "Response fully meets the criteria")
-                        codes = mappings.get(dim_id, [])
-                        codes_str = f" (covers: {', '.join(codes)})" if codes else ""
-                        dim_sections.append(
-                            f"**{dim_label}** (weight: {weight}/3){codes_str}\n"
-                            f"  Score 1: {score1}\n"
-                            f"  Score 5: {score5}"
-                        )
+                        _, dim_label, dim_desc, _ = dim_map[did]
+                        r = rubrics.get(did, {})
+                        weight = float(r.get("weight", 2))
+                        s1 = r.get("score1", "") or f"Response critically fails on {dim_label.lower()}"
+                        s5 = r.get("score5", "") or f"Response excellently demonstrates {dim_label.lower()}"
+                        codes = mappings.get(did, [])
+                        parts = [dim_desc]
+                        if codes:
+                            parts.append(f"Observed failures: {', '.join(codes)}.")
+                        causal = paradigm.get("causal_conditions", [])
+                        if causal:
+                            cs = "; ".join(c if isinstance(c, str) else c.get("name", "") for c in causal)
+                            parts.append(f"Root causes: {cs}.")
+                        criteria.append(JudgeCriterion(
+                            name=dim_label,
+                            description=" ".join(parts),
+                            scoring_rubric={
+                                5: s5,
+                                4: f"Good — minor {dim_label.lower()} issues, core value delivered",
+                                3: f"Acceptable — noticeable {dim_label.lower()} issues but response is functional",
+                                2: f"Poor — significant issues: {', '.join(codes[:3]) if codes else 'see criteria'}",
+                                1: s1,
+                            },
+                            weight=weight,
+                        ))
 
-                    hard_fail_str = "\n".join(f"- HARD-FAIL if: {hf['condition']}" for hf in hard_fails) or "None defined"
-                    codebook_str = "\n".join(f"- {c['name']}: {c.get('definition','')}" for c in codebook[:15])
-                    dimensions_str = "\n\n".join(dim_sections)
-
-                    build_prompt = (
-                        f"You are generating a production-ready LLM-as-a-Judge evaluation prompt.\n\n"
-                        f"AGENT BEING EVALUATED: {agent_name}\n"
-                        f"DESCRIPTION: {agent_desc}\n\n"
-                        f"EVALUATION DIMENSIONS (grounded in observed failures):\n{dimensions_str}\n\n"
-                        f"HARD-FAIL RULES (auto-fail if any condition met):\n{hard_fail_str}\n\n"
-                        f"ERROR CODES FROM QUALITATIVE ANALYSIS:\n{codebook_str}\n\n"
-                        f"Write a complete, production-ready judge prompt that:\n"
-                        f"1. Has a clear ROLE section explaining the judge's purpose\n"
-                        f"2. Lists HARD-FAIL CONDITIONS first (binary pass/fail check)\n"
-                        f"3. For each dimension: defines what to evaluate and the 1-5 scoring scale\n"
-                        f"4. Includes a weighted FINAL SCORE calculation\n"
-                        f"5. Specifies the OUTPUT FORMAT: JSON with per-dimension scores, hard-fail boolean, "
-                        f"weighted_total (0-100), verdict (PASS/FAIL/PARTIAL), and reasoning\n"
-                        f"6. Is actionable — each score level has concrete, specific criteria from the rubric\n\n"
-                        f"Write ONLY the judge prompt (no preamble). Make it copy-paste ready."
+                    rubric = JudgeRubric(
+                        name="Grounded Evaluation Rubric (GEDD)",
+                        description="Auto-generated from Open Coding + Axial Coding qualitative analysis.",
+                        criteria=criteria,
                     )
 
-                    msg = await asyncio.to_thread(
-                        client.messages.create,
-                        model=model_id,
-                        max_tokens=4096,
-                        messages=[{"role": "user", "content": build_prompt}],
-                    )
-                    result = msg.content[0].text.strip()
-                    _set("_generated_judge_prompt", result)
-                    prompt_area.set_value(result)
-                    ui.notify("Judge prompt generated ✓", type="positive")
+                    mode = mode_state["current"]
+                    if mode == "geval":
+                        base_prompt = generate_geval_judge_prompt(rubric, agent_name, agent_desc)
+                    elif mode == "fewshot":
+                        from grounded_evals.judge_builder.few_shot import select_exemplars
+                        exemplar_set = select_exemplars(coding_annotations, codebook)
+                        base_prompt = generate_few_shot_judge_prompt(rubric, exemplar_set, agent_name, agent_desc)
+                        if exemplar_set.n_positive == 0:
+                            ui.notify("No annotated examples found — using standard rubric for few-shot. Add annotations in the Tag tab.", type="warning")
+                    elif mode == "constitutional":
+                        principles = build_constitutional_principles(codebook, paradigm, coding_annotations)
+                        base_prompt = build_constitutional_judge_prompt(principles, agent_name, agent_desc)
+                    else:  # standard
+                        base_prompt = generate_judge_prompt(rubric, agent_name, agent_desc)
+
+                    # Inject hard-fail rules before the rubric
+                    final_prompt = _inject_hard_fails(base_prompt, hard_fails)
+                    _set("_generated_judge_prompt", final_prompt)
+                    prompt_area.set_value(final_prompt)
+                    mode_label = next(m[1] for m in MODES if m[0] == mode)
+                    ui.notify(f"{mode_label} judge prompt generated ✓", type="positive")
                 except Exception as e:
                     ui.notify(f"Generation failed: {e}", type="negative")
-                finally:
-                    generate_btn.props(remove="loading")
 
             def save_edits():
                 _set("_generated_judge_prompt", prompt_area.value)
                 ui.notify("Prompt saved ✓", type="positive")
 
             def copy_prompt():
-                ui.run_javascript(
-                    f'navigator.clipboard.writeText({json.dumps(prompt_area.value or "")});'
-                )
+                ui.run_javascript(f'navigator.clipboard.writeText({json.dumps(prompt_area.value or "")});')
                 ui.notify("Copied to clipboard ✓", type="positive")
 
             def download_prompt():
@@ -672,11 +727,13 @@ def judge_builder_page():
                 if not content:
                     ui.notify("Generate the prompt first", type="warning")
                     return
-                ui.download(content.encode(), f"judge_prompt_{agent_name.lower().replace(' ', '_')}.txt")
+                mode = _get("_jb_mode", "geval")
+                ui.download(content.encode(), f"judge_{mode}_{agent_name.lower().replace(' ', '_')}.txt")
 
             def download_full_spec():
                 spec = {
                     "agent": agent_name,
+                    "judge_mode": _get("_jb_mode", "geval"),
                     "dimensions": [
                         {
                             "id": did,
@@ -695,7 +752,7 @@ def judge_builder_page():
                 ui.download(json.dumps(spec, indent=2).encode(), f"judge_spec_{agent_name.lower().replace(' ', '_')}.json")
 
             with ui.row().classes("gap-2 flex-wrap").style("margin: 10px 0"):
-                generate_btn = ui.button("Generate Judge Prompt", icon="auto_fix_high", on_click=generate_judge).style(
+                ui.button("Generate", icon="auto_fix_high", on_click=generate_judge).style(
                     "background:var(--accent);color:white;border-radius:6px"
                 ).props("size=sm")
                 ui.button("Save Edits", icon="save", on_click=save_edits).props("size=sm outline dark").style(
@@ -707,37 +764,142 @@ def judge_builder_page():
                 ui.button("Download .txt", icon="download", on_click=download_prompt).props("size=sm outline dark").style(
                     "border-color:var(--border-default);color:var(--text-secondary)"
                 )
-                ui.button("Download Full Spec (.json)", icon="download", on_click=download_full_spec).props("size=sm outline dark").style(
+                ui.button("Download Spec", icon="download", on_click=download_full_spec).props("size=sm outline dark").style(
                     "border-color:var(--accent);color:var(--accent-bright)"
                 )
 
-            # Calibration section
-            coding_annotations = _get("coding_annotations", [])
-            if coding_annotations:
-                ui.separator().style("opacity:0.1;margin:16px 0")
-                ui.html(
-                    '<div style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:8px">'
-                    'Calibration — Annotated Examples</div>'
-                    '<div style="font-size:0.78rem;color:var(--text-muted);margin-bottom:10px">'
-                    'These are your human-annotated ground-truth examples. Use them to test your judge prompt before deploying.'
-                    '</div>'
-                )
-                for ann in coding_annotations[:5]:
-                    verdict_color = {
-                        "correct": "var(--green-bright)",
-                        "partial": "var(--yellow)",
-                        "incorrect": "var(--red)",
-                    }.get(ann.get("annotation", ""), "var(--text-muted)")
-                    codes = ann.get("codes", [])
-                    with ui.element("div").style(
-                        "background:var(--bg-surface-1);border:1px solid var(--border-subtle);"
-                        "border-radius:8px;padding:10px 14px;margin-bottom:8px"
-                    ):
-                        with ui.row().classes("items-center gap-2").style("margin-bottom:4px"):
-                            ui.html(f'<span style="font-size:0.65rem;font-weight:700;color:{verdict_color};text-transform:uppercase">{ann.get("annotation","?")}</span>')
-                            for c in codes:
-                                ui.html(f'<span style="font-size:0.6rem;padding:1px 6px;border-radius:99px;background:var(--red-tint);color:var(--red)">{c}</span>')
-                        ui.html(f'<div style="font-size:0.78rem;color:var(--text-secondary)">{ann.get("query","")[:120]}</div>')
+            # ── Calibration panel ─────────────────────────────────────────────
+            ui.separator().style("opacity:0.1;margin:18px 0")
+            with ui.row().classes("items-center justify-between w-full").style("margin-bottom:10px"):
+                with ui.column().style("gap:2px"):
+                    ui.html('<div style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em">Calibrate Judge</div>')
+                    n_anns = len(coding_annotations)
+                    ann_color = "var(--green-bright)" if n_anns >= 10 else ("var(--yellow)" if n_anns >= 5 else "var(--red)")
+                    ui.html(
+                        f'<div style="font-size:0.75rem;color:var(--text-muted)">'
+                        f'Run judge against your <span style="color:{ann_color};font-weight:600">{n_anns} annotated examples</span> '
+                        f'and measure Cohen\'s κ agreement with human labels.'
+                        f'{"" if n_anns >= 5 else " <span style=\'color:var(--yellow)\'>Add at least 5 annotations in the Tag tab for meaningful results.</span>"}'
+                        f'</div>'
+                    )
+
+            calibration_result_container = ui.column().classes("w-full")
+
+            async def run_calibration():
+                prompt = prompt_area.value or _get("_generated_judge_prompt", "")
+                if not prompt.strip():
+                    ui.notify("Generate a judge prompt first", type="warning")
+                    return
+                if not coding_annotations:
+                    ui.notify("No annotated examples found. Tag some responses first.", type="warning")
+                    return
+
+                calibrate_btn.props("loading")
+                calibration_result_container.clear()
+                with calibration_result_container:
+                    ui.html('<div style="font-size:0.78rem;color:var(--text-muted);padding:8px 0">Running judge on annotated examples…</div>')
+
+                try:
+                    from grounded_evals.llm.client import get_default_client, get_model_id
+                    from grounded_evals.judge_builder.calibrate import calibrate
+                    import json as _json
+
+                    client = get_default_client()
+                    model_id = get_model_id()
+
+                    manual_scores: list[dict] = []
+                    judge_scores: list[dict] = []
+                    disagreements_raw: list[dict] = []
+
+                    for ann in coding_annotations:
+                        query    = ann.get("query", "")
+                        response = ann.get("response", "")
+                        verdict  = ann.get("annotation", ann.get("verdict", ""))
+                        if not query or not response or not verdict:
+                            continue
+
+                        # Human: map verdict → score 1–5
+                        h_score = {"correct": 5, "partial": 3, "incorrect": 1}.get(verdict, 3)
+                        manual_scores.append({"overall": h_score})
+
+                        # Run judge
+                        filled = prompt.replace("{query}", query[:500]).replace("{response}", response[:800])
+                        msg = await asyncio.to_thread(
+                            client.messages.create,
+                            model=model_id,
+                            max_tokens=1024,
+                            messages=[{"role": "user", "content": filled}],
+                        )
+                        raw = msg.content[0].text
+                        parsed: dict = {}
+                        for fence in ("```json", "```"):
+                            if fence in raw:
+                                try:
+                                    s = raw.index(fence) + len(fence)
+                                    e2 = raw.index("```", s)
+                                    parsed = _json.loads(raw[s:e2].strip())
+                                    break
+                                except Exception:
+                                    pass
+                        if not parsed:
+                            try:
+                                js = raw.find("{"); je = raw.rfind("}") + 1
+                                if js >= 0 and je > js:
+                                    parsed = _json.loads(raw[js:je])
+                            except Exception:
+                                pass
+
+                        # Extract overall score from judge output
+                        j_score = None
+                        if "overall_score" in parsed:
+                            j_score = float(parsed["overall_score"])
+                        elif "pass" in parsed:
+                            j_score = 5.0 if parsed["pass"] else 1.0
+                        elif "weighted_total" in parsed:
+                            j_score = float(parsed["weighted_total"]) / 20  # 0-100 → 1-5
+                        else:
+                            j_score = 3.0  # fallback
+
+                        judge_scores.append({"overall": round(j_score)})
+
+                        # Collect disagreements for display
+                        j_pass = j_score >= 3.5
+                        h_pass = h_score >= 4
+                        if j_pass != h_pass:
+                            disagreements_raw.append({
+                                "query": query[:80],
+                                "human": verdict,
+                                "judge": "PASS" if j_pass else "FAIL",
+                                "j_score": j_score,
+                                "summary": parsed.get("summary", parsed.get("reasoning_summary", "")),
+                            })
+
+                    result = calibrate(manual_scores, judge_scores)
+
+                    calibration_result_container.clear()
+                    with calibration_result_container:
+                        _render_calibration_result(result, disagreements_raw, len(manual_scores))
+
+                    ui.notify(f"Calibration complete — κ = {result.weighted_kappa:.2f}", type="positive")
+
+                except Exception as e:
+                    calibration_result_container.clear()
+                    with calibration_result_container:
+                        ui.html(
+                            f'<div style="padding:12px;background:var(--red-tint);border:1px solid rgba(235,87,87,0.2);'
+                            f'border-radius:8px;font-size:0.8rem;color:var(--text-secondary)">'
+                            f'⚠️ Calibration failed: {e}<br>'
+                            f'<span style="font-size:0.72rem;color:var(--text-muted)">Check that ANTHROPIC_API_KEY or AWS credentials are configured.</span>'
+                            f'</div>'
+                        )
+                finally:
+                    calibrate_btn.props(remove="loading")
+
+            calibrate_btn = ui.button(
+                "Calibrate Judge", icon="analytics", on_click=run_calibration
+            ).props("size=sm outline").style(
+                "border-color:var(--green);color:var(--green-bright);border-radius:6px"
+            )
 
             _nav_row(back=lambda: go_to(4), forward=None)
 
@@ -787,3 +949,131 @@ def _nav_row(back, forward, forward_label: str = "Continue →", extra_btn=None)
                 ui.button(forward_label, on_click=forward).props("size=sm").style(
                     "background:var(--accent);color:white;border-radius:6px"
                 )
+
+
+def _inject_hard_fails(base_prompt: str, hard_fails: list[dict]) -> str:
+    """Prepend hard-fail rules block into the generated judge prompt."""
+    if not hard_fails:
+        return base_prompt
+    lines = ["## Hard-Fail Rules (Binary Override)", ""]
+    lines.append("If ANY of the following conditions is met, the overall verdict MUST be FAIL (score 1) regardless of other scores:")
+    lines.append("")
+    for i, hf in enumerate(hard_fails, 1):
+        cond = hf.get("condition", "")
+        code = hf.get("code", "")
+        tag = f" [{code}]" if code else ""
+        lines.append(f"{i}. VIOLATED if: {cond}{tag}")
+    lines.append("")
+    block = "\n".join(lines)
+    # Insert after first double-newline (after system context / role definition)
+    split_idx = base_prompt.find("\n\n")
+    if split_idx != -1:
+        return base_prompt[:split_idx + 2] + block + base_prompt[split_idx + 2:]
+    return block + "\n\n" + base_prompt
+
+
+def _render_calibration_result(result, disagreements_raw: list[dict], n: int):
+    """Render Cohen's κ calibration result with traffic-light color coding."""
+    kappa = result.weighted_kappa
+    interp = result.kappa_interpretation
+
+    # Traffic-light color
+    if kappa >= 0.80:
+        kappa_color = "var(--green-bright)"
+        badge_bg    = "rgba(39,174,96,0.12)"
+        verdict_icon = "✅"
+    elif kappa >= 0.61:
+        kappa_color = "var(--accent-bright)"
+        badge_bg    = "var(--accent-tint)"
+        verdict_icon = "🟡"
+    elif kappa >= 0.41:
+        kappa_color = "var(--yellow)"
+        badge_bg    = "rgba(242,201,76,0.12)"
+        verdict_icon = "⚠️"
+    else:
+        kappa_color = "var(--red)"
+        badge_bg    = "var(--red-tint)"
+        verdict_icon = "❌"
+
+    ci_lo = getattr(result, "kappa_ci_low", None)
+    ci_hi = getattr(result, "kappa_ci_high", None)
+    ci_str = f" (95% CI: {ci_lo:.2f}–{ci_hi:.2f})" if ci_lo is not None and ci_hi is not None else ""
+
+    ui.html(
+        f'<div style="padding:14px 16px;background:{badge_bg};border:1px solid {kappa_color}33;'
+        f'border-radius:10px;margin-bottom:12px">'
+        f'<div style="display:flex;align-items:center;gap:12px">'
+        f'<div style="font-size:2.2rem;font-weight:800;color:{kappa_color};font-variant-numeric:tabular-nums">'
+        f'κ = {kappa:.2f}</div>'
+        f'<div>'
+        f'<div style="font-size:0.85rem;font-weight:600;color:var(--text-primary)">{verdict_icon} {interp}</div>'
+        f'<div style="font-size:0.72rem;color:var(--text-muted)">'
+        f'{n} examples evaluated{ci_str}'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+        f'</div>'
+    )
+
+    # Recommendation
+    rec = getattr(result, "recommendation", "")
+    if rec:
+        ui.html(
+            f'<div style="font-size:0.78rem;color:var(--text-secondary);'
+            f'background:var(--bg-surface-1);border-radius:8px;padding:10px 12px;'
+            f'border-left:3px solid {kappa_color};margin-bottom:12px">'
+            f'<strong>Recommendation:</strong> {rec}'
+            f'</div>'
+        )
+
+    # Per-criterion kappa table
+    per_crit = getattr(result, "per_criterion_kappa", {})
+    weakest  = getattr(result, "weakest_criterion", "")
+    if per_crit:
+        rows_html = ""
+        for crit, ck in per_crit.items():
+            crit_color = "var(--green-bright)" if ck >= 0.80 else ("var(--yellow)" if ck >= 0.41 else "var(--red)")
+            weak_mark  = " ⚠️" if crit == weakest else ""
+            rows_html += (
+                f'<tr>'
+                f'<td style="padding:5px 8px;font-size:0.75rem;color:var(--text-secondary)">{crit}{weak_mark}</td>'
+                f'<td style="padding:5px 8px;text-align:right;font-weight:700;color:{crit_color};'
+                f'font-variant-numeric:tabular-nums;font-size:0.75rem">{ck:.2f}</td>'
+                f'</tr>'
+            )
+        ui.html(
+            f'<div style="margin-bottom:12px">'
+            f'<div style="font-size:0.68rem;font-weight:600;color:var(--text-tertiary);'
+            f'text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">Per-Criterion Agreement</div>'
+            f'<table style="width:100%;border-collapse:collapse;background:var(--bg-surface-1);border-radius:8px;overflow:hidden">'
+            f'{rows_html}'
+            f'</table>'
+            f'</div>'
+        )
+
+    # Disagreement examples
+    if disagreements_raw:
+        ui.html(
+            f'<div style="font-size:0.68rem;font-weight:600;color:var(--text-tertiary);'
+            f'text-transform:uppercase;letter-spacing:0.04em;margin-bottom:6px">'
+            f'Disagreements ({len(disagreements_raw)} of {n})'
+            f'</div>'
+        )
+        for d in disagreements_raw[:5]:
+            h_col = "var(--green-bright)" if d["human"] == "correct" else ("var(--yellow)" if d["human"] == "partial" else "var(--red)")
+            j_col = "var(--green-bright)" if d["judge"] == "PASS" else "var(--red)"
+            summary_html = f'<div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px">{d["summary"][:120]}…</div>' if d.get("summary") else ""
+            ui.html(
+                f'<div style="background:var(--bg-surface-1);border:1px solid var(--border-subtle);'
+                f'border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+                f'<div style="font-size:0.76rem;color:var(--text-secondary);margin-bottom:4px">{d["query"]}</div>'
+                f'<div style="display:flex;gap:8px;align-items:center">'
+                f'<span style="font-size:0.68rem;padding:2px 8px;border-radius:99px;'
+                f'background:{h_col}22;color:{h_col};font-weight:600">Human: {d["human"].upper()}</span>'
+                f'<span style="font-size:0.68rem;padding:2px 8px;border-radius:99px;'
+                f'background:{j_col}22;color:{j_col};font-weight:600">Judge: {d["judge"]}</span>'
+                f'<span style="font-size:0.68rem;color:var(--text-muted)">score {d["j_score"]:.1f}</span>'
+                f'</div>'
+                f'{summary_html}'
+                f'</div>'
+            )
