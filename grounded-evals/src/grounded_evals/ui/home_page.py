@@ -667,6 +667,77 @@ def home_page():
                 "</div>"
             )
 
+        def load_wealth_demo():
+            from grounded_evals.ui.domain_demos import load_wealth_demo
+            load_wealth_demo(app.storage.user)
+            ui.notify("WealthBot demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+
+        def load_hr_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_hr_demo
+                load_hr_demo(app.storage.user)
+                ui.notify("HRBot demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("HRBot demo not available", type="warning")
+
+        def load_edu_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_edu_demo
+                load_edu_demo(app.storage.user)
+                ui.notify("EduBot demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("EduBot demo not available", type="warning")
+
+        def load_crypto_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_crypto_demo
+                load_crypto_demo(app.storage.user)
+                ui.notify("VaultEx AI demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("VaultEx demo not available", type="warning")
+
+        def load_game_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_game_demo
+                load_game_demo(app.storage.user)
+                ui.notify("PixelGuard demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("PixelGuard demo not available", type="warning")
+
+        with ui.row().classes("items-center justify-between w-full").style("margin-top: 1.5rem; margin-bottom: 6px"):
+            ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary)")
+            ui.button("View all domains →", icon="collections_bookmark", on_click=lambda: ui.navigate.to("/demos")).props(
+                "flat size=xs no-caps"
+            ).style("color: var(--accent-bright); font-size: 0.72rem")
+
+        DEMO_BUTTONS = [
+            ("TravelBot", "flight", load_demo, "Flight booking — hallucination, policy miss"),
+            ("ClinicalBot", "local_hospital", load_clinical_demo, "Clinical support — escalation miss, DDI"),
+            ("LexBot", "gavel", load_lex_demo, "Legal research — phantom citations, UPL"),
+            ("WealthBot", "trending_up", load_wealth_demo, "Finance — suitability miss, insider tip"),
+            ("HRBot", "people", load_hr_demo, "Hiring AI — disparate impact, ADA violations"),
+            ("EduBot", "school", load_edu_demo, "Ed-tech tutor — academic integrity, COPPA"),
+            ("VaultEx AI", "currency_bitcoin", load_crypto_demo, "Crypto AI — securities law, seed scams, sanctions"),
+            ("PixelGuard", "sports_esports", load_game_demo, "Gaming AI — COPPA, loot box law, anti-cheat risk"),
+        ]
+
+        with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px"):
+            for label, icon, handler, desc in DEMO_BUTTONS:
+                with ui.element("div").style(
+                    "display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; "
+                    "border-radius: 10px; border: 1px solid var(--border-subtle); "
+                    "background: var(--bg-surface-2); cursor: pointer; transition: border-color 0.15s"
+                ).on("click", handler).on("mouseenter", lambda el: None):
+                    ui.icon(icon).style("color: var(--accent-bright); font-size: 1.1rem; margin-top: 2px; flex-shrink: 0")
+                    with ui.column().style("gap: 2px"):
+                        ui.label(label).style("font-size: 0.82rem; font-weight: 600; color: var(--text-primary)")
+                        ui.label(desc).style("font-size: 0.7rem; color: var(--text-muted); line-height: 1.4")
+
         # ── Closing positioning line ─────────────────────────────────────
         with ui.element("div").style(
             "margin-top: 2rem; padding: 14px 18px; border-radius: var(--radius-xl); "
@@ -680,6 +751,11 @@ def home_page():
                 "font-size: 0.84rem; color: var(--text-secondary); "
                 "font-weight: 500; letter-spacing: -0.005em"
             )
+
+        # Logout
+        def logout():
+            app.storage.user["authenticated"] = False
+            ui.navigate.to("/login")
 
         ui.button("Logout", icon="logout", on_click=logout).props("flat size=sm").style(
             "color: var(--text-muted); margin-top: 1rem"
