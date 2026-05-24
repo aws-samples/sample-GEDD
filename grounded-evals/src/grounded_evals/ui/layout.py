@@ -4,6 +4,7 @@ from nicegui import app, ui
 
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "home"},
+    {"path": "/demos", "label": "Demos", "icon": "collections_bookmark"},
     {"path": "/coach", "label": "1. Coach", "icon": "chat"},
     {"path": "/eval", "label": "2. Eval", "icon": "science"},
     {"path": "/coding", "label": "3. Tag", "icon": "label"},

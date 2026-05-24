@@ -430,17 +430,40 @@ def home_page():
             ui.notify("WealthBot demo loaded!", type="positive")
             ui.navigate.to("/coach")
 
-        ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); margin-top: 1.5rem; margin-bottom: 4px")
+        def load_hr_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_hr_demo
+                load_hr_demo(app.storage.user)
+                ui.notify("HRBot demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("HRBot demo not available", type="warning")
+
+        def load_edu_demo():
+            try:
+                from grounded_evals.ui.domain_demos import load_edu_demo
+                load_edu_demo(app.storage.user)
+                ui.notify("EduBot demo loaded!", type="positive")
+                ui.navigate.to("/coach")
+            except (ImportError, AttributeError):
+                ui.notify("EduBot demo not available", type="warning")
+
+        with ui.row().classes("items-center justify-between w-full").style("margin-top: 1.5rem; margin-bottom: 6px"):
+            ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary)")
+            ui.button("View all domains →", icon="collections_bookmark", on_click=lambda: ui.navigate.to("/demos")).props(
+                "flat size=xs no-caps"
+            ).style("color: var(--accent-bright); font-size: 0.72rem")
 
         DEMO_BUTTONS = [
-            ("TravelBot", "flight", load_demo, "Flight booking agent — policy hallucination, incomplete responses"),
-            ("SupportBot", "support_agent", load_support_demo, "E-commerce support — PII leakage, escalation failures"),
-            ("ClinicalBot", "local_hospital", load_clinical_demo, "Patient triage AI — contraindication misses, scope creep"),
-            ("LexBot", "gavel", load_lex_demo, "Legal research — phantom citations, UPL boundary"),
-            ("WealthBot", "trending_up", load_wealth_demo, "Finance advisor — suitability misses, insider trading"),
+            ("TravelBot", "flight", load_demo, "Flight booking — hallucination, policy miss"),
+            ("ClinicalBot", "local_hospital", load_clinical_demo, "Clinical support — escalation miss, DDI"),
+            ("LexBot", "gavel", load_lex_demo, "Legal research — phantom citations, UPL"),
+            ("WealthBot", "trending_up", load_wealth_demo, "Finance — suitability miss, insider tip"),
+            ("HRBot", "people", load_hr_demo, "Hiring AI — disparate impact, ADA violations"),
+            ("EduBot", "school", load_edu_demo, "Ed-tech tutor — academic integrity, COPPA"),
         ]
 
-        with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px"):
+        with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px"):
             for label, icon, handler, desc in DEMO_BUTTONS:
                 with ui.element("div").style(
                     "display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; "

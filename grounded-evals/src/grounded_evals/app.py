@@ -16,6 +16,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 import grounded_evals.ui.analysis_page  # noqa: F401
 import grounded_evals.ui.coding_page  # noqa: F401
+import grounded_evals.ui.demos_page  # noqa: F401
 import grounded_evals.ui.eval_page  # noqa: F401
 
 # Import new pages (registers their @ui.page routes)
