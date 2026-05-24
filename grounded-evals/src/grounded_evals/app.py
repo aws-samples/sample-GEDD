@@ -571,29 +571,20 @@ def main_page() -> None:
                             return
                         for i, p in enumerate(cur.golden_prompts):
                             with ui.element("div").style(
-                                "display: flex; align-items: flex-start; gap: 10px; padding: 8px 0; "
-                                "border-bottom: 1px solid var(--border-subtle)"
+                                "position: relative; padding: 8px 0 8px 0; "
+                                "border-bottom: 1px solid var(--border-subtle); width: 100%; box-sizing: border-box"
                             ):
-                                # Category badge
+                                badge = p.rationale or "uncategorized"
+                                text = _html.escape(p.prompt_text)
                                 ui.html(
+                                    f'<div style="display:flex;gap:8px;align-items:flex-start;padding-right:28px">'
                                     f'<span style="font-size:0.6rem;font-weight:600;color:var(--accent-bright);'
                                     f'background:var(--accent-tint);border-radius:4px;padding:2px 6px;'
-                                    f'white-space:nowrap;flex-shrink:0">{p.rationale or "uncategorized"}</span>'
+                                    f'white-space:nowrap;flex-shrink:0;margin-top:3px">{badge}</span>'
+                                    f'<span style="flex:1;font-size:0.82rem;color:var(--text-primary);'
+                                    f'line-height:1.55;word-break:break-word">{text}</span>'
+                                    f'</div>'
                                 )
-                                # Editable query text
-                                edit_input = ui.input(value=p.prompt_text).classes("flex-grow").props(
-                                    "dense borderless dark"
-                                ).style("font-size: 0.82rem; color: var(--text-primary)")
-
-                                def make_save(idx=i):
-                                    def on_save(e):
-                                        cur2 = _user_session()
-                                        if idx < len(cur2.golden_prompts):
-                                            cur2.golden_prompts[idx].prompt_text = e.value
-                                            _save_user_session(cur2)
-                                    return on_save
-
-                                edit_input.on_value_change(make_save())
 
                                 def make_delete(idx=i):
                                     def on_delete():
@@ -606,7 +597,9 @@ def main_page() -> None:
 
                                 ui.button(
                                     icon="delete_outline", on_click=make_delete()
-                                ).props("flat round size=xs").style("color: var(--text-muted); flex-shrink: 0")
+                                ).props("flat round size=xs").style(
+                                    "color: var(--text-muted); position: absolute; top: 4px; right: 0"
+                                )
 
                 refresh_query_table()
 

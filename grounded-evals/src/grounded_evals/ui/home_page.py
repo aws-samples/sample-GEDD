@@ -409,17 +409,48 @@ def home_page():
         def load_support_demo():
             from grounded_evals.ui.support_bot_demo import load_support_bot_demo
             load_support_bot_demo(app.storage.user)
-            ui.notify("SupportBot demo loaded! Explore each page to see it in action.", type="positive")
+            ui.notify("SupportBot demo loaded!", type="positive")
             ui.navigate.to("/coach")
 
-        with ui.row().classes("items-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):
-            ui.button("Load Demo Data (TravelBot)", icon="science", on_click=load_demo).props("size=sm").style(
-                "background: var(--accent); color: white; border-radius: 6px"
-            )
-            ui.button("Load Demo Data (SupportBot)", icon="support_agent", on_click=load_support_demo).props("size=sm").style(
-                "background: var(--accent); color: white; border-radius: 6px"
-            )
-            ui.label("Pre-populates all pages with realistic sample data").style("font-size: 0.72rem; color: var(--text-muted)")
+        def load_clinical_demo():
+            from grounded_evals.ui.domain_demos import load_clinical_demo
+            load_clinical_demo(app.storage.user)
+            ui.notify("ClinicalBot demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+
+        def load_lex_demo():
+            from grounded_evals.ui.domain_demos import load_lex_demo
+            load_lex_demo(app.storage.user)
+            ui.notify("LexBot demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+
+        def load_wealth_demo():
+            from grounded_evals.ui.domain_demos import load_wealth_demo
+            load_wealth_demo(app.storage.user)
+            ui.notify("WealthBot demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+
+        ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary); margin-top: 1.5rem; margin-bottom: 4px")
+
+        DEMO_BUTTONS = [
+            ("TravelBot", "flight", load_demo, "Flight booking agent — policy hallucination, incomplete responses"),
+            ("SupportBot", "support_agent", load_support_demo, "E-commerce support — PII leakage, escalation failures"),
+            ("ClinicalBot", "local_hospital", load_clinical_demo, "Patient triage AI — contraindication misses, scope creep"),
+            ("LexBot", "gavel", load_lex_demo, "Legal research — phantom citations, UPL boundary"),
+            ("WealthBot", "trending_up", load_wealth_demo, "Finance advisor — suitability misses, insider trading"),
+        ]
+
+        with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px"):
+            for label, icon, handler, desc in DEMO_BUTTONS:
+                with ui.element("div").style(
+                    "display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; "
+                    "border-radius: 10px; border: 1px solid var(--border-subtle); "
+                    "background: var(--bg-surface-2); cursor: pointer; transition: border-color 0.15s"
+                ).on("click", handler).on("mouseenter", lambda el: None):
+                    ui.icon(icon).style("color: var(--accent-bright); font-size: 1.1rem; margin-top: 2px; flex-shrink: 0")
+                    with ui.column().style("gap: 2px"):
+                        ui.label(label).style("font-size: 0.82rem; font-weight: 600; color: var(--text-primary)")
+                        ui.label(desc).style("font-size: 0.7rem; color: var(--text-muted); line-height: 1.4")
 
         # Logout
         def logout():

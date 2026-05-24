@@ -321,21 +321,73 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
     with ui.card().classes("w-full q-pa-md").style(
         "background:var(--bg-surface-2); border-radius:12px; border:1px solid var(--border-subtle); margin-bottom:1rem"
     ):
-        ui.label("Select Models to Compare").style(
-            "font-size:0.85rem; font-weight:700; color:var(--text-primary); margin-bottom:8px"
-        )
-        ui.label(
-            f"Running {len(session.golden_prompts)} golden queries against selected models"
-        ).style("font-size:0.75rem; color:var(--text-tertiary); margin-bottom:12px")
+        with ui.row().classes("items-center justify-between w-full").style("margin-bottom:4px"):
+            ui.label("Select Models to Compare").style(
+                "font-size:0.85rem; font-weight:700; color:var(--text-primary)"
+            )
+            ui.label(f"{len(session.golden_prompts)} queries · pick up to 3").style(
+                "font-size:0.72rem; color:var(--text-muted)"
+            )
 
-        checkboxes = []
+        # Group models by provider for visual clarity
+        MODEL_GROUPS = [
+            ("Claude", [m for m in AVAILABLE_MODELS if "claude" in m["id"]]),
+            ("Amazon Nova", [m for m in AVAILABLE_MODELS if "nova" in m["id"]]),
+            ("Other", [m for m in AVAILABLE_MODELS if "claude" not in m["id"] and "nova" not in m["id"]]),
+        ]
+
         existing_selected = _get_selected_models()
-        with ui.row().classes("gap-md"):
-            for model in AVAILABLE_MODELS:
-                cb = ui.checkbox(model["label"], value=model["id"] in existing_selected)
-                checkboxes.append((cb, model["id"]))
+        selected_state: dict[str, bool] = {m["id"]: m["id"] in existing_selected for m in AVAILABLE_MODELS}
+        pill_buttons: dict[str, object] = {}
 
-        ui.separator().style("opacity:0.2; margin:12px 0")
+        def _pill_style(selected: bool) -> str:
+            if selected:
+                return (
+                    "padding:6px 14px; border-radius:20px; cursor:pointer; font-size:0.78rem; font-weight:600; "
+                    "background:var(--accent); color:#fff; border:1.5px solid var(--accent); transition:all 0.15s"
+                )
+            return (
+                "padding:6px 14px; border-radius:20px; cursor:pointer; font-size:0.78rem; font-weight:500; "
+                "background:transparent; color:var(--text-secondary); border:1.5px solid var(--border-subtle); transition:all 0.15s"
+            )
+
+        for group_name, group_models in MODEL_GROUPS:
+            if not group_models:
+                continue
+            ui.label(group_name).style(
+                "font-size:0.65rem; font-weight:700; color:var(--text-muted); letter-spacing:0.08em; "
+                "text-transform:uppercase; margin-top:12px; margin-bottom:6px"
+            )
+            with ui.row().classes("gap-2 flex-wrap"):
+                for model in group_models:
+                    mid = model["id"]
+                    btn = ui.html(
+                        f'<div style="{_pill_style(selected_state[mid])}">{model["label"]}</div>'
+                    )
+
+                    def make_toggle(model_id=mid, pill=btn):
+                        def toggle():
+                            selected_state[model_id] = not selected_state[model_id]
+                            pill.set_content(
+                                f'<div style="{_pill_style(selected_state[model_id])}">'
+                                f'{next(m["label"] for m in AVAILABLE_MODELS if m["id"] == model_id)}'
+                                f'</div>'
+                            )
+                        return toggle
+
+                    btn.on("click", make_toggle())
+                    pill_buttons[mid] = btn
+
+        # Expose the same interface run_eval expects
+        checkboxes = []
+        for model in AVAILABLE_MODELS:
+            class _FakeCb:
+                def __init__(self, mid): self._mid = mid
+                @property
+                def value(self): return selected_state[self._mid]
+            checkboxes.append((_FakeCb(model["id"]), model["id"]))
+
+        ui.separator().style("opacity:0.2; margin:14px 0 10px")
 
         progress_bar = ui.linear_progress(value=0, show_value=False).props("color=primary size=4px").style("margin-bottom:6px; opacity:0")
         progress_label = ui.label("").style("font-size:0.8rem; color:var(--text-tertiary)")
