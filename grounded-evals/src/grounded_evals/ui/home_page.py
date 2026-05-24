@@ -473,27 +473,36 @@ def home_page():
         except (ImportError, AttributeError):
             ui.notify("PixelGuard demo not available", type="warning")
 
+    def load_crypto_demo():
+        try:
+            from grounded_evals.ui.domain_demos import load_crypto_demo
+            load_crypto_demo(app.storage.user)
+            ui.notify("VaultEx AI demo loaded!", type="positive")
+            ui.navigate.to("/coach")
+        except (ImportError, AttributeError):
+            ui.notify("VaultEx demo not available", type="warning")
+
     def logout():
         app.storage.user["authenticated"] = False
         ui.navigate.to("/login")
 
     DOMAIN_CARDS = [
-        ("LexBot", "gavel", load_lex_demo,
-         "Legal research — phantom citations, UPL boundary"),
         ("ClinicalBot", "local_hospital", load_clinical_demo,
-         "Clinical triage — missed escalation, drug interactions"),
+         "Surfaces missed escalation triggers and dangerous drug-interaction blindspots."),
+        ("LexBot", "gavel", load_lex_demo,
+         "Exposes phantom citations and unauthorized-practice-of-law boundary crossings."),
         ("WealthBot", "trending_up", load_wealth_demo,
-         "Personal finance — suitability miss, insider tip"),
+         "Finds suitability failures and responses edging toward unregistered investment advice."),
+        ("VaultEx AI", "currency_bitcoin", load_crypto_demo,
+         "Uncovers securities-law overreach, seed-phrase scam vulnerability, and sanctions blindspots."),
         ("HRBot", "people", load_hr_demo,
-         "Hiring assistant — disparate impact, ADA limits"),
+         "Identifies disparate-impact patterns and ADA boundary violations in candidate screening."),
         ("EduBot", "school", load_edu_demo,
-         "Ed-tech tutor — academic integrity, COPPA"),
+         "Catches academic-integrity violations and age-gate failures under COPPA."),
         ("PixelGuard", "sports_esports", load_game_demo,
-         "Gaming support — COPPA, loot-box law, anti-cheat"),
+         "Surfaces COPPA failures, loot-box law exposure, and anti-cheat policy violations."),
         ("TravelBot", "flight", load_demo,
-         "Flight booking — hallucinated entities, policy miss"),
-        ("SupportBot", "support_agent", load_support_demo,
-         "E-commerce support — PII leakage, refund hallucination"),
+         "Catches hallucinated airlines, fabricated booking IDs, and confident confabulation."),
     ]
 
     with ui.column().classes("w-full items-center").style(
@@ -567,11 +576,11 @@ def home_page():
         ui.html('<div id="domain-section"></div>')
         with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
             with ui.column().style("gap: 2px"):
-                ui.html('<div class="mkt-section-title">Pick the agent closest to yours</div>')
+                ui.html('<div class="mkt-section-title">Load a pre-built eval scenario</div>')
                 ui.html(
                     '<div class="mkt-section-sub">'
-                    "Each demo loads a complete eval session — golden queries, "
-                    "real failure annotations, paradigm model, generated judge prompt."
+                    "Each scenario runs all 5 steps: golden queries, failure annotations, "
+                    "paradigm model, and a generated judge — ready to explore."
                     "</div>"
                 )
             ui.button(
@@ -591,53 +600,13 @@ def home_page():
                         ui.html(f'<div class="desc">{desc}</div>')
                     ui.html('<span class="arrow material-icons">arrow_forward</span>')
 
-        # ── Or build your own (workflow steps, demoted) ───────────────────
-        with ui.element("div").classes("mkt-section-head animate-in stagger-4"):
-            with ui.column().style("gap: 2px"):
-                ui.html('<div class="mkt-section-title">Or build your own from scratch</div>')
-                ui.html(
-                    '<div class="mkt-section-sub">'
-                    "5 steps. The coach guides every one. No YAML, no SDK, no Python."
-                    "</div>"
-                )
-
-        with ui.column().classes("w-full animate-in stagger-4").style("gap: 6px"):
-            for step in PROBLEM_STEPS + SOLUTION_STEPS:
-                status = progress.get(step["path"], "todo")
-                is_done = status == "done"
-                is_current = status == "current"
-                icon_color = (
-                    "var(--green-bright)" if is_done
-                    else "var(--accent-bright)" if is_current
-                    else "var(--text-muted)"
-                )
-                text_color = "var(--text-primary)" if status != "todo" else "var(--text-secondary)"
-                with ui.element("div").classes("workflow-card").on(
-                    "click", lambda _, p=step["path"]: ui.navigate.to(p)
-                ):
-                    with ui.row().classes("items-center gap-3 w-full"):
-                        ui.icon(
-                            "check_circle" if is_done else step["icon"]
-                        ).style(f"color: {icon_color}; font-size: 1.15rem")
-                        with ui.column().style("gap: 1px; flex: 1"):
-                            ui.label(step["title"]).style(
-                                f"font-size: 0.88rem; font-weight: 600; color: {text_color}"
-                            )
-                            ui.label(step["desc"]).style(
-                                "font-size: 0.76rem; color: var(--text-tertiary)"
-                            )
-                        if is_done:
-                            ui.html(
-                                '<span style="font-size:0.65rem;background:var(--green-tint);'
-                                'color:var(--green-bright);padding:2px 9px;border-radius:99px;'
-                                'font-weight:600;white-space:nowrap">Done</span>'
-                            )
-                        elif is_current:
-                            ui.html(
-                                '<span style="font-size:0.65rem;background:var(--accent-tint);'
-                                'color:var(--accent-bright);padding:2px 9px;border-radius:99px;'
-                                'font-weight:600;white-space:nowrap">→ Next</span>'
-                            )
+        # ── Evaluate your own agent (demoted CTA) ────────────────────────
+        ui.button(
+            "Evaluate your own agent →", icon="chat",
+            on_click=lambda: ui.navigate.to("/coach"),
+        ).props("flat size=sm no-caps").style(
+            "color: var(--text-secondary); margin-top: 1rem; align-self: center"
+        )
 
         # ── Methodology fold (deprioritized; for the curious buyer) ──────
         with ui.expansion(
@@ -667,77 +636,6 @@ def home_page():
                 "</div>"
             )
 
-        def load_wealth_demo():
-            from grounded_evals.ui.domain_demos import load_wealth_demo
-            load_wealth_demo(app.storage.user)
-            ui.notify("WealthBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
-
-        def load_hr_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_hr_demo
-                load_hr_demo(app.storage.user)
-                ui.notify("HRBot demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("HRBot demo not available", type="warning")
-
-        def load_edu_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_edu_demo
-                load_edu_demo(app.storage.user)
-                ui.notify("EduBot demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("EduBot demo not available", type="warning")
-
-        def load_crypto_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_crypto_demo
-                load_crypto_demo(app.storage.user)
-                ui.notify("VaultEx AI demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("VaultEx demo not available", type="warning")
-
-        def load_game_demo():
-            try:
-                from grounded_evals.ui.domain_demos import load_game_demo
-                load_game_demo(app.storage.user)
-                ui.notify("PixelGuard demo loaded!", type="positive")
-                ui.navigate.to("/coach")
-            except (ImportError, AttributeError):
-                ui.notify("PixelGuard demo not available", type="warning")
-
-        with ui.row().classes("items-center justify-between w-full").style("margin-top: 1.5rem; margin-bottom: 6px"):
-            ui.label("Try a demo scenario:").style("font-size: 0.72rem; font-weight: 600; color: var(--text-tertiary)")
-            ui.button("View all domains →", icon="collections_bookmark", on_click=lambda: ui.navigate.to("/demos")).props(
-                "flat size=xs no-caps"
-            ).style("color: var(--accent-bright); font-size: 0.72rem")
-
-        DEMO_BUTTONS = [
-            ("TravelBot", "flight", load_demo, "Flight booking — hallucination, policy miss"),
-            ("ClinicalBot", "local_hospital", load_clinical_demo, "Clinical support — escalation miss, DDI"),
-            ("LexBot", "gavel", load_lex_demo, "Legal research — phantom citations, UPL"),
-            ("WealthBot", "trending_up", load_wealth_demo, "Finance — suitability miss, insider tip"),
-            ("HRBot", "people", load_hr_demo, "Hiring AI — disparate impact, ADA violations"),
-            ("EduBot", "school", load_edu_demo, "Ed-tech tutor — academic integrity, COPPA"),
-            ("VaultEx AI", "currency_bitcoin", load_crypto_demo, "Crypto AI — securities law, seed scams, sanctions"),
-            ("PixelGuard", "sports_esports", load_game_demo, "Gaming AI — COPPA, loot box law, anti-cheat risk"),
-        ]
-
-        with ui.element("div").style("display: grid; grid-template-columns: 1fr 1fr; gap: 8px"):
-            for label, icon, handler, desc in DEMO_BUTTONS:
-                with ui.element("div").style(
-                    "display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; "
-                    "border-radius: 10px; border: 1px solid var(--border-subtle); "
-                    "background: var(--bg-surface-2); cursor: pointer; transition: border-color 0.15s"
-                ).on("click", handler).on("mouseenter", lambda el: None):
-                    ui.icon(icon).style("color: var(--accent-bright); font-size: 1.1rem; margin-top: 2px; flex-shrink: 0")
-                    with ui.column().style("gap: 2px"):
-                        ui.label(label).style("font-size: 0.82rem; font-weight: 600; color: var(--text-primary)")
-                        ui.label(desc).style("font-size: 0.7rem; color: var(--text-muted); line-height: 1.4")
-
         # ── Closing positioning line ─────────────────────────────────────
         with ui.element("div").style(
             "margin-top: 2rem; padding: 14px 18px; border-radius: var(--radius-xl); "
@@ -751,11 +649,6 @@ def home_page():
                 "font-size: 0.84rem; color: var(--text-secondary); "
                 "font-weight: 500; letter-spacing: -0.005em"
             )
-
-        # Logout
-        def logout():
-            app.storage.user["authenticated"] = False
-            ui.navigate.to("/login")
 
         ui.button("Logout", icon="logout", on_click=logout).props("flat size=sm").style(
             "color: var(--text-muted); margin-top: 1rem"
