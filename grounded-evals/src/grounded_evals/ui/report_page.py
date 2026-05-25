@@ -9,6 +9,8 @@ from datetime import date
 
 from nicegui import app, ui
 
+from grounded_evals.feedback_loop import compute_eval_health
+
 from grounded_evals.ui.layout import page_layout
 
 
@@ -169,6 +171,56 @@ def report_page():
             with ui.row().classes("gap-4 mt-2"):
                 ui.label(f"Agent: {agent_name}").style("font-size: 0.8rem; color: var(--text-secondary)")
                 ui.label(f"Queries: {len(golden_prompts)}").style("font-size: 0.8rem; color: var(--text-secondary)")
+
+        # ── Eval Health Score (Uber-inspired composite readiness metric) ──────
+        _health = compute_eval_health(dict(app.storage.user))
+        _total_color = (
+            "#4ade80" if _health.total >= 75
+            else ("#f0bf00" if _health.total >= 40 else "#eb5757")
+        )
+        with ui.element("div").classes("page-card").style(
+            "border-left:4px solid " + _total_color
+        ):
+            with ui.row().classes("items-center justify-between w-full").style("margin-bottom:10px"):
+                ui.label("Eval Health Score").style(
+                    "font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); "
+                    "text-transform: uppercase; letter-spacing: 0.04em"
+                )
+                ui.html(
+                    f'<span style="font-size:1.6rem; font-weight:800; color:{_total_color}">'
+                    f'{_health.total}</span>'
+                    f'<span style="font-size:0.85rem; color:var(--text-muted)">/100</span>'
+                )
+            _bar_data = [
+                ("Rubric Freshness", _health.rubric_freshness,
+                 f"{_health.rubric_age_days}d old" if _health.rubric_age_days is not None
+                 else ("Generated" if _health.rubric_freshness > 0 else "No judge prompt")),
+                ("Eval Staleness", _health.eval_staleness,
+                 f"{_health.eval_age_days}d ago" if _health.eval_age_days is not None else "Never run"),
+                ("Annotation Coverage", _health.annotation_coverage,
+                 f"{_health.annotation_pct:.0%}"),
+                ("Judge-Human κ", _health.judge_human_agreement,
+                 f"κ={_health.kappa:.2f}" if _health.kappa is not None else "Not measured"),
+            ]
+            with ui.row().classes("w-full gap-4 flex-wrap"):
+                for bar_label, bar_score, bar_detail in _bar_data:
+                    bar_pct = bar_score / 25 * 100
+                    bc = "#4ade80" if bar_score >= 20 else ("#f0bf00" if bar_score >= 10 else "#eb5757")
+                    with ui.element("div").style("flex:1; min-width:140px"):
+                        with ui.row().classes("items-baseline justify-between").style("margin-bottom:3px"):
+                            ui.label(bar_label).style("font-size:0.68rem; color:var(--text-tertiary)")
+                            ui.label(bar_detail).style("font-size:0.65rem; color:var(--text-muted)")
+                        ui.html(
+                            f'<div style="height:6px; border-radius:3px; background:#2a2d35">'
+                            f'<div style="height:100%; width:{bar_pct:.0f}%; border-radius:3px; '
+                            f'background:{bc}"></div></div>'
+                        )
+            if _health.gaps:
+                ui.separator().style("opacity:0.15; margin:10px 0")
+                for _gap in _health.gaps[:2]:
+                    ui.html(
+                        f'<div style="font-size:0.7rem; color:#f0bf00; margin-bottom:2px">⚠ {_gap}</div>'
+                    )
 
         # ── Annotation stats ───────────────────────────────────────────────
         with ui.row().classes("w-full gap-3"):

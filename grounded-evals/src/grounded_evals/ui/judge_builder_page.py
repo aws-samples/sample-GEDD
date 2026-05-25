@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+from datetime import datetime
 
 from nicegui import app, ui
 
@@ -708,6 +709,7 @@ def judge_builder_page():
                     # Inject hard-fail rules before the rubric
                     final_prompt = _inject_hard_fails(base_prompt, hard_fails)
                     _set("_generated_judge_prompt", final_prompt)
+                    _set("_jb_generated_at", datetime.now().isoformat())
                     prompt_area.set_value(final_prompt)
                     mode_label = next(m[1] for m in MODES if m[0] == mode)
                     ui.notify(f"{mode_label} judge prompt generated ✓", type="positive")

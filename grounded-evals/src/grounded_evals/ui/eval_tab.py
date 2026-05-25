@@ -13,6 +13,12 @@ from datetime import datetime
 import boto3
 from nicegui import app, ui
 
+from grounded_evals.feedback_loop import (
+    QualityReport,
+    build_coach_briefing,
+    compute_eval_health,
+    run_quality_analysis,
+)
 from grounded_evals.guide.session import Session
 from grounded_evals.harness_client import HARNESS_REGIONS, HarnessClient
 from grounded_evals.llm.client import get_default_client, get_model_id, traced_eval_call
@@ -891,6 +897,275 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                                 )
 
                 ui.button("Compare", icon="compare_arrows", on_click=show_comparison).props("size=sm color=primary")
+
+    # ── Quality Loop (Uber-inspired feedback loop) ────────────────────────────
+    quality_ctr = ui.column().classes("w-full")
+
+    def render_quality_loop(report: QualityReport | None = None):
+        quality_ctr.clear()
+        with quality_ctr:
+            with ui.expansion("Quality Loop", icon="loop").classes("w-full").style(
+                "background:var(--bg-surface-2); border-radius:12px; "
+                "border:1px solid var(--border-subtle); margin-top:1rem"
+            ):
+                ui.label(
+                    "Measure eval quality and close the feedback loop — "
+                    "IAA, failure breakdown, judge-human disagreements, and "
+                    "LLM-generated improvement suggestions."
+                ).style("font-size:0.78rem; color:var(--text-tertiary); margin-bottom:10px")
+
+                # ── Health Score Widget ───────────────────────────────────────
+                health = compute_eval_health(dict(app.storage.user))
+
+                def _score_color(score: int, max_s: int = 25) -> str:
+                    pct = score / max_s if max_s else 0
+                    if pct >= 0.8:
+                        return "var(--green-bright)"
+                    if pct >= 0.5:
+                        return "var(--yellow)"
+                    return "var(--red)"
+
+                total_color = _score_color(health.total, 100)
+                with ui.element("div").style(
+                    "background:var(--bg-surface-1); border-radius:10px; "
+                    "padding:14px 18px; margin-bottom:14px; "
+                    "border:1px solid var(--border-subtle)"
+                ):
+                    with ui.row().classes("items-center justify-between w-full").style("margin-bottom:10px"):
+                        ui.label("Eval Health Score").style(
+                            "font-size:0.7rem; font-weight:700; color:var(--text-tertiary); "
+                            "text-transform:uppercase; letter-spacing:0.05em"
+                        )
+                        ui.html(
+                            f'<span style="font-size:1.4rem; font-weight:800; color:{total_color}">'
+                            f'{health.total}</span>'
+                            f'<span style="font-size:0.8rem; color:var(--text-muted)">/100</span>'
+                        )
+
+                    _indicators = [
+                        ("Rubric Freshness", health.rubric_freshness,
+                         f"{health.rubric_age_days}d old" if health.rubric_age_days is not None
+                         else ("Generated" if health.rubric_freshness > 0 else "No judge prompt")),
+                        ("Eval Staleness", health.eval_staleness,
+                         f"{health.eval_age_days}d ago" if health.eval_age_days is not None else "Never run"),
+                        ("Annotation Coverage", health.annotation_coverage,
+                         f"{health.annotation_pct:.0%} annotated"),
+                        ("Judge-Human κ", health.judge_human_agreement,
+                         f"κ={health.kappa:.2f}" if health.kappa is not None else "Run Judge first"),
+                    ]
+                    for label, score, detail in _indicators:
+                        bar_pct = score / 25 * 100
+                        bar_color = _score_color(score, 25)
+                        with ui.element("div").style("margin-bottom:8px"):
+                            with ui.row().classes("items-center justify-between w-full").style("margin-bottom:3px"):
+                                ui.label(label).style("font-size:0.72rem; color:var(--text-secondary)")
+                                ui.label(detail).style("font-size:0.68rem; color:var(--text-muted)")
+                            ui.html(
+                                f'<div style="height:5px; border-radius:3px; background:var(--border-subtle)">'
+                                f'<div style="height:100%; width:{bar_pct:.0f}%; border-radius:3px; '
+                                f'background:{bar_color}; transition:width 0.4s ease"></div></div>'
+                            )
+
+                    if health.gaps:
+                        ui.separator().style("opacity:0.15; margin:10px 0")
+                        for gap in health.gaps[:3]:
+                            ui.html(
+                                f'<div style="font-size:0.7rem; color:var(--yellow); '
+                                f'margin-bottom:3px">⚠ {gap}</div>'
+                            )
+
+                ui.separator().style("opacity:0.15; margin:10px 0")
+
+                # ── Run Quality Analysis button ───────────────────────────────
+                analysis_result_ctr = ui.column().classes("w-full")
+
+                async def run_analysis():
+                    eval_res = _get_eval_results()
+                    if not eval_res:
+                        ui.notify("Run an evaluation first", type="warning")
+                        return
+                    run_btn.props("loading")
+                    analysis_result_ctr.clear()
+                    with analysis_result_ctr:
+                        ui.label("Analyzing…").style("font-size:0.78rem; color:var(--text-muted)")
+                    try:
+                        client = get_default_client()
+                        model_id = get_model_id()
+                        sp = session.agent_spec.system_prompt or ""
+                        name = session.agent_spec.name or "agent"
+                        report = await run_quality_analysis(
+                            state=dict(app.storage.user),
+                            agent_name=name,
+                            system_prompt=sp,
+                            client=client,
+                            model_id=model_id,
+                        )
+                        app.storage.user["_quality_report"] = {
+                            "generated_at": report.generated_at,
+                            "health_total": report.health.total,
+                            "n_disagreements": report.n_disagreements,
+                        }
+                        render_quality_loop(report)
+                    except Exception as exc:
+                        analysis_result_ctr.clear()
+                        with analysis_result_ctr:
+                            ui.label(f"Analysis failed: {exc}").style("font-size:0.78rem; color:var(--red)")
+                    finally:
+                        run_btn.props(remove="loading")
+
+                with ui.row().classes("gap-2 items-center").style("margin-bottom:12px"):
+                    run_btn = ui.button(
+                        "Run Quality Analysis", icon="analytics", on_click=run_analysis
+                    ).props("color=primary size=sm")
+                    if app.storage.user.get("_quality_report"):
+                        rpt = app.storage.user["_quality_report"]
+                        ui.label(
+                            f"Last run: {rpt['generated_at'][:16]} · "
+                            f"Score {rpt['health_total']}/100 · "
+                            f"{rpt['n_disagreements']} disagreements"
+                        ).style("font-size:0.68rem; color:var(--text-muted)")
+
+                # ── Report body (shown after analysis) ────────────────────────
+                if report is not None:
+                    # Category failure breakdown (Uber: slice-first)
+                    if report.category_insights:
+                        ui.label("Failure Breakdown by Category").style(
+                            "font-size:0.7rem; font-weight:700; color:var(--text-tertiary); "
+                            "text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px"
+                        )
+                        for ci in report.category_insights[:6]:
+                            bar_w = int(ci.pass_rate * 100)
+                            bar_col = (
+                                "var(--green-bright)" if ci.pass_rate >= 0.7
+                                else ("var(--yellow)" if ci.pass_rate >= 0.4 else "var(--red)")
+                            )
+                            with ui.element("div").style(
+                                "background:var(--bg-surface-1); border-radius:8px; "
+                                "padding:8px 12px; margin-bottom:5px; "
+                                "border:1px solid var(--border-subtle)"
+                            ):
+                                with ui.row().classes("items-center justify-between w-full").style("margin-bottom:4px"):
+                                    ui.label(ci.category[:55]).style(
+                                        "font-size:0.75rem; color:var(--text-primary); font-weight:500"
+                                    )
+                                    ui.html(
+                                        f'<span style="font-size:0.72rem; font-weight:700; color:{bar_col}">'
+                                        f'{ci.pass_rate:.0%}</span>'
+                                        f'<span style="font-size:0.65rem; color:var(--text-muted); margin-left:4px">'
+                                        f'{ci.passed}/{ci.total}</span>'
+                                    )
+                                ui.html(
+                                    f'<div style="height:4px; border-radius:2px; background:var(--border-subtle)">'
+                                    f'<div style="height:100%; width:{bar_w}%; border-radius:2px; '
+                                    f'background:{bar_col}"></div></div>'
+                                )
+
+                        ui.separator().style("opacity:0.15; margin:12px 0")
+
+                    # Disagreement queue (Uber: escalate low-confidence to human review)
+                    if report.disagreements:
+                        ui.label(
+                            f"Judge-Human Disagreements — {report.n_disagreements} cases requiring review"
+                        ).style(
+                            "font-size:0.7rem; font-weight:700; color:var(--text-tertiary); "
+                            "text-transform:uppercase; letter-spacing:0.04em; margin-bottom:6px"
+                        )
+                        for d in report.disagreements[:5]:
+                            dir_color = "var(--red)" if d.direction == "false_positive" else "var(--yellow)"
+                            dir_label = "Judge=PASS, Human=FAIL" if d.direction == "false_positive" else "Judge=FAIL, Human=PASS"
+                            with ui.element("div").style(
+                                "background:var(--bg-surface-1); border-radius:8px; "
+                                "padding:8px 12px; margin-bottom:5px; "
+                                f"border:1px solid var(--border-subtle); "
+                                f"border-left:3px solid {dir_color}"
+                            ):
+                                ui.html(
+                                    f'<div style="font-size:0.72rem; color:{dir_color}; '
+                                    f'font-weight:600; margin-bottom:3px">{dir_label}</div>'
+                                    f'<div style="font-size:0.74rem; color:var(--text-secondary)">'
+                                    f'{d.query[:100]}{"…" if len(d.query) > 100 else ""}</div>'
+                                )
+
+                        ui.separator().style("opacity:0.15; margin:12px 0")
+
+                    # Improvement suggestions (LLM-generated)
+                    if report.suggestions:
+                        ui.label("Improvement Suggestions").style(
+                            "font-size:0.7rem; font-weight:700; color:var(--text-tertiary); "
+                            "text-transform:uppercase; letter-spacing:0.04em; margin-bottom:8px"
+                        )
+                        _type_icons = {
+                            "golden_query": "quiz",
+                            "rubric_refinement": "tune",
+                            "system_prompt": "edit_note",
+                            "coverage_gap": "search_off",
+                        }
+                        _priority_colors = {
+                            "high": "var(--red)",
+                            "medium": "var(--yellow)",
+                            "low": "var(--text-muted)",
+                        }
+                        for sug in report.suggestions:
+                            icon = _type_icons.get(sug.type, "lightbulb")
+                            p_color = _priority_colors.get(sug.priority, "var(--text-muted)")
+                            with ui.element("div").style(
+                                "background:var(--bg-surface-1); border-radius:10px; "
+                                "padding:12px 14px; margin-bottom:8px; "
+                                "border:1px solid var(--border-subtle)"
+                            ):
+                                with ui.row().classes("items-start gap-3"):
+                                    ui.icon(icon, size="sm").style("color:var(--accent); margin-top:2px; flex-shrink:0")
+                                    with ui.column().classes("gap-1").style("flex:1; min-width:0"):
+                                        with ui.row().classes("items-center gap-2"):
+                                            ui.label(sug.title).style(
+                                                "font-size:0.8rem; font-weight:600; color:var(--text-primary)"
+                                            )
+                                            ui.html(
+                                                f'<span style="font-size:0.62rem; font-weight:700; '
+                                                f'color:{p_color}; text-transform:uppercase; '
+                                                f'letter-spacing:0.06em; padding:1px 5px; '
+                                                f'border:1px solid {p_color}; border-radius:3px">'
+                                                f'{sug.priority}</span>'
+                                            )
+                                        ui.label(sug.description).style(
+                                            "font-size:0.74rem; color:var(--text-secondary)"
+                                        )
+                                        if sug.action_text:
+                                            ui.html(
+                                                f'<div style="font-size:0.72rem; color:var(--accent-bright); '
+                                                f'background:rgba(99,102,241,0.08); border-radius:6px; '
+                                                f'padding:6px 10px; margin-top:4px; '
+                                                f'font-family:monospace; white-space:pre-wrap">'
+                                                f'{sug.action_text[:300]}</div>'
+                                            )
+
+                    ui.separator().style("opacity:0.15; margin:12px 0")
+
+                    # Brief Coach CTA
+                    def brief_coach():
+                        if report is None:
+                            return
+                        sp = session.agent_spec.system_prompt or ""
+                        name = session.agent_spec.name or "agent"
+                        briefing = build_coach_briefing(report, name, sp)
+                        msgs = app.storage.user.setdefault("coach_messages", [])
+                        msgs.append({"role": "user", "content": briefing})
+                        app.storage.user["coach_messages"] = msgs
+                        ui.navigate.to("/coach")
+
+                    with ui.row().classes("gap-2 items-center flex-wrap"):
+                        ui.button(
+                            "Brief Coach →", icon="chat", on_click=brief_coach
+                        ).props("color=primary size=sm").style("font-weight:600")
+                        ui.button(
+                            "Refine Rubric →", icon="tune",
+                            on_click=lambda: ui.navigate.to("/judge"),
+                        ).props("outline size=sm dark").style("color:var(--accent-bright)")
+                        ui.label(
+                            "Brief Coach injects the quality report into your Coach conversation."
+                        ).style("font-size:0.68rem; color:var(--text-muted)")
+
+    render_quality_loop()
 
     # ── Keyboard shortcuts ────────────────────────────────────────────────────
     ui.html(
