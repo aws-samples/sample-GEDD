@@ -1,5 +1,9 @@
 # GEDD — find what your AI agent gets wrong
 
+[![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
 **A Qualitative Analysis research Framework for Product Managers and Domain experts building AI Products.**
 
@@ -110,6 +114,14 @@ The whole product is one screen at a time, one question at a time. PMs who hate 
 If you're considering using GEDD on your own product, the most useful first move is **5 user interviews with the PMs on your team** — to confirm GEDD's solo-PM workflow matches how your people actually work.
 
 We've shipped a complete interview kit at [`grounded-evals/docs/research/`](grounded-evals/docs/research/) — recruiting profile, verbatim consent script, per-call notes template, scoring rubric, and a synthesis template. Run it before deciding to roll GEDD out widely.
+
+---
+
+---
+
+## ⭐ Found this useful?
+
+If GEDD helped you find what your agent gets wrong, **[a star](https://github.com/aws-samples/sample-GEDD)** helps others find it too.
 
 ---
 
