@@ -6,7 +6,7 @@ NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "home"},
     {"path": "/demos", "label": "Demos", "icon": "collections_bookmark"},
     {"path": "/coach", "label": "1. Coach", "icon": "chat"},
-    {"path": "/eval", "label": "2. Eval", "icon": "science"},
+    {"path": "/eval", "label": "2. Eval Harness", "icon": "science"},
     {"path": "/coding", "label": "3. Tag", "icon": "label"},
     {"path": "/analysis", "label": "4. Root Causes", "icon": "hub"},
     {"path": "/judge", "label": "5. Build Judge", "icon": "gavel"},
