@@ -206,15 +206,22 @@ def report_page():
                 for bar_label, bar_score, bar_detail in _bar_data:
                     bar_pct = bar_score / 25 * 100
                     bc = "#4ade80" if bar_score >= 20 else ("#f0bf00" if bar_score >= 10 else "#eb5757")
+                    detail_color = "var(--text-muted)" if bar_score >= 10 else "#eb5757"
                     with ui.element("div").style("flex:1; min-width:140px"):
                         with ui.row().classes("items-baseline justify-between").style("margin-bottom:3px"):
-                            ui.label(bar_label).style("font-size:0.68rem; color:var(--text-tertiary)")
-                            ui.label(bar_detail).style("font-size:0.65rem; color:var(--text-muted)")
-                        ui.html(
-                            f'<div style="height:6px; border-radius:3px; background:#2a2d35">'
-                            f'<div style="height:100%; width:{bar_pct:.0f}%; border-radius:3px; '
-                            f'background:{bc}"></div></div>'
-                        )
+                            ui.label(bar_label).style("font-size:0.68rem; color:var(--text-tertiary); font-weight:600")
+                            ui.label(bar_detail).style(f"font-size:0.65rem; color:{detail_color}")
+                        if bar_score == 0:
+                            ui.html(
+                                f'<div style="height:6px; border-radius:3px; background:#2a2d35; '
+                                f'outline:1px dashed #3a3d45; outline-offset:-1px"></div>'
+                            )
+                        else:
+                            ui.html(
+                                f'<div style="height:6px; border-radius:3px; background:#2a2d35">'
+                                f'<div style="height:100%; width:{bar_pct:.0f}%; border-radius:3px; '
+                                f'background:{bc}; min-width:6px"></div></div>'
+                            )
             if _health.gaps:
                 ui.separator().style("opacity:0.15; margin:10px 0")
                 for _gap in _health.gaps[:2]:
@@ -259,14 +266,40 @@ def report_page():
                             }
                             for k, v in sorted(verdict_counts.items(), key=lambda x: -x[1])
                         ]
+                        pass_count = verdict_counts.get("correct", 0)
+                        pass_pct = f"{pass_count / total * 100:.0f}%" if total else "0%"
                         donut_opts = {
                             "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                            "legend": {
+                                "orient": "vertical",
+                                "right": "2%",
+                                "top": "center",
+                                "textStyle": {"color": "#b4b8c0", "fontSize": 11},
+                                "icon": "circle",
+                                "itemWidth": 8,
+                                "itemHeight": 8,
+                            },
                             "series": [{
                                 "type": "pie",
-                                "radius": ["45%", "75%"],
+                                "radius": ["45%", "72%"],
+                                "center": ["40%", "50%"],
                                 "data": pie_data,
-                                "label": {"color": "#b4b8c0", "fontSize": 11},
+                                "label": {"show": False},
                                 "emphasis": {"itemStyle": {"shadowBlur": 10}},
+                                "labelLine": {"show": False},
+                            }],
+                            "graphic": [{
+                                "type": "text",
+                                "left": "center",
+                                "top": "center",
+                                "style": {
+                                    "text": f"{pass_pct}\npass",
+                                    "fill": "#e2e5eb",
+                                    "fontSize": 13,
+                                    "fontWeight": "bold",
+                                    "textAlign": "center",
+                                    "lineHeight": 18,
+                                },
                             }],
                             "backgroundColor": "transparent",
                         }

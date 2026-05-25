@@ -956,15 +956,22 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                     for label, score, detail in _indicators:
                         bar_pct = score / 25 * 100
                         bar_color = _score_color(score, 25)
+                        detail_color = "var(--text-muted)" if score >= 10 else "#eb5757"
                         with ui.element("div").style("margin-bottom:8px"):
                             with ui.row().classes("items-center justify-between w-full").style("margin-bottom:3px"):
-                                ui.label(label).style("font-size:0.72rem; color:var(--text-secondary)")
-                                ui.label(detail).style("font-size:0.68rem; color:var(--text-muted)")
-                            ui.html(
-                                f'<div style="height:5px; border-radius:3px; background:var(--border-subtle)">'
-                                f'<div style="height:100%; width:{bar_pct:.0f}%; border-radius:3px; '
-                                f'background:{bar_color}; transition:width 0.4s ease"></div></div>'
-                            )
+                                ui.label(label).style("font-size:0.72rem; color:var(--text-secondary); font-weight:600")
+                                ui.label(detail).style(f"font-size:0.68rem; color:{detail_color}")
+                            if score == 0:
+                                ui.html(
+                                    '<div style="height:5px; border-radius:3px; background:var(--border-subtle); '
+                                    'outline:1px dashed #3a3d45; outline-offset:-1px"></div>'
+                                )
+                            else:
+                                ui.html(
+                                    f'<div style="height:5px; border-radius:3px; background:var(--border-subtle)">'
+                                    f'<div style="height:100%; width:{bar_pct:.0f}%; border-radius:3px; '
+                                    f'background:{bar_color}; min-width:5px; transition:width 0.4s ease"></div></div>'
+                                )
 
                     if health.gaps:
                         ui.separator().style("opacity:0.15; margin:10px 0")

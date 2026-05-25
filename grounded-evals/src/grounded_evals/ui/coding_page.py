@@ -321,9 +321,12 @@ def coding_page():
                 "tooltip": {"trigger": "axis"},
             }).style("height: 140px; width: 100%")
 
-            with ui.row().classes("items-center gap-3").style("margin-top: 6px"):
-                ui.linear_progress(value=weighted_pct / 100).props("size=6px color=green").style("flex: 1")
-                ui.label(f"{weighted_pct:.0f}% weighted").style("font-size: 0.72rem; color: var(--text-tertiary)")
+            with ui.row().classes("items-center gap-3").style("margin-top: 8px"):
+                ui.label("Coverage").style("font-size: 0.68rem; color: var(--text-muted); font-weight: 600; white-space: nowrap")
+                ui.linear_progress(value=weighted_pct / 100).props("size=8px color=green").style("flex: 1")
+                ui.label(f"{weighted_pct:.0f}%").style(
+                    "font-size: 0.85rem; font-weight: 700; color: var(--green-bright); min-width: 36px; text-align: right"
+                )
 
             if len(annotations_list) >= 3 and recent_new == 0:
                 with ui.row().classes("items-center gap-3 flex-wrap").style("margin-top: 6px"):
