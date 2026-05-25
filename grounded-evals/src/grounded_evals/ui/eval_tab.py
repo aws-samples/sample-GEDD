@@ -14,6 +14,7 @@ import boto3
 from nicegui import app, ui
 
 from grounded_evals.guide.session import Session
+from grounded_evals.harness_client import HARNESS_REGIONS, HarnessClient
 from grounded_evals.llm.client import get_default_client, get_model_id, traced_eval_call
 
 AVAILABLE_MODELS = [
@@ -108,6 +109,16 @@ async def run_query_against_model(
             )
     except Exception as e:
         return f"[Error: {e}]"
+
+
+async def run_harness_query(
+    harness_arn: str, model_id: str, system_prompt: str, query: str, region: str
+) -> str:
+    """Invoke one query through an AgentCore Harness instead of direct Bedrock."""
+    client = HarnessClient(region)
+    return await asyncio.to_thread(
+        client.invoke_query, harness_arn, model_id, system_prompt, query
+    )
 
 
 def _get_eval_results() -> list[dict]:
@@ -315,6 +326,268 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             ).style("width:200px")
             selected_variant.on_value_change(lambda e: selected_variant_ref.update({"value": e.value}))
 
+    # ── Agent Target (Direct Bedrock vs AgentCore Harness) ───────────────────
+    agent_target_ctr = ui.column().classes("w-full")
+
+    def render_agent_target():
+        agent_target_ctr.clear()
+        mode = app.storage.user.get("harness_mode", "direct")
+        with agent_target_ctr:
+            with ui.expansion("Agent Target", icon="track_changes").classes("w-full").style(
+                "background:var(--bg-surface-2); border-radius:12px; "
+                "border:1px solid var(--border-subtle); margin-bottom:1rem"
+            ):
+                ui.label(
+                    "Route eval queries directly through Bedrock or through an Amazon Bedrock "
+                    "AgentCore Harness (your deployed agent endpoint)."
+                ).style("font-size:0.78rem; color:var(--text-tertiary); margin-bottom:12px")
+
+                # Mode toggle pills
+                with ui.row().classes("gap-2 items-center").style("margin-bottom:14px"):
+                    def _mode_pill_style(active: bool) -> str:
+                        if active:
+                            return (
+                                "padding:5px 16px; border-radius:20px; cursor:pointer; "
+                                "font-size:0.78rem; font-weight:600; background:var(--accent); "
+                                "color:#fff; border:1.5px solid var(--accent)"
+                            )
+                        return (
+                            "padding:5px 16px; border-radius:20px; cursor:pointer; "
+                            "font-size:0.78rem; font-weight:500; background:transparent; "
+                            "color:var(--text-secondary); border:1.5px solid var(--border-subtle)"
+                        )
+
+                    direct_pill = ui.html(
+                        f'<div style="{_mode_pill_style(mode == "direct")}">Direct Bedrock</div>'
+                    )
+                    harness_pill = ui.html(
+                        f'<div style="{_mode_pill_style(mode == "harness")}">AgentCore Harness</div>'
+                    )
+
+                    def set_direct():
+                        app.storage.user["harness_mode"] = "direct"
+                        render_agent_target()
+
+                    def set_harness():
+                        app.storage.user["harness_mode"] = "harness"
+                        render_agent_target()
+
+                    direct_pill.on("click", set_direct)
+                    harness_pill.on("click", set_harness)
+
+                if mode == "direct":
+                    ui.html(
+                        '<div style="display:flex;align-items:center;gap:6px;'
+                        'font-size:0.78rem;color:var(--green-bright)">'
+                        '&#9679; Queries will be sent directly to the selected Bedrock models.'
+                        '</div>'
+                    )
+                else:
+                    # Harness configuration
+                    harness_status = app.storage.user.get("harness_status", "")
+                    harness_arn_val = app.storage.user.get("harness_arn", "")
+                    harness_name_val = app.storage.user.get("harness_name", "")
+                    harness_region_val = app.storage.user.get("harness_region", "us-east-1")
+
+                    if harness_arn_val and harness_status == "READY":
+                        # Active harness summary
+                        ui.html(
+                            f'<div style="display:flex;align-items:center;gap:8px;'
+                            f'background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.3);'
+                            f'border-radius:8px;padding:10px 14px;font-size:0.8rem;margin-bottom:12px">'
+                            f'<span style="color:var(--green-bright);font-size:1rem">&#9679;</span>'
+                            f'<div><div style="color:var(--green-bright);font-weight:600">'
+                            f'Harness READY — {harness_name_val}</div>'
+                            f'<div style="color:var(--text-tertiary);font-size:0.72rem;margin-top:2px">'
+                            f'{harness_arn_val[:60]}{"…" if len(harness_arn_val) > 60 else ""}'
+                            f'</div></div></div>'
+                        )
+                        with ui.row().classes("gap-2 items-center").style("margin-bottom:10px"):
+                            def clear_harness():
+                                app.storage.user.pop("harness_arn", None)
+                                app.storage.user.pop("harness_status", None)
+                                app.storage.user.pop("harness_name", None)
+                                render_agent_target()
+                            ui.button("Remove", icon="delete_outline", on_click=clear_harness).props(
+                                "flat size=sm dark"
+                            ).style("color:var(--text-muted)")
+
+                    else:
+                        # Region selector
+                        ui.label("Region").style(
+                            "font-size:0.7rem; font-weight:600; color:var(--text-tertiary); "
+                            "text-transform:uppercase; letter-spacing:0.04em; margin-bottom:4px"
+                        )
+                        region_opts = {r: r for r in sorted(HARNESS_REGIONS)}
+                        region_sel = ui.select(
+                            options=region_opts,
+                            value=harness_region_val if harness_region_val in HARNESS_REGIONS else "us-east-1",
+                            label="Harness region",
+                        ).props("dense outlined dark").style("width:200px; margin-bottom:12px")
+                        region_sel.on_value_change(
+                            lambda e: app.storage.user.update({"harness_region": e.value})
+                        )
+
+                        ui.separator().style("opacity:0.15; margin:10px 0")
+
+                        # Option A — use existing ARN
+                        with ui.element("div").style("margin-bottom:12px"):
+                            ui.label("Use an existing Harness ARN").style(
+                                "font-size:0.78rem; font-weight:600; color:var(--text-primary); margin-bottom:6px"
+                            )
+                            arn_status_ctr = ui.column().classes("w-full")
+                            with ui.row().classes("gap-2 items-center").style("flex-wrap:wrap"):
+                                arn_input = ui.input(
+                                    "Harness ARN",
+                                    value=harness_arn_val,
+                                    placeholder="arn:aws:bedrock-agentcore:us-east-1:123456789012:harness/...",
+                                ).props("dense outlined dark").style("flex:1; min-width:300px")
+
+                                async def verify_harness_arn():
+                                    arn = arn_input.value.strip()
+                                    if not arn.startswith("arn:"):
+                                        ui.notify("Enter a valid ARN", type="warning")
+                                        return
+                                    verify_btn.props("loading")
+                                    region = app.storage.user.get("harness_region", "us-east-1")
+                                    hc = HarnessClient(region)
+                                    status = await asyncio.to_thread(hc.get_harness_status, arn)
+                                    verify_btn.props(remove="loading")
+                                    if status == "READY":
+                                        app.storage.user["harness_arn"] = arn
+                                        app.storage.user["harness_status"] = "READY"
+                                        app.storage.user["harness_name"] = arn.split("/")[-1]
+                                        ui.notify("Harness verified and ready", type="positive")
+                                        render_agent_target()
+                                    elif status == "CREATING":
+                                        ui.notify("Harness is still being created — wait a moment", type="warning")
+                                    elif status == "NOT_FOUND":
+                                        ui.notify("Harness not found — check ARN and region", type="negative")
+                                    else:
+                                        ui.notify(f"Harness status: {status}", type="warning")
+
+                                verify_btn = ui.button("Verify", icon="check_circle", on_click=verify_harness_arn).props(
+                                    "size=sm color=primary"
+                                )
+
+                        ui.separator().style("opacity:0.15; margin:10px 0")
+
+                        # Option B — create a new Harness
+                        with ui.element("div"):
+                            ui.label("Or create a new Harness").style(
+                                "font-size:0.78rem; font-weight:600; color:var(--text-primary); margin-bottom:6px"
+                            )
+
+                            _hc_tmp = HarnessClient()
+                            default_role = _hc_tmp.discover_execution_role_arn()
+                            role_input = ui.input(
+                                "Execution role ARN",
+                                value=default_role,
+                                placeholder="arn:aws:iam::123456789012:role/GEDDHarnessExecutionRole",
+                            ).props("dense outlined dark").style("width:100%; margin-bottom:8px")
+                            create_status_ctr = ui.column().classes("w-full")
+
+                            async def create_harness():
+                                role_arn = role_input.value.strip()
+                                if not role_arn.startswith("arn:aws:iam::"):
+                                    ui.notify("Enter a valid IAM role ARN", type="warning")
+                                    return
+                                agent_name = session.agent_spec.name if session.agent_spec else "my-agent"
+                                system_prompt_text = session.agent_spec.system_prompt or "You are a helpful assistant."
+                                region = app.storage.user.get("harness_region", "us-east-1")
+                                hc = HarnessClient(region)
+                                create_btn.props("loading")
+                                create_status_ctr.clear()
+                                with create_status_ctr:
+                                    ui.html(
+                                        '<div style="font-size:0.78rem;color:var(--text-tertiary)">'
+                                        '&#9675; Creating harness…</div>'
+                                    )
+                                try:
+                                    result = await asyncio.to_thread(
+                                        hc.create_harness, agent_name, system_prompt_text, role_arn
+                                    )
+                                except RuntimeError as exc:
+                                    create_btn.props(remove="loading")
+                                    create_status_ctr.clear()
+                                    with create_status_ctr:
+                                        ui.html(
+                                            f'<div style="font-size:0.78rem;color:var(--red)">'
+                                            f'&#10060; {exc}</div>'
+                                        )
+                                    return
+
+                                created_arn = result["arn"]
+                                app.storage.user["harness_arn"] = created_arn
+                                app.storage.user["harness_name"] = result["name"]
+                                app.storage.user["harness_status"] = "CREATING"
+                                create_btn.props(remove="loading")
+
+                                async def poll_harness_ready():
+                                    hc2 = HarnessClient(region)
+                                    final = await asyncio.to_thread(hc2.wait_for_ready, created_arn, 120)
+                                    app.storage.user["harness_status"] = final
+                                    if final == "READY":
+                                        ui.notify("Harness is ready!", type="positive")
+                                        render_agent_target()
+                                    else:
+                                        ui.notify(f"Harness ended with status: {final}", type="negative")
+                                        render_agent_target()
+
+                                asyncio.create_task(poll_harness_ready())
+                                create_status_ctr.clear()
+                                with create_status_ctr:
+                                    ui.html(
+                                        '<div style="font-size:0.78rem;color:var(--text-tertiary)">'
+                                        '&#9675; Harness provisioning… this takes ~60 s. '
+                                        'Eval will be available once status shows READY.</div>'
+                                    )
+
+                            create_btn = ui.button(
+                                "Create Harness", icon="add_circle", on_click=create_harness
+                            ).props("size=sm color=primary").style("margin-bottom:8px")
+
+                        # Setup guide link
+                        ui.separator().style("opacity:0.15; margin:10px 0")
+
+                        async def show_setup_guide():
+                            with ui.dialog() as dlg:
+                                dlg.open()
+                                with ui.card().style(
+                                    "min-width:540px; max-width:620px; padding:1.5rem; "
+                                    "background:var(--bg-surface-2)"
+                                ):
+                                    ui.label("AgentCore Harness Setup").style(
+                                        "font-size:1rem; font-weight:700; color:var(--text-primary); margin-bottom:4px"
+                                    )
+                                    ui.label(
+                                        "Create the IAM execution role your Harness needs:"
+                                    ).style("font-size:0.8rem; color:var(--text-tertiary); margin-bottom:12px")
+                                    _setup_cmd = (
+                                        "aws iam create-role \\\n"
+                                        "  --role-name GEDDHarnessExecutionRole \\\n"
+                                        "  --assume-role-policy-document "
+                                        '\'{"Version":"2012-10-17","Statement":[{"Effect":"Allow",'
+                                        '"Principal":{"Service":"bedrock-agentcore.amazonaws.com"},'
+                                        '"Action":"sts:AssumeRole"}]}\'\n\n'
+                                        "aws iam attach-role-policy \\\n"
+                                        "  --role-name GEDDHarnessExecutionRole \\\n"
+                                        "  --policy-arn arn:aws:iam::aws:policy/AmazonBedrockFullAccess"
+                                    )
+                                    ui.code(_setup_cmd, language="bash").style("font-size:0.72rem")
+                                    ui.label(
+                                        "Harness is available in: us-east-1 · us-west-2 · eu-central-1 · ap-southeast-2"
+                                    ).style("font-size:0.72rem; color:var(--text-muted); margin-top:10px")
+                                    ui.button("Close", on_click=dlg.close).props(
+                                        "flat size=sm dark"
+                                    ).style("margin-top:12px; color:var(--text-muted)")
+
+                        ui.button(
+                            "Setup Guide", icon="help_outline", on_click=show_setup_guide
+                        ).props("flat size=sm no-caps dark").style("color:var(--text-muted)")
+
+    render_agent_target()
+
     # ── Model Selection + Run ─────────────────────────────────────────────────
     results_container = ui.column().classes("w-full")
 
@@ -421,13 +694,22 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             progress_bar.set_value(0)
             progress_label.set_text("Running queries...")
 
+            harness_mode = app.storage.user.get("harness_mode", "direct")
+            harness_arn = app.storage.user.get("harness_arn", "")
+            harness_region = app.storage.user.get("harness_region", "us-east-1")
+
             total = len(session.golden_prompts)
             for idx, gp in enumerate(session.golden_prompts):
                 progress_bar.set_value(idx / total)
                 progress_label.set_text(f"Running query {idx + 1}/{total}...")
                 responses = {}
                 for model_id in sel:
-                    resp = await run_query_against_model(active_prompt, gp.prompt_text, model_id)
+                    if harness_mode == "harness" and harness_arn:
+                        resp = await run_harness_query(
+                            harness_arn, model_id, active_prompt, gp.prompt_text, harness_region
+                        )
+                    else:
+                        resp = await run_query_against_model(active_prompt, gp.prompt_text, model_id)
                     responses[model_id] = resp
 
                 eval_results_store.append({
