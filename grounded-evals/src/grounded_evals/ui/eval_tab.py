@@ -329,14 +329,22 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
     # ── Agent Target (Direct Bedrock vs AgentCore Harness) ───────────────────
     agent_target_ctr = ui.column().classes("w-full")
 
-    def render_agent_target():
+    _at_expanded: dict = {"open": False}
+
+    def render_agent_target(keep_open: bool = False):
         agent_target_ctr.clear()
         mode = app.storage.user.get("harness_mode", "direct")
+        if keep_open:
+            _at_expanded["open"] = True
         with agent_target_ctr:
-            with ui.expansion("Agent Target", icon="track_changes").classes("w-full").style(
+            exp = ui.expansion("Agent Target", icon="track_changes").classes("w-full").style(
                 "background:var(--bg-surface-2); border-radius:12px; "
                 "border:1px solid var(--border-subtle); margin-bottom:1rem"
-            ):
+            )
+            if _at_expanded["open"]:
+                exp.open()
+            exp.on_value_change(lambda e: _at_expanded.update({"open": e.value}))
+            with exp:
                 ui.label(
                     "Route eval queries directly through Bedrock or through an Amazon Bedrock "
                     "AgentCore Harness (your deployed agent endpoint)."
@@ -366,11 +374,11 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
 
                     def set_direct():
                         app.storage.user["harness_mode"] = "direct"
-                        render_agent_target()
+                        render_agent_target(keep_open=True)
 
                     def set_harness():
                         app.storage.user["harness_mode"] = "harness"
-                        render_agent_target()
+                        render_agent_target(keep_open=True)
 
                     direct_pill.on("click", set_direct)
                     harness_pill.on("click", set_harness)
@@ -407,7 +415,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                                 app.storage.user.pop("harness_arn", None)
                                 app.storage.user.pop("harness_status", None)
                                 app.storage.user.pop("harness_name", None)
-                                render_agent_target()
+                                render_agent_target(keep_open=True)
                             ui.button("Remove", icon="delete_outline", on_click=clear_harness).props(
                                 "flat size=sm dark"
                             ).style("color:var(--text-muted)")
@@ -529,10 +537,10 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                                     app.storage.user["harness_status"] = final
                                     if final == "READY":
                                         ui.notify("Harness is ready!", type="positive")
-                                        render_agent_target()
+                                        render_agent_target(keep_open=True)
                                     else:
                                         ui.notify(f"Harness ended with status: {final}", type="negative")
-                                        render_agent_target()
+                                        render_agent_target(keep_open=True)
 
                                 asyncio.create_task(poll_harness_ready())
                                 create_status_ctr.clear()
