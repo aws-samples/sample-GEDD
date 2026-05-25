@@ -317,15 +317,20 @@ def report_page():
                         ca for ca in coding_annotations
                         if p["name"] in ca.get("codes", [])
                     ]
-                    header = (
-                        f"{p['name']}  ·  "
-                        f"<span style='color:{sev_col}'>{p['severity'].upper()}</span>"
-                        f"  ·  {p['frequency']}×"
-                    )
-                    with ui.expansion(header).classes("w-full").style(
+                    exp = ui.expansion().classes("w-full").style(
                         f"background:var(--bg-surface-1); border-radius:8px; margin-bottom:5px; "
                         f"border:1px solid var(--border-subtle); border-left:3px solid {sev_col}"
-                    ):
+                    )
+                    with exp.add_slot('header'):
+                        ui.html(
+                            f'<div style="display:flex;align-items:center;gap:6px;padding:4px 0;'
+                            f'font-size:0.85rem;font-weight:500;color:var(--text-primary)">'
+                            f'{p["name"]} &nbsp;·&nbsp; '
+                            f'<span style="color:{sev_col};font-weight:600">{p["severity"].upper()}</span>'
+                            f' &nbsp;·&nbsp; {p["frequency"]}×'
+                            f'</div>'
+                        )
+                    with exp:
                         if p.get("definition"):
                             ui.label(p["definition"]).style(
                                 "font-size:0.75rem; color:var(--text-tertiary); "

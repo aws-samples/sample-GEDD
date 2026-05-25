@@ -67,9 +67,12 @@ def _all_code_names():
 
 
 def _assigned_codes():
+    all_names = set(_all_code_names())
     assigned = set()
-    for codes in app.storage.user['paradigm_model'].values():
-        assigned.update(codes)
+    for items in app.storage.user['paradigm_model'].values():
+        for item in items:
+            if item in all_names:
+                assigned.add(item)
     return assigned
 
 
@@ -81,7 +84,7 @@ def _saturation_pct():
     total = len(_all_code_names())
     if total == 0:
         return 0
-    return len(_assigned_codes()) / total
+    return min(1.0, len(_assigned_codes()) / total)
 
 
 def _code_evidence(code_name: str) -> list[dict]:

@@ -742,18 +742,18 @@ def coding_page():
                         'X = frequency · Y = severity · hover for name</div>'
                     )
                     ui.echart({
-                        "tooltip": {"formatter": "function(p){return'<b>'+p.data.name+'</b><br/>Freq: '+p.data.value[0]+'&nbsp; Sev: '+['','Cosmetic','Functional','Critical','Catastrophic'][p.data.value[1]]}"},
+                        "tooltip": {":formatter": "function(p){return'<b>'+p.data.name+'</b><br/>Freq: '+p.data.value[0]+'&nbsp; Sev: '+['','Cosmetic','Functional','Critical','Catastrophic'][p.data.value[1]]}"},
                         "xAxis": {"type": "value", "name": "Frequency", "min": 0, "max": max_freq + 1,
                                   "splitLine": {"show": False}, "axisLine": {"lineStyle": {"color": "#4a4e55"}},
                                   "axisLabel": {"color": "#666", "fontSize": 9}},
                         "yAxis": {"type": "value", "min": 0, "max": 5, "splitLine": {"show": False},
                                   "axisLine": {"lineStyle": {"color": "#4a4e55"}},
-                                  "axisLabel": {"formatter": "function(v){return['','C','F','!','!!'][v]||''}", "color": "#666", "fontSize": 9}},
+                                  "axisLabel": {":formatter": "function(v){return['','C','F','!','!!'][v]||''}", "color": "#666", "fontSize": 9}},
                         "series": [{"type": "scatter", "data": scatter_data,
                                     "label": {"show": len(scatter_data) <= 7,
-                                              "formatter": "function(p){return p.data.name.split(' ').slice(0,2).join(' ')}",
+                                              ":formatter": "function(p){return p.data.name.split(' ').slice(0,2).join(' ')}",
                                               "color": "#999", "fontSize": 8, "position": "top"},
-                                    "itemStyle": {"color": color_fn, "opacity": 0.85}}],
+                                    "itemStyle": {":color": color_fn, "opacity": 0.85}}],
                         "markLine": {"silent": True, "lineStyle": {"color": "rgba(255,255,255,0.08)", "type": "dashed"},
                                      "data": [{"xAxis": mid_x}, {"yAxis": 2.5}]},
                         "grid": {"top": 10, "bottom": 28, "left": 28, "right": 8},

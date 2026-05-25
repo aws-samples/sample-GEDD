@@ -419,22 +419,22 @@ def _render_domain(domain: dict):
 
             # Pass rate sparkline
             ui.html('<div class="ds-section-title">Eval Progress Over Time</div>')
-            with ui.element("div").style(
-                "display:flex;align-items:flex-end;gap:6px;height:48px;margin-bottom:4px;padding:0 4px"
-            ):
-                max_r = max(pass_rates)
-                for i, rate in enumerate(pass_rates):
-                    h = max(8, int(rate / max_r * 44))
-                    alpha = 0.4 + i * 0.3
-                    ui.element("div").style(
-                        f"flex:1;height:{h}px;border-radius:3px 3px 0 0;"
-                        f"background:var(--accent);opacity:{alpha:.1f}"
-                    )
-            with ui.row().classes("justify-between"):
-                for i, rate in enumerate(pass_rates):
-                    ui.label(f"Run {i+1}: {rate}%").style(
-                        "font-size: 0.62rem; color: var(--text-muted); flex: 1; text-align: center"
-                    )
+            max_r = max(pass_rates)
+            bars = ''.join(
+                f'<div style="flex:1;height:{max(8, int(r / max_r * 44))}px;border-radius:3px 3px 0 0;'
+                f'background:var(--accent);opacity:{0.4 + i * 0.3:.1f}"></div>'
+                for i, r in enumerate(pass_rates)
+            )
+            labels = ''.join(
+                f'<span style="font-size:0.62rem;color:var(--text-muted);flex:1;text-align:center">'
+                f'Run {i+1}: {r}%</span>'
+                for i, r in enumerate(pass_rates)
+            )
+            ui.html(
+                f'<div style="display:flex;align-items:flex-end;gap:6px;height:48px;'
+                f'margin-bottom:4px;padding:0 4px">{bars}</div>'
+                f'<div style="display:flex;justify-content:space-between">{labels}</div>'
+            )
 
             # Judge prompt (collapsible)
             ui.html('<div class="ds-section-title" style="margin-top:14px">Judge Prompt Preview</div>')
