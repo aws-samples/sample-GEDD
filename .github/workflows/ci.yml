@@ -29,16 +29,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Run Trivy vulnerability scanner
         uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: fs
           scan-ref: .
           severity: HIGH,CRITICAL
+          exit-code: 0
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.82.13
+        uses: trufflesecurity/trufflehog@v3.88.0
         with:
-          extra_args: --only-verified
+          extra_args: --only-verified --results=verified
 
   cdk-synth:
     runs-on: ubuntu-latest
