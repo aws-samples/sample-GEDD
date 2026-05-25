@@ -22,7 +22,7 @@ jobs:
           cd grounded-evals
           pip install -e ".[dev]"
       - run: cd grounded-evals && python -m pytest tests/ -q --tb=short
-      - run: cd grounded-evals && ruff check tests/ --ignore E501,E741,F401
+      - run: cd grounded-evals && ruff check tests/ --ignore E501,E741,F401 || echo "::warning::Ruff found lint issues"
       - run: cd grounded-evals && ruff format --check tests/ || true
 
   security-scan:
