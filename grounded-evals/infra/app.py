@@ -1,4 +1,4 @@
-"""CDK App — Agent Playground infrastructure."""
+"""CDK App — Agent Playground infrastructure (production)."""
 
 import aws_cdk as cdk
 
@@ -14,22 +14,30 @@ env = cdk.Environment(
     region=app.node.try_get_context("region") or "us-east-1",
 )
 
-network = NetworkStack(app, "AgentPlayground-Network", env=env)
+certificate_arn = app.node.try_get_context("certificate_arn") or ""
+
+# ── Stacks ────────────────────────────────────────────────────────────────────
+
+network = NetworkStack(
+    app, "AgentPlayground-Network",
+    certificate_arn=certificate_arn,
+    env=env,
+)
+
 ecr = EcrStack(app, "AgentPlayground-Ecr", env=env)
 agentcore = AgentCoreStack(app, "AgentPlayground-AgentCore", env=env)
 
 cognito_stack = CognitoStack(
-    app,
-    "AgentPlayground-Cognito",
+    app, "AgentPlayground-Cognito",
     alb_dns=network.alb.load_balancer_dns_name,
     env=env,
 )
 
 ecs = EcsStack(
-    app,
-    "AgentPlayground-Ecs",
+    app, "AgentPlayground-Ecs",
     vpc=network.vpc,
     alb=network.alb,
+    listener=network.listener,
     ecs_sg=network.ecs_sg,
     ecr_repo=ecr.repo,
     user_pool_id=cognito_stack.user_pool.user_pool_id,

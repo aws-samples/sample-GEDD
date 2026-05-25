@@ -1,0 +1,5 @@
+# Require review for infrastructure and security-sensitive changes
+/grounded-evals/infra/          @your-team/platform
+/grounded-evals/Dockerfile      @your-team/platform
+/.github/                       @your-team/platform
+/grounded-evals/src/grounded_evals/llm/   @your-team/platform

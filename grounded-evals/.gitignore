@@ -33,3 +33,11 @@ package-lock.json
 # Temp files
 ~$*
 *.pptx
+
+# Secrets / credentials (never commit)
+*.pem
+*.key
+.env.*
+credentials.json
+secrets.json
+**/terraform.tfstate*

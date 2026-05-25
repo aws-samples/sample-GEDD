@@ -2,7 +2,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends gcc curl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y --no-install-recommends gcc curl && \
+    rm -rf /var/lib/apt/lists/* && \
+    useradd -r -s /bin/false appuser && \
+    mkdir -p /app/data && chown -R appuser:appuser /app
 
 COPY pyproject.toml .
 COPY src/ src/
@@ -13,7 +16,11 @@ EXPOSE 8080
 
 ENV HOST=0.0.0.0 \
     PORT=8080 \
-    NICEGUI_RELOAD=false \
-    STORAGE_SECRET=change-me-in-production
+    NICEGUI_RELOAD=false
+
+USER appuser
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8080/health || exit 1
 
 CMD ["python", "-m", "grounded_evals.app"]
