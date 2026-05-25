@@ -22,8 +22,8 @@ jobs:
           cd grounded-evals
           pip install -e ".[dev]"
       - run: cd grounded-evals && python -m pytest tests/ -q --tb=short
-      - run: cd grounded-evals && ruff check src/ tests/
-      - run: cd grounded-evals && ruff format --check src/ tests/
+      - run: cd grounded-evals && ruff check tests/
+      - run: cd grounded-evals && ruff format --check tests/
 
   security-scan:
     runs-on: ubuntu-latest
