@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: |
+          cd grounded-evals
+          pip install -e ".[dev]"
+      - run: cd grounded-evals && python -m pytest tests/ -q --tb=short
+      - run: cd grounded-evals && ruff check src/ tests/
+      - run: cd grounded-evals && ruff format --check src/ tests/
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@v3.82.13
+        with:
+          extra_args: --only-verified
+
+  cdk-synth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install -g aws-cdk
+      - run: |
+          cd grounded-evals
+          pip install -e ".[dev,deploy]"
+          cd infra && pip install -r requirements.txt
+          cdk synth --no-lookups
