@@ -34,6 +34,9 @@ COGNITO_CLIENT_ID = os.environ.get("COGNITO_CLIENT_ID", "")
 COGNITO_REGION = os.environ.get("AWS_REGION", "us-east-1")
 # Fallback password if Cognito not configured — must be set explicitly; no hardcoded default
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
+# Guest mode: no auth required when neither Cognito nor ADMIN_PASSWORD is configured.
+# This is the default for local dev / demo runs — just `python -m grounded_evals.app`.
+GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/_nicegui", "/favicon.ico", "/health"}
 
 
@@ -41,12 +44,6 @@ def _cognito_auth(email: str, password: str) -> bool:
     """Authenticate user against Cognito User Pool via SRP."""
     if not COGNITO_USER_POOL_ID or not COGNITO_CLIENT_ID:
         if not ADMIN_PASSWORD:
-            import warnings
-            warnings.warn(
-                "ADMIN_PASSWORD env var is not set and Cognito is not configured — "
-                "all login attempts will fail. Set ADMIN_PASSWORD to enable access.",
-                stacklevel=2,
-            )
             return False
         return password == ADMIN_PASSWORD
     import boto3
@@ -72,6 +69,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if any(request.url.path.startswith(p) for p in UNRESTRICTED_PATHS):
             return await call_next(request)
+        if GUEST_MODE:
+            app.storage.user["authenticated"] = True
+            return await call_next(request)
         if not app.storage.user.get("authenticated", False):
             return RedirectResponse("/login")
         return await call_next(request)
@@ -88,6 +88,12 @@ app.add_middleware(AuthMiddleware)
 @ui.page("/login")
 def login_page():
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
+
+    # In guest mode, skip the login wall entirely
+    if GUEST_MODE:
+        app.storage.user["authenticated"] = True
+        ui.navigate.to("/")
+        return
 
     def try_login():
         if _cognito_auth(email.value, password.value):

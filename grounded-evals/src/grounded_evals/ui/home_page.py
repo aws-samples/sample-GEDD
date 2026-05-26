@@ -407,6 +407,16 @@ def home_page():
     ui.add_head_html(f"<style>{HOME_CSS}</style>")
 
     storage = app.storage.user
+
+    # Guest mode: auto-load TravelBot on first visit so newcomers land in a
+    # fully-populated session rather than a blank slate.
+    import os as _os
+    _guest_mode = not _os.environ.get("ADMIN_PASSWORD") and not _os.environ.get("COGNITO_USER_POOL_ID")
+    if _guest_mode and not storage.get("_guest_demo_loaded"):
+        from grounded_evals.ui.demo_data import load_demo_data
+        load_demo_data(storage)
+        storage["_guest_demo_loaded"] = True
+
     progress = _get_progress(storage)
     session = storage.get("session_data") or {}
     agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
