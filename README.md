@@ -286,6 +286,8 @@ grounded-evals export   --session travelbot.json --format jsonl
 | `chat` | Conversational coaching — Steps 1-4, saves to `session.json` |
 | `eval` | Run golden queries against a model, save responses |
 | `annotate` | Interactively mark responses correct / partial / incorrect |
+| `status` | Terminal dashboard — agent, step, saturation, annotations, error codes |
+| `judge` | Generate a deployable LLM-as-a-Judge prompt from your error codes |
 | `export` | Write golden dataset as JSONL, CSV, or JSON |
 | `fracture` | Fracture an agent spec YAML into test categories (Open Coding) |
 | `check-saturation` | Check whether a dataset has reached theoretical saturation |
