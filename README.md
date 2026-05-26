@@ -122,6 +122,7 @@ The whole product is one screen at a time, one question at a time. PMs who hate 
 | [Cohen's Kappa for LLM Judges](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | What κ is, how to compute it, how to interpret it, and how to iterate your rubric until κ ≥ 0.80 |
 | [Building an LLM-as-a-Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Full rubric design, weighting, hard-fail rules, few-shot calibration, and export |
 | [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | End-to-end walkthrough of all 5 steps for PMs and SMEs |
+| [PM Artifacts → Production Judge](grounded-evals/docs/pm-to-ml-llm-judge.md) | Step-by-step guide for ML engineers: turn golden queries, annotations, and codebook into a calibrated CI judge |
 
 ---
 
