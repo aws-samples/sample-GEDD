@@ -109,6 +109,16 @@ The whole product is one screen at a time, one question at a time. PMs who hate 
 
 ---
 
+## Guides and further reading
+
+| Guide | What it covers |
+|-------|---------------|
+| [Cohen's Kappa for LLM Judges](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | What κ is, how to compute it, how to interpret it, and how to iterate your rubric until κ ≥ 0.80 |
+| [Building an LLM-as-a-Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Full rubric design, weighting, hard-fail rules, few-shot calibration, and export |
+| [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | End-to-end walkthrough of all 5 steps for PMs and SMEs |
+
+---
+
 ## Doing the user research
 
 If you're considering using GEDD on your own product, the most useful first move is **5 user interviews with the PMs on your team** — to confirm GEDD's solo-PM workflow matches how your people actually work.
