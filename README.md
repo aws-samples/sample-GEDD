@@ -91,58 +91,114 @@ For AWS Bedrock setup, environment variables, deployment, project structure, and
 
 ---
 
-## For engineers: CLI and Claude Code skill
+## For engineers: CLI and Claude Code skills
 
-The web UI is built for PMs. If you'd rather stay in the terminal, there are two engineer-native paths that produce the same outputs.
+The web UI is built for PMs. If you'd rather stay in the terminal, there are two engineer-native paths that produce the same outputs — a Claude Code skill that runs the full pipeline conversationally, and a standalone CLI for scripting and CI.
 
-Both write to a `session.json` file. They interoperate — start in the skill, finish in the CLI, or mix freely.
+Both read and write the same `session.json` file, so you can switch between them freely mid-session.
 
 ---
 
-### Path A — `/gedd-chat` Claude Code skill
+### Claude Code skills
 
-The fastest way to generate a golden dataset if you already have Claude Code installed. No credentials, no REPL, no separate process — Claude itself acts as the coach.
+#### `/gedd-chat` — full pipeline in one conversation
 
-**1. Open Claude Code in the project**
+Open Claude Code in the project directory and run `/gedd-chat`. No separate credentials, no REPL, no extra process — Claude acts as both coach and executor.
 
 ```bash
 cd grounded-evals
-claude
+claude        # opens Claude Code CLI
 ```
-
-**2. Start a new session or resume an existing one**
 
 ```
 /gedd-chat
 ```
 
-Claude reads `session.json` if it exists and picks up where you left off. Otherwise it starts fresh and asks for your agent's name.
+Claude reads `session.json` if it exists and resumes where you left off. The full 7-step pipeline runs inside the conversation:
 
-**3. Have the conversation**
+```
+Step 1  Define Agent        Name, capabilities, target users → saved to session.json
+Step 2  System Prompt       Draft and refine collaboratively → saved to session.json
+Step 3  Golden Queries      Open Coding: fracture domain → generate queries in batches
+                            Live coverage table shown after every approved batch:
 
-Claude walks you through all four steps — defining your agent, writing a system prompt, and generating golden queries using Open Coding methodology. Each approved query is written to `session.json` automatically.
+                            Coverage snapshot  (12 queries)
+                              happy_path      ███░░   3   ✓ saturated
+                              edge_case       ██░░░   2   ~ approx.
+                              adversarial     █░░░░   1   ✗ thin
+                              ambiguous       ░░░░░   0   ✗ none
 
-**4. Hand off to the CLI for eval and export**
+Step 4  Eval                Runs grounded-evals eval inline via Bash — no CLI switch needed
+Step 5  Annotation          Shows each Q/A pair in conversation, collects c/p/i + error codes,
+                            writes annotations to session.json in real time
+Step 6  Error Analysis      Groups error codes (Open Coding), maps to 8 standard dimensions
+                            (accuracy, tone, safety, completeness, ...), builds paradigm model
+Step 7  Judge Prompt        Generates deployable LLM-as-a-Judge prompt grounded in your
+                            observed failures → saves to judge_prompt.md, exports dataset
+```
 
-When Step 3 is complete, the skill tells you to switch to the terminal:
+Type `quit` at any point — state is saved after every turn.
 
-```bash
-grounded-evals eval        # run queries, see responses
-grounded-evals annotate    # mark each response correct / partial / incorrect
-grounded-evals export      # write JSONL, CSV, or JSON
+---
+
+#### `/gedd-status` — session dashboard
+
+Check where you are without entering the coaching conversation:
+
+```
+/gedd-status
+```
+
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  GEDD Session Status
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  Agent      : TravelBot
+  Step       : 4 / 7  (Eval)
+  Session    : session.json
+
+  ── Golden Queries ──────────────────────────
+
+  Total: 15 queries across 5 categories
+
+  happy_path        █████   5   ✓ saturated
+  edge_case         ███░░   3   ✓ saturated
+  adversarial       ███░░   3   ✓ saturated
+  ambiguous         ██░░░   2   ~ approx.
+  multi_turn        ██░░░   2   ~ approx.
+
+  Overall saturation: 3 / 5 categories ✓  (60%)
+
+  ── Annotations ─────────────────────────────
+
+  Total: 8 annotated
+    ✓ correct     5  (63%)
+    ⚠ partial     2  (25%)
+    ✗ incorrect   1  (12%)
+
+  Error codes found:
+    hallucination     ×2   → accuracy
+    wrong_tone        ×1   → tone
+
+  ── What's next ─────────────────────────────
+
+  7 responses left to annotate — run /gedd-chat
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
-### Path B — standalone CLI
+### Standalone CLI (Path B)
 
-Use this when you want to run the full pipeline without Claude Code, or when scripting / CI is involved.
+Use this when scripting, running in CI, or working without Claude Code.
 
 **1. Install and set credentials**
 
 ```bash
 cd grounded-evals
-source .venv/bin/activate          # or: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+source .venv/bin/activate
 
 export ANTHROPIC_API_KEY=sk-ant-…  # easiest for local dev
 # OR configure AWS credentials for Bedrock (IAM, us-east-1)
@@ -154,15 +210,14 @@ export ANTHROPIC_API_KEY=sk-ant-…  # easiest for local dev
 grounded-evals chat
 ```
 
-A conversational coach guides you through the same four steps. Type `quit` to exit — progress is saved to `session.json` and you can resume any time.
+A conversational LLM coach guides you through Steps 1-4. Type `quit` to exit — progress is saved to `session.json` and resumes on the next run.
 
 ```
 New GEDD session. State will be saved to: session.json
 Type 'quit' to exit.
 
-Coach: Hi! I'm your GEDD coaching assistant. Let's build a golden
-       evaluation dataset for your AI agent. What's the agent's name,
-       and what does it do?
+Coach: Hi! Let's build a golden evaluation dataset for your AI agent.
+       What's the agent's name, and what does it do?
 
 You: ▌
 ```
@@ -171,11 +226,11 @@ You: ▌
 
 ```bash
 grounded-evals eval
-# or target a specific model:
+# target a specific model:
 grounded-evals eval --model us.anthropic.claude-haiku-4-5-20251001-v1:0
 ```
 
-Prints each query and the agent's response. Saves everything to `eval_results.json`.
+Streams each query and agent response to stdout. Saves results to `eval_results.json`.
 
 **4. Annotate responses**
 
@@ -183,10 +238,8 @@ Prints each query and the agent's response. Saves everything to `eval_results.js
 grounded-evals annotate
 ```
 
-Steps through each response one at a time:
-
 ```
-──── [1/12] ────────────────────────────────
+──── [1/15] ────────────────────────────────
 Category : happy_path
 Query    : Where is my order #12345?
 Expected : Return real-time order status with tracking link
@@ -196,23 +249,23 @@ Annotation [c/p/i/s]: ▌
 ```
 
 Keys: `c` correct · `p` partial · `i` incorrect · `s` skip.
-For failures, it asks for an error code (`hallucination`, `wrong_tone`, `missed_escalation` — whatever fits) and a note.
+For failures, prompts for an error code and a note.
 
-**5. Export the golden dataset**
+**5. Export**
 
 ```bash
 grounded-evals export --format jsonl   # one query per line — feeds into eval pipelines
 grounded-evals export --format csv     # shareable spreadsheet
-grounded-evals export --format json    # full metadata dump
+grounded-evals export --format json    # full Pydantic model dump with all metadata
 ```
 
-Output filename defaults to `<agent_name>_golden_dataset.<fmt>`.
+Output defaults to `<agent_name>_golden_dataset.<fmt>`.
 
 ---
 
-### Working with multiple agents
+### Multiple agents
 
-Both paths support a `--session` flag so you can keep separate files per agent:
+Both paths support `--session` to keep separate files per agent:
 
 ```bash
 grounded-evals chat     --session travelbot.json
@@ -223,7 +276,7 @@ grounded-evals export   --session travelbot.json --format jsonl
 
 ---
 
-### All CLI commands at a glance
+### All CLI commands
 
 | Command | What it does |
 |---------|-------------|
