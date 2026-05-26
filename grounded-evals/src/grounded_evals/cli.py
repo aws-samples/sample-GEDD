@@ -513,5 +513,124 @@ def export(session: str, fmt: str, output: str | None) -> None:
     click.echo(f"Exported {len(prompts)} queries → {out_path}")
 
 
+@main.command()
+@click.option("--session", "-s", default="session.json", show_default=True)
+@click.option("--results", "-r", default="eval_results.json", show_default=True)
+def status(session: str, results: str) -> None:
+    """Show a dashboard of the current GEDD session."""
+    from collections import Counter
+
+    path = Path(session)
+    if not path.exists():
+        click.echo("No session.json found. Run `grounded-evals chat` to start.")
+        return
+
+    data = json.loads(path.read_text())
+    sess = data.get("session", {})
+    agent_name = (sess.get("agent_spec") or {}).get("name", "not defined")
+    step = data.get("current_step", 1)
+    prompts = sess.get("golden_prompts", [])
+    annotations = data.get("annotations", [])
+    step_names = {1: "Define Agent", 2: "System Prompt", 3: "Golden Queries",
+                  4: "Eval", 5: "Annotation", 6: "Export"}
+
+    click.echo("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    click.echo("  GEDD Session Status")
+    click.echo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+    click.echo(f"  Agent      : {agent_name}")
+    click.echo(f"  Step       : {step} / 6  ({step_names.get(step, '')})")
+    click.echo(f"  Session    : {session}\n")
+
+    if prompts:
+        cats = Counter(p.get("rationale", "uncategorized") for p in prompts)
+        click.echo(f"  ── Golden Queries ({len(prompts)} total) ──\n")
+        for cat, n in sorted(cats.items(), key=lambda x: -x[1]):
+            bar = "█" * min(n, 5) + "░" * max(0, 5 - n)
+            stat = "✓ saturated" if n >= 3 else ("~ approx." if n >= 2 else "✗ thin")
+            click.echo(f"  {cat:<18} {bar}  {n:>2}  {stat}")
+        saturated = sum(1 for c in cats.values() if c >= 3)
+        click.echo(f"\n  Overall: {saturated}/{len(cats)} saturated ({saturated / len(cats) * 100:.0f}%)\n")
+
+    if annotations:
+        correct = sum(1 for a in annotations if a.get("annotation") == "correct")
+        partial = sum(1 for a in annotations if a.get("annotation") == "partial")
+        incorrect = sum(1 for a in annotations if a.get("annotation") == "incorrect")
+        click.echo(f"  ── Annotations ({len(annotations)} total) ──\n")
+        click.echo(f"    ✓ correct    {correct}")
+        click.echo(f"    ⚠ partial    {partial}")
+        click.echo(f"    ✗ incorrect  {incorrect}")
+        codes = Counter(a.get("error_code") for a in annotations if a.get("error_code"))
+        if codes:
+            click.echo("\n  Error codes:")
+            for code, count in codes.most_common(5):
+                click.echo(f"    {code:<24} ×{count}")
+        click.echo()
+
+    rpath = Path(results)
+    if rpath.exists():
+        rdata = json.loads(rpath.read_text())
+        annotated = sum(1 for r in rdata if r.get("annotation"))
+        click.echo(f"  Eval results: {len(rdata)} responses ({annotated} annotated)\n")
+
+    click.echo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+
+
+@main.command()
+@click.option("--session", "-s", default="session.json", show_default=True)
+@click.option("--results", "-r", default="eval_results.json", show_default=True)
+@click.option("--output", "-o", default="judge_prompt.md", show_default=True)
+def judge(session: str, results: str, output: str) -> None:
+    """Generate a deployable LLM-as-a-Judge prompt from annotations.
+
+    Reads error codes from annotations, maps them to evaluation dimensions,
+    builds a weighted rubric, and outputs a ready-to-use judge prompt.
+    """
+    from collections import Counter
+
+    from grounded_evals.axial_coding.mapper import ErrorMapping
+    from grounded_evals.judge_builder.prompt_gen import generate_judge_prompt
+    from grounded_evals.judge_builder.rubric import generate_rubric
+
+    state, _ = _load_state(session)
+    annotations = list(state.annotations)
+
+    rpath = Path(results)
+    if rpath.exists():
+        for r in json.loads(rpath.read_text()):
+            if r.get("error_code"):
+                annotations.append(r)
+
+    codes = Counter(a.get("error_code") for a in annotations if a.get("error_code"))
+    if not codes:
+        click.echo("No error codes found. Run `annotate` first and name the failures.", err=True)
+        sys.exit(1)
+
+    dim_keywords = {
+        "hallucin": "accuracy", "fabricat": "accuracy", "factual": "accuracy", "wrong": "accuracy",
+        "tone": "tone", "rude": "tone", "empathy": "tone",
+        "escalat": "safety", "safety": "safety", "harm": "safety",
+        "incomplete": "completeness", "missing": "completeness",
+        "instruction": "instruction_following", "prompt": "instruction_following",
+        "bias": "bias", "discriminat": "bias",
+    }
+
+    def _infer_dim(code: str) -> str:
+        for kw, dim in dim_keywords.items():
+            if kw in code.lower():
+                return dim
+        return "quality"
+
+    mappings = [ErrorMapping(error_code=c, primary_category=_infer_dim(c)) for c in codes]
+    rubric = generate_rubric(mappings)
+    agent_name = state.session.agent_spec.name or "AI Agent"
+    prompt = generate_judge_prompt(rubric, agent_name=agent_name)
+
+    Path(output).write_text(f"# Judge Prompt — {agent_name}\n\n{prompt}\n")
+    click.echo(f"Generated judge from {len(codes)} error codes:")
+    for code, count in codes.most_common():
+        click.echo(f"  {code} (×{count}) → {_infer_dim(code)}")
+    click.echo(f"\nSaved → {output} ({len(rubric.criteria)} criteria)")
+
+
 if __name__ == "__main__":
     main()
