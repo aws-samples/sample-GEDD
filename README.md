@@ -32,32 +32,24 @@ That's it. The whole flow takes about 90 minutes for a real agent with 8–12 go
 
 ---
 
-## Why this works
+## Quick start
 
-Most eval tools ask: *what should we measure?* — then build rubrics from assumptions. GEDD asks: *what is actually happening?* — then builds the rubric from evidence.
+```bash
+cd grounded-evals
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+python -m grounded_evals.app
+```
 
-This matters because:
+Open `http://localhost:8080` — TravelBot loads automatically, no login required. Click through the tabs to explore the full pipeline.
 
-- **You can't evaluate what you haven't observed.** Pre-baked rubrics miss the failures unique to your agent.
-- **Criteria should be weighted by evidence.** Not every dimension matters equally. A bereavement-handling failure isn't the same severity as a tone slip.
-- **Your evaluation evolves with the agent.** New patterns surface as you ship; the methodology absorbs them naturally.
-- **Your work becomes load-bearing.** The judge GEDD generates is in *your* domain vocabulary, not a generic "helpfulness 1-5." When you hand it to engineering, they can use it.
-
-The methodology under the hood is grounded theory — the same discipline social scientists use to find patterns in human data. We use it to find patterns in agent failures. The full mapping (open coding, axial coding, paradigm model, ML techniques, calibration) lives in [METHODOLOGY.md](METHODOLOGY.md). You don't need to read it to use the tool.
-
----
-
-## What it's not
-
-- **Not a tracing or observability tool.** It doesn't ingest live production traces. Bring your traces (paste them in, or run queries through GEDD itself).
-- **Not a metric library.** No pre-built "faithfulness," "hallucination index," or 20-evaluator zoo. You discover your metrics; the tool makes them deployable.
-- **Not a one-shot rubric generator.** It's a workflow, not a button. Plan ~90 minutes the first time.
+To run against your own agent you'll need AWS credentials (Bedrock) or an `ANTHROPIC_API_KEY`. Set `ADMIN_PASSWORD=your-password` to enable the login wall for shared deployments.
 
 ---
 
 ## Try it before you commit to it
 
-The home page has seventeen one-click demo scenarios, each pre-loaded with golden queries, human annotations, error codes, a paradigm model, and a generated judge — no LLM calls needed. You can walk the entire pipeline in 5 minutes.
+The home page has **17 one-click demo scenarios** — no LLM calls needed. Each is pre-loaded with golden queries, human annotations, error codes, a paradigm model, and a generated judge. Walk the entire pipeline in 5 minutes.
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
@@ -83,20 +75,24 @@ Load any scenario and explore every tab — Eval, Tag, Root Causes, Build Judge,
 
 ---
 
-## Quick start
+## Why this works
 
-```bash
-cd grounded-evals
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-python -m grounded_evals.app
-```
+Most eval tools ask: *what should we measure?* — then build rubrics from assumptions. GEDD asks: *what is actually happening?* — then builds the rubric from evidence.
 
-Open `http://localhost:8080` — TravelBot loads automatically, no login required. Click through the tabs to explore the full pipeline.
+- **You can't evaluate what you haven't observed.** Pre-baked rubrics miss the failures unique to your agent.
+- **Criteria should be weighted by evidence.** A bereavement-handling failure isn't the same severity as a tone slip.
+- **Your evaluation evolves with the agent.** New patterns surface as you ship; the methodology absorbs them naturally.
+- **Your work becomes load-bearing.** The judge GEDD generates is in *your* domain vocabulary, not a generic "helpfulness 1-5."
 
-To run against your own agent you'll need AWS credentials (Bedrock) or an `ANTHROPIC_API_KEY`. Set `ADMIN_PASSWORD=your-password` to enable the login wall for shared deployments.
+The methodology under the hood is grounded theory — the same discipline social scientists use to find patterns in human data. We use it to find patterns in agent failures. The full mapping lives in [METHODOLOGY.md](METHODOLOGY.md).
 
-For AWS Bedrock setup, environment variables, deployment, project structure, and contribution guidelines, see [SETUP.md](SETUP.md).
+---
+
+## What it's not
+
+- **Not a tracing or observability tool.** It doesn't ingest live production traces. Bring your traces (paste them in, or run queries through GEDD itself).
+- **Not a metric library.** No pre-built "faithfulness," "hallucination index," or 20-evaluator zoo. You discover your metrics; the tool makes them deployable.
+- **Not a one-shot rubric generator.** It's a workflow, not a button. Plan ~90 minutes the first time.
 
 ---
 
@@ -106,13 +102,9 @@ The web UI is built for PMs. If you'd rather stay in the terminal, there are two
 
 Both read and write the same `session.json` file, so you can switch between them freely mid-session.
 
----
-
 ### Claude Code skills
 
 #### `/gedd-chat` — full pipeline in one conversation
-
-Open Claude Code in the project directory and run `/gedd-chat`. No separate credentials, no REPL, no extra process — Claude acts as both coach and executor.
 
 ```bash
 cd grounded-evals
@@ -142,11 +134,7 @@ Step 6  Export              Summarizes failure modes, offers export/web UI/judge
 
 Type `quit` at any point — state is saved after every turn.
 
----
-
 #### `/gedd-status` — session dashboard
-
-Check where you are without entering the coaching conversation:
 
 ```
 /gedd-status
@@ -162,124 +150,16 @@ Check where you are without entering the coaching conversation:
   Session    : session.json
 
   ── Golden Queries ──────────────────────────
-
-  Total: 15 queries across 5 categories
-
   happy_path        █████   5   ✓ saturated
   edge_case         ███░░   3   ✓ saturated
   adversarial       ███░░   3   ✓ saturated
-  ambiguous         ██░░░   2   ~ approx.
-  multi_turn        ██░░░   2   ~ approx.
-
-  Overall saturation: 3 / 5 categories ✓  (60%)
-
-  ── Annotations ─────────────────────────────
-
-  Total: 8 annotated
-    ✓ correct     5  (63%)
-    ⚠ partial     2  (25%)
-    ✗ incorrect   1  (12%)
-
-  Error codes found:
-    hallucination     ×2   → accuracy
-    wrong_tone        ×1   → tone
 
   ── What's next ─────────────────────────────
-
-  7 responses left to annotate — run /gedd-chat
-
+  Run evaluation → grounded-evals eval
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
----
-
-### Standalone CLI (Path B)
-
-Use this when scripting, running in CI, or working without Claude Code.
-
-**1. Install and set credentials**
-
-```bash
-cd grounded-evals
-source .venv/bin/activate
-
-export ANTHROPIC_API_KEY=sk-ant-…  # easiest for local dev
-# OR configure AWS credentials for Bedrock (IAM, us-east-1)
-```
-
-**2. Run the coaching session**
-
-```bash
-grounded-evals chat
-```
-
-A conversational LLM coach guides you through Steps 1-4. Type `quit` to exit — progress is saved to `session.json` and resumes on the next run.
-
-```
-New GEDD session. State will be saved to: session.json
-Type 'quit' to exit.
-
-Coach: Hi! Let's build a golden evaluation dataset for your AI agent.
-       What's the agent's name, and what does it do?
-
-You: ▌
-```
-
-**3. Run queries against the model**
-
-```bash
-grounded-evals eval
-# target a specific model:
-grounded-evals eval --model us.anthropic.claude-haiku-4-5-20251001-v1:0
-```
-
-Streams each query and agent response to stdout. Saves results to `eval_results.json`.
-
-**4. Annotate responses**
-
-```bash
-grounded-evals annotate
-```
-
-```
-──── [1/15] ────────────────────────────────
-Category : happy_path
-Query    : Where is my order #12345?
-Expected : Return real-time order status with tracking link
-Response : Your order #12345 is currently in transit...
-
-Annotation [c/p/i/s]: ▌
-```
-
-Keys: `c` correct · `p` partial · `i` incorrect · `s` skip.
-For failures, prompts for an error code and a note.
-
-**5. Export**
-
-```bash
-grounded-evals export --format jsonl   # one query per line — feeds into eval pipelines
-grounded-evals export --format csv     # shareable spreadsheet
-grounded-evals export --format json    # full Pydantic model dump with all metadata
-```
-
-Output defaults to `<agent_name>_golden_dataset.<fmt>`.
-
----
-
-### Multiple agents
-
-Both paths support `--session` to keep separate files per agent:
-
-```bash
-grounded-evals chat     --session travelbot.json
-grounded-evals eval     --session travelbot.json
-grounded-evals annotate --session travelbot.json
-grounded-evals export   --session travelbot.json --format jsonl
-```
-
----
-
-### All CLI commands
+### CLI commands
 
 | Command | What it does |
 |---------|-------------|
@@ -299,6 +179,20 @@ grounded-evals export   --session travelbot.json --format jsonl
 grounded-evals --help          # all commands
 grounded-evals chat --help     # options for a specific command
 ```
+
+<details>
+<summary><strong>Multiple agents</strong></summary>
+
+Both paths support `--session` to keep separate files per agent:
+
+```bash
+grounded-evals chat     --session travelbot.json
+grounded-evals eval     --session travelbot.json
+grounded-evals annotate --session travelbot.json
+grounded-evals export   --session travelbot.json --format jsonl
+```
+
+</details>
 
 ---
 
@@ -322,8 +216,6 @@ grounded-evals chat --help     # options for a specific command
                     against your own scoring (κ ≥ 0.80). Export.
 ```
 
-The whole product is one screen at a time, one question at a time. PMs who hate forms find this less painful than it looks.
-
 ---
 
 ## Guides and further reading
@@ -334,6 +226,8 @@ The whole product is one screen at a time, one question at a time. PMs who hate 
 | [Building an LLM-as-a-Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Full rubric design, weighting, hard-fail rules, few-shot calibration, and export |
 | [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | End-to-end walkthrough of all 5 steps for PMs and SMEs |
 | [PM Artifacts → Production Judge](grounded-evals/docs/pm-to-ml-llm-judge.md) | Step-by-step guide for ML engineers: turn golden queries, annotations, and codebook into a calibrated CI judge |
+
+For AWS Bedrock setup, environment variables, deployment, project structure, and contribution guidelines, see [SETUP.md](SETUP.md).
 
 ---
 
