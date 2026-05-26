@@ -17,7 +17,7 @@ GEDD is the tool for *before* you have a rubric.
 
 > **The eval pipeline is the product. The agent is just the thing it produces.**
 
-<img width="945" height="755" alt="Screenshot 2026-05-24 at 12 33 49 PM" src="https://github.com/user-attachments/assets/4ad588b7-e288-4990-be57-255b0410f05d" />
+![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
 
 
 📖 **Read the why:** [Why Grounded Theory? for reliable AI Agents](https://balachanderkeelapudi.substack.com/p/why-grounded-theory-for-reliable) — the long-form argument behind this repo.
