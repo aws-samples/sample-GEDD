@@ -581,6 +581,12 @@ def home_page():
             with ui.element("div").classes("outcome-cell"):
                 ui.html('<div class="num">κ ≥ 0.80</div>')
                 ui.html('<div class="label">judge-vs-human calibration target</div>')
+                ui.html(
+                    '<div style="font-size:0.68rem;color:#6e737b;margin-top:4px;line-height:1.4">'
+                    'κ (Cohen\'s Kappa) measures how closely your LLM judge agrees with human verdicts. '
+                    '0.80 = strong agreement — the threshold where the judge can run autonomously in CI.'
+                    '</div>'
+                )
 
         # ── Domain demo grid (the hero asset) ────────────────────────────
         ui.html('<div id="domain-section"></div>')
