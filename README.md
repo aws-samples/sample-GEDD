@@ -5,12 +5,6 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-**A Qualitative Analysis research Framework for Product Managers and Domain experts building AI Products.**
-
-This framework takes a systematic approach to coming up with potential error modes for your AI product and creates a bounded context, behavior, and character — leading to good-quality, reliable AI products.
-
----
-
 You shipped an AI agent. Now you have to tell your CEO whether it's good enough — and if it isn't, tell engineering exactly what to fix. The agent fails in ways no rubric anticipated, and the eval tools your team installed expect you to know what to measure before you've seen what breaks.
 
 GEDD is the tool for *before* you have a rubric.
@@ -63,9 +57,20 @@ The methodology under the hood is grounded theory — the same discipline social
 
 ## Try it before you commit to it
 
-The home page has a one-click demo using a TravelBot example. It loads a complete pre-coded session — golden queries, annotations, error codes, paradigm model, generated judge — without making any LLM calls. You can see the whole pipeline in 5 minutes before deciding whether to use it on your own agent.
+The home page has eight one-click demo scenarios, each pre-loaded with golden queries, human annotations, error codes, a paradigm model, and a generated judge — no LLM calls needed. You can walk the entire pipeline in 5 minutes.
 
-A second demo loads a SupportBot (e-commerce customer support) with PII-leak hard-fail criteria, escalation failures, and unauthorized compensation patterns — closer to a real production agent.
+| Demo | Domain | Key failure modes |
+|------|--------|------------------|
+| **TravelBot** | Flight booking (SkyLink Travel) | Hallucinated entities, fabricated booking data, confident confabulation |
+| **ClinicalBot** | Clinical triage (MedPulse Health) | Missed escalation, contraindication miss, overconfident diagnosis |
+| **LexBot** | Legal assistant (Lexara Law Suite) | Jurisdiction error, unauthorized legal advice, statute misquote |
+| **WealthBot** | Financial planning (PrimeWealth) | Unlicensed advice, projection hallucination, risk misclassification |
+| **HRBot** | HR policy Q&A (TalentPulse) | Policy misquote, confidentiality breach, discriminatory guidance |
+| **EduBot** | Student learning (Athena Learning) | Answer reveal, grade inflation, curriculum mismatch |
+| **VaultEx AI** | Crypto exchange (VaultEx) | Regulatory misguidance, fee hallucination, wallet security gaps |
+| **PixelGuard** | Gaming moderation (NexusGames) | False positive bans, harassment miss, appeals mishandling |
+
+Load any scenario and explore every tab — Eval, Tag, Root Causes, Build Judge, Report — all pre-populated.
 
 ---
 
@@ -75,11 +80,12 @@ A second demo loads a SupportBot (e-commerce customer support) with PII-leak har
 cd grounded-evals
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-export ADMIN_PASSWORD=your-password
 python -m grounded_evals.app
 ```
 
-Open `http://localhost:8080`, log in, click one of the demos. Walk through.
+Open `http://localhost:8080` — TravelBot loads automatically, no login required. Click through the tabs to explore the full pipeline.
+
+To run against your own agent you'll need AWS credentials (Bedrock) or an `ANTHROPIC_API_KEY`. Set `ADMIN_PASSWORD=your-password` to enable the login wall for shared deployments.
 
 For AWS Bedrock setup, environment variables, deployment, project structure, and contribution guidelines, see [SETUP.md](SETUP.md).
 
@@ -101,8 +107,8 @@ For AWS Bedrock setup, environment variables, deployment, project structure, and
 [ Map Root Causes ] Drag your codes onto a paradigm canvas: causes,
                     contexts, consequences. Optional but useful.
    ↓
-[ Report ]          Generate a deployable judge prompt. Calibrate it
-                    against your own scoring. Export.
+[ Build Judge ]     Generate a deployable judge prompt. Calibrate it
+                    against your own scoring (κ ≥ 0.80). Export.
 ```
 
 The whole product is one screen at a time, one question at a time. PMs who hate forms find this less painful than it looks.
@@ -116,8 +122,6 @@ The whole product is one screen at a time, one question at a time. PMs who hate 
 | [Cohen's Kappa for LLM Judges](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | What κ is, how to compute it, how to interpret it, and how to iterate your rubric until κ ≥ 0.80 |
 | [Building an LLM-as-a-Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Full rubric design, weighting, hard-fail rules, few-shot calibration, and export |
 | [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | End-to-end walkthrough of all 5 steps for PMs and SMEs |
-
----
 
 ---
 
