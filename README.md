@@ -55,7 +55,7 @@ The methodology under the hood is grounded theory — the same discipline social
 
 ## What it's not
 
-- **Not a tracing or observability tool.** It doesn't ingest live production traces. Bring your traces (paste them in, or run queries through GEDD itself). LangSmith, Braintrust, Langfuse cover ingestion better.
+- **Not a tracing or observability tool.** It doesn't ingest live production traces. Bring your traces (paste them in, or run queries through GEDD itself).
 - **Not a metric library.** No pre-built "faithfulness," "hallucination index," or 20-evaluator zoo. You discover your metrics; the tool makes them deployable.
 - **Not a one-shot rubric generator.** It's a workflow, not a button. Plan ~90 minutes the first time.
 
