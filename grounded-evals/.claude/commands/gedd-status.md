@@ -14,7 +14,7 @@ Display exactly this layout — nothing more, nothing less:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Agent      : <name or "not defined">
-  Step       : <current_step> / 4  (<step name>)
+  Step       : <current_step> / 6  (<step name>)
   Session    : session.json
 
   ── Golden Queries ────────────────────────────
@@ -65,7 +65,7 @@ Use block characters: `█` for filled, `░` for empty, 5 bars total.
 
 ## Building the error code table
 
-Read `annotations` array from `session.json`. Count unique `error_code` values
+Read both `annotations` and `eval_results` arrays from `session.json`. Count unique `error_code` values
 (skip empty strings). Map each to its standard dimension:
 
 | error code contains... | dimension |
@@ -87,8 +87,10 @@ Read `annotations` array from `session.json`. Count unique `error_code` values
 | `current_step == 2` | "Write a system prompt — run `/gedd-chat`" |
 | `current_step == 3`, queries < 15 | "Generate more queries (need ≥15) — run `/gedd-chat`" |
 | `current_step == 3`, queries ≥ 15 | "Queries ready — run `/gedd-chat` and say 'run eval'" |
-| `current_step == 4`, annotations == 0 | "Run eval and annotate — run `/gedd-chat`" |
-| `current_step == 4`, annotations > 0, < all | "Keep annotating — run `/gedd-chat`" |
-| annotations complete | "Generate your judge prompt — run `/gedd-chat`" |
+| `current_step == 4`, eval_results == 0 | "Run eval — run `/gedd-chat` and say 'run eval'" |
+| `current_step == 4`, eval_results > 0 | "Eval done — run `/gedd-chat` and say 'annotate'" |
+| `current_step == 5`, annotations < all | "Keep annotating — run `/gedd-chat`" |
+| `current_step == 5`, annotations complete | "Annotation done — export or build judge in web UI" |
+| `current_step == 6` | "Complete! Export: `grounded-evals export --format jsonl`" |
 
 After displaying the dashboard, say nothing else. Do not ask questions.
