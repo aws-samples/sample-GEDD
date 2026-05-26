@@ -572,7 +572,30 @@ def status(session: str, results: str) -> None:
         annotated = sum(1 for r in rdata if r.get("annotation"))
         click.echo(f"  Eval results: {len(rdata)} responses ({annotated} annotated)\n")
 
-    click.echo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
+    # What's next suggestion
+    click.echo("  ── What's next ──\n")
+    if step == 1:
+        click.echo("  Define your agent → grounded-evals chat")
+    elif step == 2:
+        click.echo("  Write a system prompt → grounded-evals chat")
+    elif step == 3:
+        n = len(prompts)
+        if n < 15:
+            click.echo(f"  Generate more queries ({n}/15 minimum) → grounded-evals chat")
+        else:
+            click.echo("  Queries ready → grounded-evals eval")
+    elif step == 4:
+        click.echo("  Run evaluation → grounded-evals eval")
+    elif step == 5:
+        unannotated = len(annotations) < len(prompts)
+        if unannotated:
+            click.echo("  Keep annotating → grounded-evals annotate")
+        else:
+            click.echo("  Generate judge → grounded-evals judge")
+    else:
+        click.echo("  Export dataset → grounded-evals export --format jsonl")
+
+    click.echo("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
 
 
 @main.command()
@@ -630,6 +653,10 @@ def judge(session: str, results: str, output: str) -> None:
     for code, count in codes.most_common():
         click.echo(f"  {code} (×{count}) → {_infer_dim(code)}")
     click.echo(f"\nSaved → {output} ({len(rubric.criteria)} criteria)")
+    click.echo(f"\nNext steps:")
+    click.echo(f"  • Review and edit {output}")
+    click.echo(f"  • Calibrate: grounded-evals calibrate -j {output}")
+    click.echo(f"  • Or open in web UI: grounded-evals serve → Build Judge tab")
 
 
 if __name__ == "__main__":

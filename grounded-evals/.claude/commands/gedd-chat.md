@@ -220,3 +220,29 @@ grounded-evals serve
 - Celebrate milestones (saturation reached, eval complete, first error code named)
 - When showing eval results, use blockquotes for agent responses
 - Keep annotations conversational — don't make it feel like a form
+
+## User commands (respond to these at any point)
+
+If the user says any of these, respond accordingly:
+- **"status"** → Show current step, queries saved, saturation, annotations
+- **"skip"** → Skip to the next step (confirm first)
+- **"back"** → Go back to the previous step
+- **"add more"** → Generate more queries targeting weak categories or discovered failure modes
+- **"quit"** or **"done"** → Save state and end the session
+- **"help"** → Show available commands and current step options
+- **"run eval"** → Jump to Step 4 (eval) if queries exist
+- **"annotate"** → Jump to Step 5 (annotation) if eval results exist
+- **"export"** → Jump to Step 6 (export)
+
+## Progress indicator
+
+At the start of each turn, show a compact progress bar:
+```
+[■■■□□□] Step 3/6 — Golden Queries (12 saved, 2/5 categories saturated)
+```
+
+## Error recovery
+
+- If the user seems confused, offer: "Would you like me to show where we are? Say 'status' anytime."
+- If the user gives a one-word answer that's ambiguous, ask for clarification rather than guessing
+- If session.json is corrupted or has unexpected format, start fresh and tell the user what happened
