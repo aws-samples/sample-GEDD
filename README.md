@@ -57,7 +57,7 @@ The methodology under the hood is grounded theory — the same discipline social
 
 ## Try it before you commit to it
 
-The home page has eight one-click demo scenarios, each pre-loaded with golden queries, human annotations, error codes, a paradigm model, and a generated judge — no LLM calls needed. You can walk the entire pipeline in 5 minutes.
+The home page has seventeen one-click demo scenarios, each pre-loaded with golden queries, human annotations, error codes, a paradigm model, and a generated judge — no LLM calls needed. You can walk the entire pipeline in 5 minutes.
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
@@ -69,6 +69,15 @@ The home page has eight one-click demo scenarios, each pre-loaded with golden qu
 | **EduBot** | Student learning (Athena Learning) | Answer reveal, grade inflation, curriculum mismatch |
 | **VaultEx AI** | Crypto exchange (VaultEx) | Regulatory misguidance, fee hallucination, wallet security gaps |
 | **PixelGuard** | Gaming moderation (NexusGames) | False positive bans, harassment miss, appeals mishandling |
+| **InsureBot** | Insurance claims (ShieldPoint) | Bad-faith denial, coverage hallucination, state regulation miss |
+| **PropBot** | Real estate (NestKey Realty) | Fair Housing steering, fabricated comps, disclosure miss |
+| **RxBot** | Pharmacy (PharmaLink) | Drug interaction miss, dosage unit confusion (mg vs mcg), off-label promotion |
+| **TaxBot** | Tax/accounting (FileSmart) | Deduction hallucination, entity misguidance, Circular 230 violation |
+| **ClaimsBot** | Defense contracting (AeroGuard) | ITAR violation, CUI spillage, foreign national access error |
+| **FoodBot** | Food safety (SafePlate) | Allergen cross-contact miss, HACCP temp error, anaphylaxis delay |
+| **AutoBot** | Automotive (DrivePulse Motors) | Lemon law omission, FTC CARS Rule violation, odometer fraud miss |
+| **MigrateBot** | Immigration (PathForward Legal) | Asylum deadline miss, unauthorized practice, bar misapplication |
+| **EnergyBot** | Energy/utilities (GridSync) | Solar ITC outdated (§25D terminated), NEM 3.0 confusion, DC voltage safety |
 
 Load any scenario and explore every tab — Eval, Tag, Root Causes, Build Judge, Report — all pre-populated.
 
@@ -114,27 +123,21 @@ claude        # opens Claude Code CLI
 /gedd-chat
 ```
 
-Claude reads `session.json` if it exists and resumes where you left off. The full 7-step pipeline runs inside the conversation:
+Claude reads `session.json` if it exists and resumes where you left off. The full 6-step pipeline runs inside the conversation:
 
 ```
-Step 1  Define Agent        Name, capabilities, target users → saved to session.json
+Step 1  Define Agent        Name, capabilities, target users, domain → saved to session.json
 Step 2  System Prompt       Draft and refine collaboratively → saved to session.json
 Step 3  Golden Queries      Open Coding: fracture domain → generate queries in batches
                             Live coverage table shown after every approved batch:
 
-                            Coverage snapshot  (12 queries)
-                              happy_path      ███░░   3   ✓ saturated
-                              edge_case       ██░░░   2   ~ approx.
-                              adversarial     █░░░░   1   ✗ thin
-                              ambiguous       ░░░░░   0   ✗ none
+                            Saturation: happy_path 3/3 ✓ | edge_case 2/3 ~ | adversarial 1/3 ✗
+                            Overall: 1/6 categories saturated (17%)
 
-Step 4  Eval                Runs grounded-evals eval inline via Bash — no CLI switch needed
-Step 5  Annotation          Shows each Q/A pair in conversation, collects c/p/i + error codes,
+Step 4  Eval                Runs queries against your model inline — no CLI switch needed
+Step 5  Annotation          Shows each Q/A pair in conversation, collects ✓/⚠/✗ + error codes,
                             writes annotations to session.json in real time
-Step 6  Error Analysis      Groups error codes (Open Coding), maps to 8 standard dimensions
-                            (accuracy, tone, safety, completeness, ...), builds paradigm model
-Step 7  Judge Prompt        Generates deployable LLM-as-a-Judge prompt grounded in your
-                            observed failures → saves to judge_prompt.md, exports dataset
+Step 6  Export              Summarizes failure modes, offers export/web UI/judge generation
 ```
 
 Type `quit` at any point — state is saved after every turn.
@@ -155,7 +158,7 @@ Check where you are without entering the coaching conversation:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   Agent      : TravelBot
-  Step       : 4 / 7  (Eval)
+  Step       : 4 / 6  (Eval)
   Session    : session.json
 
   ── Golden Queries ──────────────────────────
