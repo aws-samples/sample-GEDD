@@ -91,6 +91,159 @@ For AWS Bedrock setup, environment variables, deployment, project structure, and
 
 ---
 
+## For engineers: CLI and Claude Code skill
+
+The web UI is built for PMs. If you'd rather stay in the terminal, there are two engineer-native paths that produce the same outputs.
+
+Both write to a `session.json` file. They interoperate — start in the skill, finish in the CLI, or mix freely.
+
+---
+
+### Path A — `/gedd-chat` Claude Code skill
+
+The fastest way to generate a golden dataset if you already have Claude Code installed. No credentials, no REPL, no separate process — Claude itself acts as the coach.
+
+**1. Open Claude Code in the project**
+
+```bash
+cd grounded-evals
+claude
+```
+
+**2. Start a new session or resume an existing one**
+
+```
+/gedd-chat
+```
+
+Claude reads `session.json` if it exists and picks up where you left off. Otherwise it starts fresh and asks for your agent's name.
+
+**3. Have the conversation**
+
+Claude walks you through all four steps — defining your agent, writing a system prompt, and generating golden queries using Open Coding methodology. Each approved query is written to `session.json` automatically.
+
+**4. Hand off to the CLI for eval and export**
+
+When Step 3 is complete, the skill tells you to switch to the terminal:
+
+```bash
+grounded-evals eval        # run queries, see responses
+grounded-evals annotate    # mark each response correct / partial / incorrect
+grounded-evals export      # write JSONL, CSV, or JSON
+```
+
+---
+
+### Path B — standalone CLI
+
+Use this when you want to run the full pipeline without Claude Code, or when scripting / CI is involved.
+
+**1. Install and set credentials**
+
+```bash
+cd grounded-evals
+source .venv/bin/activate          # or: python -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
+
+export ANTHROPIC_API_KEY=sk-ant-…  # easiest for local dev
+# OR configure AWS credentials for Bedrock (IAM, us-east-1)
+```
+
+**2. Run the coaching session**
+
+```bash
+grounded-evals chat
+```
+
+A conversational coach guides you through the same four steps. Type `quit` to exit — progress is saved to `session.json` and you can resume any time.
+
+```
+New GEDD session. State will be saved to: session.json
+Type 'quit' to exit.
+
+Coach: Hi! I'm your GEDD coaching assistant. Let's build a golden
+       evaluation dataset for your AI agent. What's the agent's name,
+       and what does it do?
+
+You: ▌
+```
+
+**3. Run queries against the model**
+
+```bash
+grounded-evals eval
+# or target a specific model:
+grounded-evals eval --model us.anthropic.claude-haiku-4-5-20251001-v1:0
+```
+
+Prints each query and the agent's response. Saves everything to `eval_results.json`.
+
+**4. Annotate responses**
+
+```bash
+grounded-evals annotate
+```
+
+Steps through each response one at a time:
+
+```
+──── [1/12] ────────────────────────────────
+Category : happy_path
+Query    : Where is my order #12345?
+Expected : Return real-time order status with tracking link
+Response : Your order #12345 is currently in transit...
+
+Annotation [c/p/i/s]: ▌
+```
+
+Keys: `c` correct · `p` partial · `i` incorrect · `s` skip.
+For failures, it asks for an error code (`hallucination`, `wrong_tone`, `missed_escalation` — whatever fits) and a note.
+
+**5. Export the golden dataset**
+
+```bash
+grounded-evals export --format jsonl   # one query per line — feeds into eval pipelines
+grounded-evals export --format csv     # shareable spreadsheet
+grounded-evals export --format json    # full metadata dump
+```
+
+Output filename defaults to `<agent_name>_golden_dataset.<fmt>`.
+
+---
+
+### Working with multiple agents
+
+Both paths support a `--session` flag so you can keep separate files per agent:
+
+```bash
+grounded-evals chat     --session travelbot.json
+grounded-evals eval     --session travelbot.json
+grounded-evals annotate --session travelbot.json
+grounded-evals export   --session travelbot.json --format jsonl
+```
+
+---
+
+### All CLI commands at a glance
+
+| Command | What it does |
+|---------|-------------|
+| `chat` | Conversational coaching — Steps 1-4, saves to `session.json` |
+| `eval` | Run golden queries against a model, save responses |
+| `annotate` | Interactively mark responses correct / partial / incorrect |
+| `export` | Write golden dataset as JSONL, CSV, or JSON |
+| `fracture` | Fracture an agent spec YAML into test categories (Open Coding) |
+| `check-saturation` | Check whether a dataset has reached theoretical saturation |
+| `coverage` | Show a bar-chart coverage breakdown by category |
+| `compare` | Check whether a new prompt adds unique coverage to a dataset |
+| `serve` | Start the web UI |
+
+```bash
+grounded-evals --help          # all commands
+grounded-evals chat --help     # options for a specific command
+```
+
+---
+
 ## How it actually feels
 
 ```
