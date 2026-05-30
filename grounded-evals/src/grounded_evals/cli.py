@@ -43,6 +43,43 @@ def _save_state(session_file: str, state, messages: list[dict]) -> None:
     Path(session_file).write_text(json.dumps(data, indent=2, default=str))
 
 
+def _infer_dimension(error_code: str) -> str:
+    code = error_code.lower()
+    if any(k in code for k in ["hallucin", "factual", "confab", "wrong_fact", "fabricat"]):
+        return "accuracy"
+    if any(k in code for k in ["tone", "hostile", "empathy", "rude", "harsh", "cold"]):
+        return "tone"
+    if any(k in code for k in ["escalat", "refus", "safety", "harm", "danger", "unsafe"]):
+        return "safety"
+    if any(k in code for k in ["incomplete", "missing", "partial", "skip", "unanswer"]):
+        return "completeness"
+    if any(k in code for k in ["instruction", "constraint", "policy", "prompt", "rule"]):
+        return "instruction_following"
+    if any(k in code for k in ["brand", "voice", "persona", "off_brand", "company"]):
+        return "brand_relevance"
+    if any(k in code for k in ["bias", "discriminat", "fair", "stereotyp", "inequit"]):
+        return "bias"
+    return "quality"
+
+
+def _coverage_table(state, indent: str = "  ") -> str:
+    from collections import Counter
+    prompts = state.session.golden_prompts
+    if not prompts:
+        return f"{indent}No queries yet."
+    counts = Counter(p.rationale for p in prompts)
+    max_name = max(len(c) for c in counts)
+    lines = [f"{indent}{'Category':<{max_name}}  Bars   N  Status"]
+    lines.append(f"{indent}{'─' * max_name}  ─────  ─  ──────────")
+    for cat, n in sorted(counts.items(), key=lambda x: -x[1]):
+        bar = "█" * min(n, 5) + "░" * (5 - min(n, 5))
+        status = "✓ saturated" if n >= 3 else ("~ approx." if n >= 2 else "✗ thin")
+        lines.append(f"{indent}{cat:<{max_name}}  {bar}  {n}  {status}")
+    saturated = sum(1 for n in counts.values() if n >= 3)
+    lines.append(f"\n{indent}Saturation: {saturated}/{len(counts)} categories  ({len(prompts)} queries total)")
+    return "\n".join(lines)
+
+
 @click.group()
 def main() -> None:
     """grounded-evals: Build golden eval datasets and analyse AI agent failures."""
@@ -297,11 +334,13 @@ def chat(session: str) -> None:
 
         resp = run_agent_turn(user_input, messages, state)
 
+        saved_query_this_turn = False
         for te in resp.tool_executions:
             name = te["tool_name"]
             result = json.loads(te["tool_result"])
             if name == "save_golden_query":
                 click.echo(f"  [query #{result.get('total')} saved]", err=True)
+                saved_query_this_turn = True
             elif name == "set_current_step":
                 s = result.get("step", 1)
                 click.echo(f"  [→ step {s}: {step_names.get(s, '')}]", err=True)
@@ -309,6 +348,9 @@ def chat(session: str) -> None:
                 click.echo("  [agent info saved]", err=True)
             elif name == "save_annotation":
                 click.echo(f"  [annotation #{result.get('total_annotations')} saved]", err=True)
+
+        if saved_query_this_turn:
+            click.echo("\n" + _coverage_table(state) + "\n", err=True)
 
         click.echo(f"\nCoach: {resp.text}\n")
         _save_state(session, state, messages)
@@ -400,6 +442,7 @@ def annotate(results: str, session: str) -> None:
     click.echo("Keys: [c] correct  [p] partial  [i] incorrect  [s] skip\n")
 
     annotation_map = {"c": "correct", "p": "partial", "i": "incorrect"}
+    from collections import Counter
 
     for i, result in enumerate(unannotated, 1):
         click.echo(f"──── [{i}/{len(unannotated)}] ────────────────────────────────")
@@ -420,6 +463,10 @@ def annotate(results: str, session: str) -> None:
         error_code = ""
         notes = ""
         if annotation in ("partial", "incorrect"):
+            existing = [a["error_code"] for a in state.annotations if a.get("error_code")]
+            if existing:
+                top = ", ".join(c for c, _ in Counter(existing).most_common(5))
+                click.echo(f"  Previously used: {top}")
             error_code = click.prompt("Error code (e.g. hallucination, wrong_tone, incomplete)", default="")
             notes = click.prompt("Notes — why did it fail?", default="")
 
@@ -436,6 +483,12 @@ def annotate(results: str, session: str) -> None:
         })
         click.echo()
 
+        if i % 5 == 0:
+            c = sum(1 for a in state.annotations if a.get("annotation") == "correct")
+            p = sum(1 for a in state.annotations if a.get("annotation") == "partial")
+            inc = sum(1 for a in state.annotations if a.get("annotation") == "incorrect")
+            click.echo(f"  ── Progress: {i}/{len(unannotated)}  ✓ {c}  ⚠ {p}  ✗ {inc} ──\n")
+
     Path(results).write_text(json.dumps(results_data, indent=2))
     _save_state(session, state, messages)
 
@@ -446,6 +499,14 @@ def annotate(results: str, session: str) -> None:
     incorrect = sum(1 for r in results_data if r.get("annotation") == "incorrect")
 
     click.echo(f"Done. {annotated}/{total} annotated — {correct} correct, {partial} partial, {incorrect} incorrect")
+
+    error_codes = Counter(r["error_code"] for r in results_data if r.get("error_code"))
+    if error_codes:
+        click.echo("\nError codes found:")
+        for code, count in error_codes.most_common():
+            click.echo(f"  {code:<30} ×{count}  → {_infer_dimension(code)}")
+        click.echo("\nRun `grounded-evals analyze` to map these to evaluation dimensions.")
+        click.echo("Run `grounded-evals judge` to generate your judge prompt.")
 
 
 @main.command()
@@ -601,17 +662,24 @@ def status(session: str, results: str) -> None:
 @main.command()
 @click.option("--session", "-s", default="session.json", show_default=True)
 @click.option("--results", "-r", default="eval_results.json", show_default=True)
+@click.option("--style", type=click.Choice(["standard", "geval"]), default="geval", show_default=True,
+              help="standard: direct rubric scoring | geval: chain-of-thought per criterion (more reliable)")
 @click.option("--output", "-o", default="judge_prompt.md", show_default=True)
-def judge(session: str, results: str, output: str) -> None:
+def judge(session: str, results: str, style: str, output: str) -> None:
     """Generate a deployable LLM-as-a-Judge prompt from annotations.
 
+    \b
     Reads error codes from annotations, maps them to evaluation dimensions,
     builds a weighted rubric, and outputs a ready-to-use judge prompt.
+
+    Styles:
+      standard  Direct rubric scoring — fast, good baseline
+      geval     Chain-of-thought per criterion (Liu et al. 2023) — more reliable
     """
     from collections import Counter
 
     from grounded_evals.axial_coding.mapper import ErrorMapping
-    from grounded_evals.judge_builder.prompt_gen import generate_judge_prompt
+    from grounded_evals.judge_builder.prompt_gen import generate_geval_judge_prompt, generate_judge_prompt
     from grounded_evals.judge_builder.rubric import generate_rubric
 
     state, _ = _load_state(session)
@@ -628,35 +696,112 @@ def judge(session: str, results: str, output: str) -> None:
         click.echo("No error codes found. Run `annotate` first and name the failures.", err=True)
         sys.exit(1)
 
-    dim_keywords = {
-        "hallucin": "accuracy", "fabricat": "accuracy", "factual": "accuracy", "wrong": "accuracy",
-        "tone": "tone", "rude": "tone", "empathy": "tone",
-        "escalat": "safety", "safety": "safety", "harm": "safety",
-        "incomplete": "completeness", "missing": "completeness",
-        "instruction": "instruction_following", "prompt": "instruction_following",
-        "bias": "bias", "discriminat": "bias",
-    }
-
-    def _infer_dim(code: str) -> str:
-        for kw, dim in dim_keywords.items():
-            if kw in code.lower():
-                return dim
-        return "quality"
-
-    mappings = [ErrorMapping(error_code=c, primary_category=_infer_dim(c)) for c in codes]
+    mappings = [ErrorMapping(error_code=c, primary_category=_infer_dimension(c)) for c in codes]
     rubric = generate_rubric(mappings)
     agent_name = state.session.agent_spec.name or "AI Agent"
-    prompt = generate_judge_prompt(rubric, agent_name=agent_name)
+    agent_desc = state.session.agent_spec.description or ""
 
-    Path(output).write_text(f"# Judge Prompt — {agent_name}\n\n{prompt}\n")
-    click.echo(f"Generated judge from {len(codes)} error codes:")
+    if style == "geval":
+        prompt_text = generate_geval_judge_prompt(rubric, agent_name=agent_name, agent_description=agent_desc)
+    else:
+        prompt_text = generate_judge_prompt(rubric, agent_name=agent_name, agent_description=agent_desc)
+
+    Path(output).write_text(f"# Judge Prompt — {agent_name}\n\n{prompt_text}\n")
+
+    click.echo(f"\nGenerating judge for: {agent_name}")
+    click.echo(f"  Style : {style}")
+    click.echo(f"\n  Criteria:")
+    for c in rubric.criteria:
+        click.echo(f"    • {c.name:<22} weight {c.weight}")
+    click.echo(f"\n  Error codes mapped:")
     for code, count in codes.most_common():
-        click.echo(f"  {code} (×{count}) → {_infer_dim(code)}")
-    click.echo(f"\nSaved → {output} ({len(rubric.criteria)} criteria)")
-    click.echo(f"\nNext steps:")
-    click.echo(f"  • Review and edit {output}")
-    click.echo(f"  • Calibrate: grounded-evals calibrate -j {output}")
-    click.echo(f"  • Or open in web UI: grounded-evals serve → Build Judge tab")
+        click.echo(f"    {code:<30} ×{count}  → {_infer_dimension(code)}")
+    click.echo(f"\n  Saved → {output}  ({len(rubric.criteria)} criteria, {len(prompt_text)} chars)")
+    click.echo("  Next: run `grounded-evals export --format jsonl` to export the dataset.")
+
+
+@main.command()
+@click.option("--session", "-s", default="session.json", show_default=True,
+              help="Session file with annotations")
+@click.option("--llm", is_flag=True,
+              help="Use LLM for richer dimension mapping with rationale (requires credentials)")
+@click.option("--output", "-o", default=None,
+              help="Save analysis JSON to this file")
+def analyze(session: str, llm: bool, output: str | None) -> None:
+    """Map error codes from annotations to the 8 standard evaluation dimensions.
+
+    \b
+    Dimensions: quality · accuracy · completeness · tone · safety
+                instruction_following · brand_relevance · bias
+
+    Run after `annotate`. Results saved to session.json and used by `judge`.
+    Use --llm for richer analysis with LLM-generated rationale per code.
+    """
+    from collections import Counter
+
+    state, messages = _load_state(session)
+    annotations = state.annotations
+
+    if not annotations:
+        click.echo("No annotations found. Run `grounded-evals annotate` first.", err=True)
+        sys.exit(1)
+
+    error_counts = Counter(a["error_code"] for a in annotations if a.get("error_code"))
+    if not error_counts:
+        click.echo(f"No error codes in {len(annotations)} annotations — all responses were correct.")
+        return
+
+    click.echo(f"\nError Analysis — {len(error_counts)} unique codes, {sum(error_counts.values())} failures\n")
+
+    if llm:
+        from grounded_evals.axial_coding.mapper import map_errors_to_categories
+        from grounded_evals.models.core import Code, CodeType
+
+        click.echo("Running LLM-based mapping...", err=True)
+        code_objects = [
+            Code(label=code, code_type=CodeType.DESCRIPTIVE,
+                 definition=f"Observed {error_counts[code]}× in human annotations")
+            for code in error_counts
+        ]
+        mappings = map_errors_to_categories(code_objects)
+        max_w = max(len(m.error_code) for m in mappings)
+        click.echo(f"  {'Error Code':<{max_w}}  Count  {'Dimension':<22}  Rationale")
+        click.echo(f"  {'─' * max_w}  ─────  {'─' * 22}  {'─' * 30}")
+        for m in sorted(mappings, key=lambda x: -error_counts.get(x.error_code, 0)):
+            n = error_counts.get(m.error_code, 0)
+            click.echo(f"  {m.error_code:<{max_w}}  ×{n:<4}  {m.primary_category:<22}  {m.rationale[:50]}")
+        from grounded_evals.models.core import Code, CodeType
+        state.session.codes = [
+            Code(label=m.error_code, code_type=CodeType.DESCRIPTIVE, definition=m.rationale)
+            for m in mappings
+        ]
+    else:
+        max_w = max(len(c) for c in error_counts)
+        click.echo(f"  {'Error Code':<{max_w}}  Count  Dimension")
+        click.echo(f"  {'─' * max_w}  ─────  ──────────────────────")
+        for code, n in error_counts.most_common():
+            click.echo(f"  {code:<{max_w}}  ×{n:<4}  {_infer_dimension(code)}")
+        click.echo("\n  Tip: use --llm for richer mapping with rationale per code")
+        from grounded_evals.models.core import Code, CodeType
+        state.session.codes = [
+            Code(label=code, code_type=CodeType.DESCRIPTIVE)
+            for code in error_counts
+        ]
+
+    _save_state(session, state, messages)
+    click.echo(f"\n  Saved {len(state.session.codes)} codes to {session}")
+    click.echo("  Run `grounded-evals judge` to generate your judge prompt.")
+
+    if output:
+        result = {
+            "error_codes": dict(error_counts),
+            "mappings": [
+                {"error_code": c.label, "dimension": _infer_dimension(c.label), "definition": c.definition}
+                for c in state.session.codes
+            ],
+        }
+        Path(output).write_text(json.dumps(result, indent=2))
+        click.echo(f"  Analysis saved → {output}")
 
 
 if __name__ == "__main__":
