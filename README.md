@@ -7,159 +7,187 @@
 
 You shipped an AI agent. Now you need to prove it works — to your CEO, to compliance, to the team that inherits it. The agent fails in ways no rubric anticipated, and the eval tools expect you to know what to measure before you've seen what breaks.
 
-GEDD is the tool for *before* you have a rubric. A domain expert has a conversation, and 90 minutes later you have a production eval pipeline.
+**GEDD is the tool for *before* you have a rubric.** A domain expert has a conversation, and 90 minutes later you have a production eval pipeline.
 
-> **The eval pipeline is the product. The agent is just the thing it produces.**
+> *The eval pipeline is the product. The agent is just the thing it produces.*
 
-<img width="4644" height="5854" alt="Quality Metrics Pipeline-2026-05-31-074649" src="https://github.com/user-attachments/assets/c2b6c3b4-8b56-4eea-a221-c0287a56fb7d" />
+![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
 
-
-
-📖 **Read the why:** [Why Grounded Theory? for reliable AI Agents](https://balachanderkeelapudi.substack.com/p/why-grounded-theory-for-reliable)
+📖 [Why Grounded Theory? for reliable AI Agents](https://balachanderkeelapudi.substack.com/p/why-grounded-theory-for-reliable) — the long-form argument behind this repo.
 
 ---
 
 ## The Pipeline
 
-Two personas. Six steps. One `session.json` connects them.
+```mermaid
+flowchart TD
+    subgraph DE["🧑‍💼 DOMAIN EXPERT — /gedd in Claude Code"]
+        direction TB
+        S1["1️⃣ Define Agent"]
+        S2["2️⃣ System Prompt"]
+        S3["3️⃣ Deploy to AgentCore"]
+        S4["4️⃣ Golden Queries"]
+        S5["5️⃣ Annotate & Judge"]
+        S1 ==> S2 ==> S3 ==> S4 ==> S5
+    end
 
+    S5 ==>|"📄 session.json"| HANDOFF:::handoff
+
+    HANDOFF ==> S6
+
+    subgraph ML["🔧 ML ENGINEER — grounded-evals mlflow"]
+        direction TB
+        S6["6️⃣ SageMaker MLflow Pipeline"]
+    end
+
+    S3 -.->|"deploy"| AC["☁️ Bedrock AgentCore"]
+    S4 -.->|"invoke"| BR["🤖 Claude Haiku 4.5"]
+    S6 -.->|"track"| SM["📊 SageMaker MLflow"]
+    S6 -.->|"gate"| CI["🚦 CI/CD Pipeline"]
+
+    classDef handoff fill:#fce4ec,stroke:#c62828,stroke-width:3px,stroke-dasharray: 5 5
 ```
-╔══════════════════════════════════════════════════════════════════════════╗
-║  DOMAIN EXPERT (PM / SME)                                              ║
-║  Tool: /gedd in Claude Code                                            ║
-║                                                                         ║
-║  Step 1  Define Agent       "RxBot helps patients with medications"     ║
-║  Step 2  System Prompt      "Never prescribe. Always escalate."         ║
-║  Step 3  Deploy             → live on Amazon Bedrock AgentCore          ║
-║  Step 4  Golden Queries     20 test cases via Open Coding methodology   ║
-║  Step 5  Annotate & Judge   ✓/⚠/✗ → error codes → G-Eval rubric       ║
-║                                                                         ║
-╠══════════════════════════════════════════════════════════════════════════╣
-║  ML ENGINEER                                                           ║
-║  Tool: grounded-evals mlflow                                           ║
-║                                                                         ║
-║  Step 6  MLflow Pipeline    → SageMaker experiment + CI/CD gates       ║
-║                                                                         ║
-╚══════════════════════════════════════════════════════════════════════════╝
-```
 
-**Why deploy before testing?** The agent only needs the system prompt to function. By deploying at Step 3, all golden queries run against the *real endpoint* — latency, IAM, cold starts included. If the prompt changes, redeployment is one command.
+**Two personas. Six steps. One file connects them.**
 
-**Why two personas?** The domain expert knows what "correct" means. The ML engineer knows how to run it at scale. GEDD gives each the right tool and connects them with one file.
+| Step | Who | What happens | Output |
+|:----:|-----|-------------|--------|
+| 1 | Domain Expert | "RxBot helps patients with medications" | Bounded context |
+| 2 | Domain Expert | "Never prescribe. Always escalate." | System prompt + safety rules |
+| 3 | Domain Expert | One command → live endpoint | Agent on AgentCore |
+| 4 | Domain Expert | 20 test cases via Open Coding | Golden queries + responses |
+| 5 | Domain Expert | ✓/⚠/✗ → name the failures | Error codes + G-Eval rubric |
+| 6 | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
+
+> **Why deploy before testing?** The agent only needs the system prompt. By deploying at Step 3, all golden queries run against the *real endpoint* — latency, IAM, cold starts included.
 
 ---
 
-## Quick start
+## The Flywheel
 
-### For Domain Experts: Claude Code skill
+The pipeline isn't linear — it's a loop. Production failures feed back into new test cases. The eval suite grows with the agent.
 
+```mermaid
+flowchart TD
+    subgraph EXPERT["🧑‍💼 DOMAIN EXPERT"]
+        D["Define + Prompt + Deploy"]
+        Q["Golden Queries<br/><i>Open Coding methodology</i>"]
+        A["Annotate<br/><i>✓/⚠/✗ + error codes</i>"]
+        D --> Q --> A
+    end
+
+    subgraph ENGINEER["🔧 ML ENGINEER"]
+        J["Build Judge<br/><i>Rubric + weights + hard-fails</i>"]
+        K{"Calibrate<br/>κ ≥ 0.80?"}
+        CI["CI/CD Gate<br/><i>TSR ≥ 95%</i>"]
+        J --> K
+        K -->|"Yes"| CI
+        K -->|"No — fix criteria"| J
+    end
+
+    A -->|"session.json"| J
+    CI -->|"✅ Ship"| PROD["🚀 Production"]
+    PROD -.->|"🔄 New failure discovered"| Q
+
+    style PROD fill:#c8e6c9,stroke:#2e7d32
+```
+
+Each guide maps to a section of the flywheel:
+
+| Guide | Covers | For |
+|-------|--------|-----|
+| [Pipeline Guide](grounded-evals/docs/pipeline-guide.md) | Full workflow + CI/CD YAML | Both |
+| [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | Steps 1-5 walkthrough | PMs / SMEs |
+| [PM → Production Judge](grounded-evals/docs/pm-to-ml-llm-judge.md) | Turn annotations into CI judge | ML Engineers |
+| [Cohen's Kappa](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | Calibrate judge-human agreement | ML Engineers |
+| [Building an LLM Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Rubric design + few-shot calibration | ML Engineers |
+
+---
+
+## Quick Start
+
+<table>
+<tr>
+<td width="33%">
+
+**Domain Expert**
 ```bash
 cd grounded-evals
 pip install -e .
-claude          # opens Claude Code
+claude
 ```
 ```
 /gedd
 ```
+90 min → golden dataset + judge
 
-The skill guides you through all 5 steps conversationally. No code. No YAML. Just answer questions about your agent and mark responses correct or incorrect.
+</td>
+<td width="33%">
 
-### For ML Engineers: SageMaker MLflow bridge
-
+**ML Engineer**
 ```bash
 pip install sagemaker-mlflow
 
 grounded-evals mlflow \
   --session session.json \
-  --results eval_results.json \
-  --tracking-uri arn:aws:sagemaker:us-east-1:ACCOUNT:mlflow-tracking-server/SERVER
+  --tracking-uri $ARN \
+  --run-eval
 ```
 
-Creates custom judges, eval dataset, and metrics in your SageMaker MLflow server. Add `--run-eval` to score the agent through all judges.
+</td>
+<td width="33%">
 
-### For everyone: Web UI
-
+**Explore Demos**
 ```bash
 pip install -e ".[dev]"
 grounded-evals serve
 ```
+Open `localhost:8080`
+17 pre-loaded scenarios
 
-Open `http://localhost:8080` — 17 pre-loaded demo scenarios, no LLM calls needed.
-
----
-
-## What each step produces
-
-| Step | Who | Input | Output |
-|------|-----|-------|--------|
-| 1. Define | Domain Expert | "It's a pharmacy assistant for patients" | Bounded context in `session.json` |
-| 2. Prompt | Domain Expert | Collaborative drafting | System prompt + safety rules |
-| 3. Deploy | Domain Expert | One command | Live agent on AgentCore |
-| 4. Test | Domain Expert | Coach proposes queries | 20 golden queries + agent responses |
-| 5. Judge | Domain Expert | ✓/⚠/✗ per response | Error codes + G-Eval rubric |
-| 6. Ship | ML Engineer | `grounded-evals mlflow` | SageMaker experiment + CI/CD gates |
-
-The domain expert never touches MLflow. The ML engineer never touches the golden dataset. Each works in their tool, connected by `session.json`.
+</td>
+</tr>
+</table>
 
 ---
 
-## What the domain expert discovers
+## What the Domain Expert Discovers
 
 We tested across 4 domains. In every case, the expert caught failures an engineer would miss:
 
 | Domain | Error Code | What Happened | Why Only an Expert Catches It |
 |--------|-----------|---------------|-------------------------------|
-| Pharmacy | `dosage_unit_confusion` | Agent said "mg" when context suggests "mcg" | 1000x dosage error — potentially fatal |
-| Insurance | `coverage_hallucination` | Assumed policy exists without checking | Could lead policyholder to believe they're covered |
-| Tax | `incomplete_guidance` | Didn't recommend CPA for $200K scenario | Liability issue in tax advice |
-| Immigration | `bar_misapplication` | Said 3-year bar applies to 90-day overstay | Bar only triggers at 180+ days (INA §212(a)(9)(B)) |
+| 💊 Pharmacy | `dosage_unit_confusion` | Said "mg" when context suggests "mcg" | 1000x error — potentially fatal |
+| 🏠 Insurance | `coverage_hallucination` | Assumed policy exists without checking | Policyholder believes they're covered |
+| 💰 Tax | `incomplete_guidance` | Didn't recommend CPA for $200K scenario | Liability issue in tax advice |
+| 🛂 Immigration | `bar_misapplication` | Said 3-year bar applies to 90-day overstay | Bar triggers at 180+ days (INA §212(a)(9)(B)) |
 
 These aren't generic "hallucination" labels. They're domain-specific failure modes in the expert's own vocabulary — and they become the criteria in the deployed judge.
 
 ---
 
-## The AWS-native stack
+## Architecture
 
-```
-Claude Code (/gedd skill)
-  └── Domain Expert conversation → session.json
-                    │
-                    │  grounded-evals mlflow --tracking-uri ARN
-                    ▼
-Amazon SageMaker MLflow (managed tracking server)
-  ├── Custom judges (make_judge from error codes)
-  ├── Eval datasets (golden queries + expectations)
-  ├── Metrics (human_tsr, error_code_count)
-  └── Auth: IAM SigV4 (via sagemaker-mlflow plugin)
-                    │
-                    ▼
-Amazon Bedrock
-  ├── AgentCore (deployed agent runtime)
-  └── Claude Haiku 4.5 (inference for agent + judges)
+```mermaid
+flowchart LR
+    CC["Claude Code<br/><i>/gedd skill</i>"] --> SJ["session.json"]
+    SJ --> CLI["grounded-evals mlflow"]
+    CLI --> SM["SageMaker MLflow<br/><i>Experiments + Judges</i>"]
+    CLI --> BR["Bedrock<br/><i>AgentCore + Claude</i>"]
+    SM --> CICD["CI/CD<br/><i>Regression gates</i>"]
+    CICD --> BR
 ```
 
-No external services. No API keys to rotate. All IAM.
+All AWS-native. IAM for auth. S3 for artifacts. No external services.
 
 ---
 
-## CI/CD integration
-
-```yaml
-# .github/workflows/agent-eval.yml
-- run: |
-    grounded-evals mlflow \
-      --session session.json \
-      --tracking-uri ${{ secrets.SAGEMAKER_MLFLOW_ARN }} \
-      --run-eval
-```
-
-Every push that changes the agent triggers the eval pipeline. If TSR drops below 95%, the deploy is blocked.
-
----
-
-## 17 demo scenarios
+## 17 Demo Scenarios
 
 No LLM calls needed. Each is pre-loaded with golden queries, annotations, error codes, and a generated judge.
+
+<details>
+<summary><b>View all 17 demos</b></summary>
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
@@ -181,9 +209,11 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 | **MigrateBot** | Immigration | Asylum deadline miss, bar misapplication |
 | **EnergyBot** | Energy/utilities | Solar ITC outdated, NEM 3.0 confusion |
 
+</details>
+
 ---
 
-## CLI reference
+## CLI Reference
 
 | Command | What it does |
 |---------|-------------|
@@ -201,34 +231,16 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 | `coverage` | Bar-chart breakdown by category |
 | `compare` | Check if a new prompt adds unique coverage |
 
-```bash
-grounded-evals --help
-```
-
 ---
 
-## Why this works
+## Why This Works
 
 Most eval tools ask: *what should we measure?* GEDD asks: *what is actually happening?*
 
 - **You can't evaluate what you haven't observed.** Pre-baked rubrics miss your agent's unique failures.
-- **Criteria should be weighted by evidence.** A dosage unit confusion isn't the same severity as a tone slip.
-- **Your evaluation evolves with the agent.** New failure modes surface; the methodology absorbs them.
+- **Criteria are weighted by evidence.** A dosage unit confusion isn't the same severity as a tone slip.
+- **Your evaluation evolves with the agent.** The flywheel absorbs new failure modes naturally.
 - **Your work becomes load-bearing.** The judge is in *your* domain vocabulary, not generic "helpfulness 1-5."
-
-The methodology is grounded theory — the same discipline social scientists use to find patterns in human data. We use it to find patterns in agent failures.
-
----
-
-## Guides
-
-| Guide | For |
-|-------|-----|
-| [Pipeline Guide](grounded-evals/docs/pipeline-guide.md) | Full two-persona workflow with CI/CD YAML |
-| [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | End-to-end walkthrough for PMs |
-| [PM → Production Judge](grounded-evals/docs/pm-to-ml-llm-judge.md) | ML engineer: turn annotations into CI judge |
-| [Cohen's Kappa](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | Calibrate judge-human agreement (κ ≥ 0.80) |
-| [Building an LLM Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Rubric design, weighting, few-shot calibration |
 
 ---
 
@@ -238,8 +250,4 @@ If GEDD helped you find what your agent gets wrong, **[a star](https://github.co
 
 ---
 
-## License
-
-MIT-0. See [LICENSE](LICENSE).
-
-Security issues: see [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications).
+License: MIT-0. See [LICENSE](LICENSE). Security: see [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications).
