@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -809,26 +810,56 @@ def analyze(session: str, llm: bool, output: str | None) -> None:
 @click.option("--results", "-r", default="eval_results.json", show_default=True)
 @click.option("--experiment", "-e", default=None,
               help="MLflow experiment name (default: gedd-<agent_name>)")
+@click.option("--tracking-uri", "-t", default=None,
+              help="MLflow tracking URI or SageMaker ARN (default: env MLFLOW_TRACKING_URI)")
 @click.option("--run-eval", is_flag=True,
-              help="Run evaluation against the agent (requires predict_fn)")
-def mlflow_export(session: str, results: str, experiment: str | None, run_eval: bool) -> None:
-    """Export GEDD session to MLflow — judges, dataset, and optionally run evals.
+              help="Run evaluation against the agent via Bedrock")
+def mlflow_export(session: str, results: str, experiment: str | None,
+                  tracking_uri: str | None, run_eval: bool) -> None:
+    """Export GEDD session to MLflow/SageMaker — judges, dataset, and eval pipeline.
 
     \b
-    Creates:
-      - MLflow experiment with GEDD metadata
-      - Custom judges from your error codes (via make_judge)
-      - Evaluation dataset from golden queries
-      - Human feedback from annotations (for judge alignment)
+    Two-persona workflow:
+      Domain Expert: runs /gedd skill → produces session.json
+      ML Engineer:   runs this command → creates MLflow eval pipeline
 
-    Requires: pip install mlflow>=3.0
+    \b
+    Creates in MLflow:
+      - Experiment with GEDD metadata and agent lineage
+      - Custom LLM judges from domain expert's error codes
+      - Evaluation dataset from golden queries
+      - Human feedback baseline from annotations
+
+    \b
+    SageMaker integration:
+      pip install sagemaker-mlflow
+      grounded-evals mlflow --tracking-uri arn:aws:sagemaker:us-east-1:ACCT:mlflow/SERVER
+
+    Requires: pip install mlflow>=3.0 (+ sagemaker-mlflow for AWS)
     """
     try:
         import mlflow
         from mlflow.genai.judges import make_judge
     except ImportError:
-        click.echo("MLflow not installed. Run: pip install mlflow>=3.0", err=True)
+        click.echo("MLflow not installed. Run: pip install 'mlflow>=3.0'", err=True)
         sys.exit(1)
+
+    # ── 0. Connect to tracking server ──
+    uri = tracking_uri or os.environ.get("MLFLOW_TRACKING_URI", "")
+    if uri:
+        is_sagemaker = uri.startswith("arn:aws:sagemaker")
+        if is_sagemaker:
+            try:
+                import sagemaker_mlflow  # noqa: F401
+            except ImportError:
+                click.echo(
+                    "SageMaker MLflow plugin required for ARN tracking URIs.\n"
+                    "  Run: pip install sagemaker-mlflow", err=True)
+                sys.exit(1)
+        mlflow.set_tracking_uri(uri)
+        click.echo(f"\n  Tracking: {'SageMaker' if is_sagemaker else 'MLflow'} @ {uri[:60]}...")
+    else:
+        click.echo("\n  Tracking: local (set --tracking-uri or MLFLOW_TRACKING_URI for remote)")
 
     state, _ = _load_state(session)
     agent_name = state.session.agent_spec.name or "agent"
@@ -836,7 +867,7 @@ def mlflow_export(session: str, results: str, experiment: str | None, run_eval: 
 
     # ── 1. Create/set experiment ──
     mlflow.set_experiment(exp_name)
-    click.echo(f"\n  MLflow experiment: {exp_name}")
+    click.echo(f"  Experiment: {exp_name}")
 
     # ── 2. Build eval dataset from golden queries ──
     prompts = state.session.golden_prompts
@@ -855,7 +886,7 @@ def mlflow_export(session: str, results: str, experiment: str | None, run_eval: 
         }
         for p in prompts
     ]
-    click.echo(f"  Eval dataset: {len(eval_dataset)} test cases")
+    click.echo(f"  Dataset: {len(eval_dataset)} test cases")
 
     # ── 3. Build custom judges from error codes ──
     from collections import Counter
@@ -868,7 +899,7 @@ def mlflow_export(session: str, results: str, experiment: str | None, run_eval: 
                 annotations.append(r)
 
     error_counts = Counter(a.get("error_code") for a in annotations if a.get("error_code"))
-    dimensions = {}
+    dimensions: dict[str, list[str]] = {}
     for code in error_counts:
         dim = _infer_dimension(code)
         dimensions.setdefault(dim, []).append(code)
@@ -881,72 +912,77 @@ def mlflow_export(session: str, results: str, experiment: str | None, run_eval: 
             instructions=(
                 f"You are evaluating an AI agent called {agent_name}.\n\n"
                 f"Evaluate the {dim} dimension of the agent's response.\n"
-                f"Known failure patterns in this dimension: {codes_str}\n\n"
+                f"Known failure patterns: {codes_str}\n\n"
                 f"User's message: {{{{ inputs }}}}\n"
                 f"Agent's response: {{{{ outputs }}}}\n"
                 f"Expected behavior: {{{{ expectations }}}}\n\n"
-                f"Score the response on {dim}. Consider whether any of these "
-                f"known failure patterns ({codes_str}) are present."
+                f"Score 1-5 on {dim}. Deduct points if these failure patterns "
+                f"({codes_str}) are present.\n"
+                f"5=Excellent, 4=Good, 3=Acceptable, 2=Poor, 1=Failing"
             ),
             feedback_value_type=int,
         )
         judges.append(judge)
-        click.echo(f"  Judge: gedd_{dim} (codes: {codes_str})")
+        click.echo(f"  Judge: gedd_{dim} (patterns: {codes_str})")
 
-    # Also add an overall correctness judge
     overall_judge = make_judge(
-        name="gedd_overall",
+        name="gedd_correctness",
         instructions=(
-            f"You are evaluating an AI agent called {agent_name}.\n\n"
-            f"Compare the agent's response against the expected behavior.\n\n"
+            f"You are evaluating {agent_name}.\n\n"
             f"User's message: {{{{ inputs }}}}\n"
             f"Agent's response: {{{{ outputs }}}}\n"
             f"Expected behavior: {{{{ expectations }}}}\n\n"
             f"Is the response correct, partially correct, or incorrect?"
         ),
-        feedback_value_type="Literal['correct', 'partial', 'incorrect']",
+        feedback_value_type=bool,
     )
     judges.append(overall_judge)
-    click.echo(f"  Judge: gedd_overall (correctness)")
-    click.echo(f"\n  Total judges: {len(judges)}")
+    click.echo(f"  Judge: gedd_correctness")
+    click.echo(f"  Total: {len(judges)} judges")
 
-    # ── 4. Log artifacts ──
-    with mlflow.start_run(run_name="gedd-export") as run:
-        # Log GEDD metadata
+    # ── 4. Log to MLflow ──
+    with mlflow.start_run(run_name="gedd-pipeline-export") as run:
         mlflow.log_params({
             "agent_name": agent_name,
             "domain": state.session.agent_spec.domain_context or "general",
+            "system_prompt_chars": len(state.session.agent_spec.system_prompt),
             "total_queries": len(prompts),
             "total_annotations": len(state.annotations),
             "error_codes": json.dumps(dict(error_counts)),
+            "dimensions": json.dumps(list(dimensions.keys())),
+            "source": "gedd",
         })
 
-        # Log golden dataset as artifact
+        # Log metrics from human annotations
+        if state.annotations:
+            correct = sum(1 for a in state.annotations if a.get("annotation") == "correct")
+            total = len(state.annotations)
+            mlflow.log_metrics({
+                "human_tsr": correct / total if total else 0,
+                "human_annotations": total,
+                "error_code_count": len(error_counts),
+                "categories_covered": len(set(p.rationale for p in prompts)),
+            })
+
+        # Log artifacts
         dataset_path = Path("gedd_eval_dataset.json")
         dataset_path.write_text(json.dumps(eval_dataset, indent=2))
         mlflow.log_artifact(str(dataset_path))
         dataset_path.unlink()
 
-        # Log judge prompt if it exists
         judge_path = Path("judge_prompt.md")
         if judge_path.exists():
             mlflow.log_artifact(str(judge_path))
 
-        # Log human annotations as metrics
-        if state.annotations:
-            correct = sum(1 for a in state.annotations if a.get("annotation") == "correct")
-            total = len(state.annotations)
-            mlflow.log_metrics({
-                "human_correct_rate": correct / total if total else 0,
-                "human_annotations_total": total,
-                "error_code_count": len(error_counts),
-            })
+        session_path = Path(session)
+        if session_path.exists():
+            mlflow.log_artifact(str(session_path))
 
-        click.echo(f"\n  MLflow run: {run.info.run_id}")
+        click.echo(f"\n  Run ID: {run.info.run_id}")
 
-    # ── 5. Optionally run evaluation ──
+    # ── 5. Run evaluation if requested ──
     if run_eval:
-        click.echo("\n  Running MLflow evaluation...")
+        click.echo("\n  Running evaluation pipeline...")
         from grounded_evals.llm.client import get_default_client, get_model_id, traced_eval_call
 
         system_prompt = state.session.agent_spec.system_prompt
@@ -968,16 +1004,26 @@ def mlflow_export(session: str, results: str, experiment: str | None, run_eval: 
             predict_fn=predict_fn,
             scorers=judges,
         )
-        click.echo(f"  Evaluation complete. Results logged to MLflow.")
-        click.echo(f"  View: mlflow ui")
+        click.echo("  ✓ Evaluation complete — results logged to MLflow")
     else:
-        click.echo(f"\n  To run evaluation: grounded-evals mlflow -s {session} --run-eval")
+        click.echo(f"\n  To run eval: grounded-evals mlflow -s {session} --run-eval")
 
-    click.echo(f"\n  ✓ GEDD → MLflow export complete")
-    click.echo(f"    Experiment: {exp_name}")
-    click.echo(f"    Dataset: {len(eval_dataset)} cases")
-    click.echo(f"    Judges: {len(judges)} custom scorers")
-    click.echo(f"    View: mlflow ui\n")
+    # ── 6. Summary ──
+    click.echo(f"\n  {'━' * 50}")
+    click.echo(f"  ✓ GEDD → MLflow pipeline ready")
+    click.echo(f"  {'━' * 50}")
+    click.echo(f"  Experiment : {exp_name}")
+    click.echo(f"  Dataset    : {len(eval_dataset)} golden queries")
+    click.echo(f"  Judges     : {len(judges)} custom scorers")
+    click.echo(f"  Annotations: {len(state.annotations)} human labels")
+    if uri and uri.startswith("arn:aws:sagemaker"):
+        click.echo(f"  Backend    : Amazon SageMaker Managed MLflow")
+    click.echo(f"\n  ML Engineer next steps:")
+    click.echo(f"    1. mlflow ui                    # view experiment")
+    click.echo(f"    2. Add to CI: grounded-evals mlflow -s {session} --run-eval")
+    click.echo(f"    3. Set regression gate: TSR ≥ 95% on happy_path")
+    click.echo(f"    4. Monitor judge-human agreement (target κ ≥ 0.80)")
+    click.echo()
 
 
 if __name__ == "__main__":
