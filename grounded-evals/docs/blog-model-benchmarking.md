@@ -252,6 +252,43 @@ What you get: A domain-specific benchmark that tells you which model is actually
 
 ---
 
+## The Flywheel: Why This Benchmark Gets Better Every Month
+
+This isn't a one-shot comparison. It's a flywheel.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                                                              │
+│   Domain Expert          ML Engineer          Production     │
+│   builds golden    →     runs benchmark   →   ships best     │
+│   dataset (12 queries)   across models        model          │
+│                                                              │
+│        ↑                                          │          │
+│        │                                          │          │
+│        └──── new failure discovered ◄─────────────┘          │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Month 1:** Expert builds 12 queries. Haiku 4.5 wins. Ships.
+
+**Month 2:** Production surfaces a new failure — FoodBot doesn't mention that reheated food must reach 165°F within 2 hours (not just "reheat thoroughly"). Expert runs `/gedd`, says "add more," creates 3 new queries targeting reheat protocols. Benchmark grows to 15 queries. Re-run against all models. Haiku still wins — but now the judge catches reheat failures too.
+
+**Month 3:** Anthropic releases Claude Sonnet 4.7. ML engineer re-runs the benchmark — same 15 queries, new model. Sonnet 4.7 scores 88% (vs Haiku's 81%). The expert annotates the differences. If Sonnet 4.7 is better on the criteria that matter, swap it in. If not, stay on Haiku.
+
+**Month 6:** The benchmark has grown to 25 queries and 6 error codes. It encodes every failure FoodBot has ever had. No new model can ship without passing this gauntlet — and the gauntlet was built entirely by the person who knows food safety, not the person who knows PyTorch.
+
+**The flywheel compounds:**
+- More production traffic → more failures discovered
+- More failures → more golden queries
+- More golden queries → more precise model selection
+- More precise selection → fewer production failures
+- Fewer failures → higher trust → more traffic
+
+The benchmark IS the institutional knowledge. Models come and go. The benchmark persists.
+
+---
+
 ## The Takeaway
 
 Generic benchmarks answer: "Which model is smartest?"
