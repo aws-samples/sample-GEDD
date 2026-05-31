@@ -804,5 +804,181 @@ def analyze(session: str, llm: bool, output: str | None) -> None:
         click.echo(f"  Analysis saved → {output}")
 
 
+@main.command("mlflow")
+@click.option("--session", "-s", default="session.json", show_default=True)
+@click.option("--results", "-r", default="eval_results.json", show_default=True)
+@click.option("--experiment", "-e", default=None,
+              help="MLflow experiment name (default: gedd-<agent_name>)")
+@click.option("--run-eval", is_flag=True,
+              help="Run evaluation against the agent (requires predict_fn)")
+def mlflow_export(session: str, results: str, experiment: str | None, run_eval: bool) -> None:
+    """Export GEDD session to MLflow — judges, dataset, and optionally run evals.
+
+    \b
+    Creates:
+      - MLflow experiment with GEDD metadata
+      - Custom judges from your error codes (via make_judge)
+      - Evaluation dataset from golden queries
+      - Human feedback from annotations (for judge alignment)
+
+    Requires: pip install mlflow>=3.0
+    """
+    try:
+        import mlflow
+        from mlflow.genai.judges import make_judge
+    except ImportError:
+        click.echo("MLflow not installed. Run: pip install mlflow>=3.0", err=True)
+        sys.exit(1)
+
+    state, _ = _load_state(session)
+    agent_name = state.session.agent_spec.name or "agent"
+    exp_name = experiment or f"gedd-{agent_name.lower().replace(' ', '-')}"
+
+    # ── 1. Create/set experiment ──
+    mlflow.set_experiment(exp_name)
+    click.echo(f"\n  MLflow experiment: {exp_name}")
+
+    # ── 2. Build eval dataset from golden queries ──
+    prompts = state.session.golden_prompts
+    if not prompts:
+        click.echo("  No golden queries. Run the GEDD workflow first.", err=True)
+        sys.exit(1)
+
+    eval_dataset = [
+        {
+            "inputs": {"messages": [{"role": "user", "content": p.prompt_text}]},
+            "expectations": {
+                "expected_behavior": p.expected_behavior,
+                "category": p.rationale,
+                "is_adversarial": p.is_adversarial,
+            },
+        }
+        for p in prompts
+    ]
+    click.echo(f"  Eval dataset: {len(eval_dataset)} test cases")
+
+    # ── 3. Build custom judges from error codes ──
+    from collections import Counter
+    annotations = list(state.annotations)
+
+    rpath = Path(results)
+    if rpath.exists():
+        for r in json.loads(rpath.read_text()):
+            if r.get("error_code"):
+                annotations.append(r)
+
+    error_counts = Counter(a.get("error_code") for a in annotations if a.get("error_code"))
+    dimensions = {}
+    for code in error_counts:
+        dim = _infer_dimension(code)
+        dimensions.setdefault(dim, []).append(code)
+
+    judges = []
+    for dim, codes in dimensions.items():
+        codes_str = ", ".join(codes)
+        judge = make_judge(
+            name=f"gedd_{dim}",
+            instructions=(
+                f"You are evaluating an AI agent called {agent_name}.\n\n"
+                f"Evaluate the {dim} dimension of the agent's response.\n"
+                f"Known failure patterns in this dimension: {codes_str}\n\n"
+                f"User's message: {{{{ inputs }}}}\n"
+                f"Agent's response: {{{{ outputs }}}}\n"
+                f"Expected behavior: {{{{ expectations }}}}\n\n"
+                f"Score the response on {dim}. Consider whether any of these "
+                f"known failure patterns ({codes_str}) are present."
+            ),
+            feedback_value_type=int,
+        )
+        judges.append(judge)
+        click.echo(f"  Judge: gedd_{dim} (codes: {codes_str})")
+
+    # Also add an overall correctness judge
+    overall_judge = make_judge(
+        name="gedd_overall",
+        instructions=(
+            f"You are evaluating an AI agent called {agent_name}.\n\n"
+            f"Compare the agent's response against the expected behavior.\n\n"
+            f"User's message: {{{{ inputs }}}}\n"
+            f"Agent's response: {{{{ outputs }}}}\n"
+            f"Expected behavior: {{{{ expectations }}}}\n\n"
+            f"Is the response correct, partially correct, or incorrect?"
+        ),
+        feedback_value_type="Literal['correct', 'partial', 'incorrect']",
+    )
+    judges.append(overall_judge)
+    click.echo(f"  Judge: gedd_overall (correctness)")
+    click.echo(f"\n  Total judges: {len(judges)}")
+
+    # ── 4. Log artifacts ──
+    with mlflow.start_run(run_name="gedd-export") as run:
+        # Log GEDD metadata
+        mlflow.log_params({
+            "agent_name": agent_name,
+            "domain": state.session.agent_spec.domain_context or "general",
+            "total_queries": len(prompts),
+            "total_annotations": len(state.annotations),
+            "error_codes": json.dumps(dict(error_counts)),
+        })
+
+        # Log golden dataset as artifact
+        dataset_path = Path("gedd_eval_dataset.json")
+        dataset_path.write_text(json.dumps(eval_dataset, indent=2))
+        mlflow.log_artifact(str(dataset_path))
+        dataset_path.unlink()
+
+        # Log judge prompt if it exists
+        judge_path = Path("judge_prompt.md")
+        if judge_path.exists():
+            mlflow.log_artifact(str(judge_path))
+
+        # Log human annotations as metrics
+        if state.annotations:
+            correct = sum(1 for a in state.annotations if a.get("annotation") == "correct")
+            total = len(state.annotations)
+            mlflow.log_metrics({
+                "human_correct_rate": correct / total if total else 0,
+                "human_annotations_total": total,
+                "error_code_count": len(error_counts),
+            })
+
+        click.echo(f"\n  MLflow run: {run.info.run_id}")
+
+    # ── 5. Optionally run evaluation ──
+    if run_eval:
+        click.echo("\n  Running MLflow evaluation...")
+        from grounded_evals.llm.client import get_default_client, get_model_id, traced_eval_call
+
+        system_prompt = state.session.agent_spec.system_prompt
+        if not system_prompt:
+            click.echo("  No system prompt. Cannot run eval.", err=True)
+            sys.exit(1)
+
+        client = get_default_client()
+        model_id = get_model_id()
+
+        def predict_fn(inputs: dict) -> dict:
+            messages = inputs.get("messages", [])
+            query = messages[-1]["content"] if messages else ""
+            resp = traced_eval_call(client, model_id, system_prompt, query)
+            return {"messages": [{"role": "assistant", "content": resp.content[0].text}]}
+
+        eval_result = mlflow.genai.evaluate(
+            data=eval_dataset,
+            predict_fn=predict_fn,
+            scorers=judges,
+        )
+        click.echo(f"  Evaluation complete. Results logged to MLflow.")
+        click.echo(f"  View: mlflow ui")
+    else:
+        click.echo(f"\n  To run evaluation: grounded-evals mlflow -s {session} --run-eval")
+
+    click.echo(f"\n  ✓ GEDD → MLflow export complete")
+    click.echo(f"    Experiment: {exp_name}")
+    click.echo(f"    Dataset: {len(eval_dataset)} cases")
+    click.echo(f"    Judges: {len(judges)} custom scorers")
+    click.echo(f"    View: mlflow ui\n")
+
+
 if __name__ == "__main__":
     main()

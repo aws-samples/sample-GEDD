@@ -25,6 +25,9 @@ dev = [
     "mypy>=2.1.0",
     "ruff>=0.15.14",
 ]
+mlflow = [
+    "mlflow>=3.0.0",
+]
 deploy = [
     "aws-cdk-lib>=2.150.0",
     "constructs>=10.0",

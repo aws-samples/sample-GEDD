@@ -133,33 +133,67 @@ grounded-evals judge --session session.json --results eval_results.json --output
 Show the judge prompt criteria and weights.
 
 ### Step 6 — Export & Redeploy
-The final step: export the golden dataset and redeploy with the judge as a guardrail.
+The final step: export the golden dataset, connect to MLflow for production monitoring, and redeploy.
 
 1. **Export golden dataset:**
 ```bash
 grounded-evals export --session session.json --format jsonl --output golden_dataset.jsonl
 ```
 
-2. **Redeploy with judge:**
+2. **Build LLM-as-a-Judge:**
+```bash
+grounded-evals judge --session session.json --results eval_results.json --output judge_prompt.md
+```
+
+3. **Connect to MLflow** (production eval pipeline):
+```bash
+grounded-evals mlflow --session session.json --results eval_results.json
+```
+
+This creates:
+- An MLflow experiment with your agent's metadata
+- Custom judges (one per error dimension) using `make_judge()`
+- An evaluation dataset from your golden queries
+- Human feedback from your annotations (for judge alignment)
+
+Explain to the user:
+```
+✓ MLflow pipeline connected!
+
+  Your GEDD artifacts are now in MLflow:
+    Experiment: gedd-insurebot
+    Judges: gedd_accuracy, gedd_completeness, gedd_overall
+    Dataset: 20 test cases with expectations
+
+  The ML engineer can now:
+    • Run `grounded-evals mlflow --run-eval` to score the agent
+    • Add regression gates in CI/CD
+    • Monitor judge-human agreement over time
+    • Rotate new test cases from production failures
+```
+
+4. **Redeploy with judge:**
 ```bash
 bash scripts/deploy-agent.sh
 ```
 
-3. Show completion:
+5. Show completion:
 ```
 ✓ Pipeline complete!
 
-  Artifacts:
+  Domain Expert artifacts:
     golden_dataset.jsonl  — 20 test cases across 7 categories
-    eval_results.json     — agent responses with annotations
-    judge_prompt.md       — G-Eval rubric (deployable)
+    judge_prompt.md       — G-Eval rubric (your domain knowledge, codified)
+
+  ML Engineer artifacts:
+    MLflow experiment     — custom judges, eval dataset, human feedback
+    CI/CD ready           — `grounded-evals mlflow --run-eval` in pipeline
 
   Deployed:
-    Agent ID: <id>
+    Agent ID: <id> (AgentCore)
     Judge: integrated as online eval
 
-  Next: Run `grounded-evals serve` to open the web UI,
-        or add this to CI: grounded-evals eval --session session.json
+  The eval pipeline IS the product. The agent is just the thing it produces.
 ```
 
 ---
