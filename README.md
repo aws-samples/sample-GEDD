@@ -11,7 +11,8 @@ GEDD is the tool for *before* you have a rubric. A domain expert has a conversat
 
 > **The eval pipeline is the product. The agent is just the thing it produces.**
 
-![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
+<img width="4644" height="5854" alt="Quality Metrics Pipeline-2026-05-31-074649" src="https://github.com/user-attachments/assets/c2b6c3b4-8b56-4eea-a221-c0287a56fb7d" />
+
 
 📖 **Read the why:** [Why Grounded Theory? for reliable AI Agents](https://balachanderkeelapudi.substack.com/p/why-grounded-theory-for-reliable)
 
