@@ -1,4 +1,4 @@
-<img width="119" height="150" alt="Quality Metrics Pipeline-2026-05-31-075314" src="https://github.com/user-attachments/assets/ef93c474-5b4c-4ef5-a1f0-f29fae6d3103" /># GEDD — find what your AI agent gets wrong
+# GEDD — find what your AI agent gets wrong
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
