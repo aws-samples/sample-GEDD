@@ -1093,21 +1093,21 @@ The PM's 90 minutes of observation of LexBot failures — phantom citations, UPL
 
 ## Try It
 
-The LexBot demo in GEDD ships with all the artifacts described in this post — 7 golden queries spanning adversarial, edge-case, and multi-turn scenarios; 6 annotations; 6 codebook entries; 5 coding annotations; the full paradigm model; and the generated judge prompt. Open the demo and click through each tab to see the full pipeline.
-
-To run it against your own legal AI:
+This scenario is available in GEDD with all artifacts pre-populated.
 
 ```bash
-cd grounded-evals
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-python -m grounded_evals.app
+# Domain Expert: run the full pipeline
+cd grounded-evals && claude
+# Then invoke /gedd
+
+# ML Engineer: connect to SageMaker MLflow
+grounded-evals mlflow --session session.json --tracking-uri YOUR_ARN --run-eval
+
+# Or explore in the web UI
+grounded-evals serve
 ```
 
-Load LexBot from the home page → Eval tab → Build Judge → Export. The exported prompt is exactly what Step 4 produces above.
-
-To test the phantom citation hard-fail specifically, try running the Mitchell v. Harrington query against any LLM that doesn't have citation verification. The pattern-match failure is remarkably consistent — the model generates a plausible holding because that's what case law looks like in the training distribution. The judge catches it. The question is whether your CI does too.
+Load the demo from the home page to explore pre-populated golden queries, annotations, error codes, and generated judge.
 
 ---
-
 *GEDD is open source under MIT-0. [github.com/aws-samples/sample-GEDD](https://github.com/aws-samples/sample-GEDD)*

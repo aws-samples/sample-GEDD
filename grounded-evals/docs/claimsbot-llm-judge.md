@@ -1260,28 +1260,21 @@ Every time the judge fires a hard-fail on "no identity verification," that's ano
 
 ## Try It
 
-To run ClaimsBot evaluation against your own defense claims agent:
+This scenario is available in GEDD with all artifacts pre-populated.
 
 ```bash
-cd grounded-evals
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
+# Domain Expert: run the full pipeline
+cd grounded-evals && claude
+# Then invoke /gedd
 
-# Set your API key
-export ANTHROPIC_API_KEY=your-key-here
+# ML Engineer: connect to SageMaker MLflow
+grounded-evals mlflow --session session.json --tracking-uri YOUR_ARN --run-eval
 
-# Run the eval suite
-python ci/eval_claimsbot.py
+# Or explore in the web UI
+grounded-evals serve
 ```
 
-For AWS Bedrock instead of Anthropic direct:
-
-```bash
-# Ensure AWS credentials are configured for Bedrock access
-export AWS_REGION=us-east-1
-# Modify ci/eval_claimsbot.py to use bedrock-runtime client
-```
+Load the demo from the home page to explore pre-populated golden queries, annotations, error codes, and generated judge.
 
 ---
-
 *GEDD is open source under MIT-0. [github.com/aws-samples/sample-GEDD](https://github.com/aws-samples/sample-GEDD)*

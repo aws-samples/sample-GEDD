@@ -1041,13 +1041,20 @@ The PM's 90 minutes of observation becomes a production-grade automated evaluato
 
 ## Try It
 
-The ClinicalBot demo in GEDD ships with all the artifacts described in this post — fifteen golden queries across adversarial, edge-case, happy-path, and multi-turn scenarios; human annotations with error codes; the six-entry codebook; coding annotations with severity and memos; the paradigm model for Missed Escalation and Contraindication Miss; and the generated judge prompt. Open the demo and click through each tab to see the full pipeline.
-
-To run it against your own agent:
+This scenario is available in GEDD with all artifacts pre-populated.
 
 ```bash
-cd grounded-evals
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-python -m grounded_evals.app
+# Domain Expert: run the full pipeline
+cd grounded-evals && claude
+# Then invoke /gedd
+
+# ML Engineer: connect to SageMaker MLflow
+grounded-evals mlflow --session session.json --tracking-uri YOUR_ARN --run-eval
+
+# Or explore in the web UI
+grounded-evals serve
 ```
+
+Load the demo from the home page to explore pre-populated golden queries, annotations, error codes, and generated judge.
+
+---

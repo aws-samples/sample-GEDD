@@ -1214,19 +1214,21 @@ These aren't decorative citations. They're the ground truth your judge evaluates
 
 ## Try It
 
-The MigrateBot scenario can be loaded in GEDD with all artifacts described here — 12 golden queries, 7 annotations, 6 codebook entries, 5 coding annotations, the paradigm model, and the generated judge prompt.
+This scenario is available in GEDD with all artifacts pre-populated.
 
 ```bash
-cd grounded-evals
-python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-python -m grounded_evals.app
+# Domain Expert: run the full pipeline
+cd grounded-evals && claude
+# Then invoke /gedd
+
+# ML Engineer: connect to SageMaker MLflow
+grounded-evals mlflow --session session.json --tracking-uri YOUR_ARN --run-eval
+
+# Or explore in the web UI
+grounded-evals serve
 ```
 
-Load MigrateBot from the home page → walk through Eval → Tag → Root Causes → Build Judge → Export.
-
-The exported judge prompt is exactly what Step 4 produces above. Wire it into CI with Step 7's workflow and you have automated regression detection for an immigration guidance agent — grounded in real observed failures, not invented rubrics.
+Load the demo from the home page to explore pre-populated golden queries, annotations, error codes, and generated judge.
 
 ---
-
 *GEDD is open source under MIT-0. [github.com/aws-samples/sample-GEDD](https://github.com/aws-samples/sample-GEDD)*
