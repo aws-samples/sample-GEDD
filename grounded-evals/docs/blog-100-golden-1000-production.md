@@ -1,0 +1,290 @@
+# The 100 Golden + 1,000 Production Architecture for Agent Evaluation
+
+*Your eval dataset should be small and sacred. Your eval coverage should be massive and automated. Here's how to get both — and why the domain expert is the linchpin of the entire system.*
+
+---
+
+## The Two Failure Modes of Agent Evaluation
+
+**Failure Mode 1: Too few evals, all expert-curated.**
+You have 20 golden queries. They're perfect — a DPO wrote each one, validated the expected behavior, annotated the responses. But 20 queries can't catch the long tail. Your agent fails on query patterns nobody anticipated.
+
+**Failure Mode 2: Too many evals, all synthetic.**
+You generated 2,000 test cases with an LLM. Great coverage on paper. But the queries test what the LLM *thinks* might fail — not what *actually* fails in your domain. Your agent passes all 2,000 and still hallucinates retention periods in production.
+
+The right architecture uses both — in different layers, for different purposes, connected by a feedback loop.
+
+---
+
+## The Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                      │
+│  LAYER 1: Golden Dataset                                             │
+│  ─────────────────────                                               │
+│  Size: 100-150 queries                                               │
+│  Source: Domain expert via GEDD                                      │
+│  Quality: Every query personally validated                           │
+│  Purpose: CI/CD gate — blocks bad deploys                            │
+│  Runs: Every push (11 min)                                           │
+│  Cost: $0.26/run                                                     │
+│                                                                      │
+│  This is your OFFLINE eval. It runs before code reaches production.  │
+│                                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  LAYER 2: Production Scoring                                         │
+│  ────────────────────────                                            │
+│  Size: 1,000+ interactions/day                                       │
+│  Source: Real user traffic                                           │
+│  Quality: Scored by judge (generated from Layer 1)                   │
+│  Purpose: Monitor drift, find new failure patterns                   │
+│  Runs: Continuously                                                  │
+│  Cost: ~$0.002/interaction (judge inference only)                    │
+│                                                                      │
+│  This is your ONLINE eval. It watches production 24/7.               │
+│                                                                      │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  LAYER 3: Flywheel                                                   │
+│  ────────────────                                                    │
+│  Direction: Layer 2 failures → domain expert → Layer 1               │
+│  Frequency: Weekly/monthly                                           │
+│  Purpose: Golden dataset grows from real evidence                    │
+│  Gate: Domain expert must validate before promotion                  │
+│                                                                      │
+│  This is what makes the system IMPROVE over time.                    │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Layer 1: The Golden Dataset (Offline Eval)
+
+### What It Is
+
+100-150 queries written by a domain expert who knows what "correct" means in your specific domain. Not generated. Not scraped from production. *Written* — with intent, with expected behaviors, with knowledge of regulatory requirements and edge cases.
+
+### Why It Must Be Small
+
+| Property | Small (100) | Large (1,000) |
+|----------|:-----------:|:-------------:|
+| Expert validates every query | ✅ Feasible (90 min) | ❌ Impossible (15+ hours) |
+| CI/CD runtime | 11 min | 100 min |
+| Developer respects the gate | ✅ Tolerable wait | ❌ Gets bypassed |
+| False positive rate | Low | High (noisy queries trigger false alarms) |
+| Maintenance burden | Low (expert adds 5-10/month) | High (who reviews 1,000 queries for staleness?) |
+
+### Why the Domain Expert Is Critical Here
+
+The golden dataset encodes **offline knowledge** — things the expert knows from years of experience that haven't happened in production yet:
+
+| What the Expert Adds | Why an Engineer Can't |
+|---------------------|----------------------|
+| "A ROPA without retention periods fails an audit" | Engineer sees "comprehensive data mapping" → correct |
+| "Saying mg when you mean mcg is potentially fatal" | Engineer sees "dosage information provided" → correct |
+| "Bad faith allegations require immediate escalation" | Engineer sees "helpful response about insurance" → correct |
+| "The 3-year bar triggers at 180 days, not 90" | Engineer sees "explained overstay consequences" → correct |
+
+These are **pre-production catches**. The expert writes queries that test for failures *before* they happen to real users. That's the entire point of offline eval — catching what production monitoring can't, because it hasn't happened yet.
+
+### How It Works in Practice
+
+```bash
+# Domain expert generates the golden dataset (once, 90 min)
+claude → /gedd
+# "I'm building a privacy assistant for DPOs..."
+# → 109 queries across 7 categories
+
+# ML engineer wires it into CI (once, 5 min)
+grounded-evals mlflow --session session.json --tracking-uri $ARN --run-eval
+
+# CI runs on every push (automated, 11 min)
+# If quality drops below threshold → deploy blocked
+```
+
+---
+
+## Layer 2: Production Scoring (Online Eval)
+
+### What It Is
+
+The judge generated from Layer 1 scores *every* production interaction. No human in the loop. The judge knows what to look for because the domain expert taught it — via error codes and expected behaviors in the golden dataset.
+
+### Why It Must Be Large
+
+Layer 1 catches known failure patterns. Layer 2 catches *unknown* ones — patterns that emerge from real user behavior that nobody anticipated.
+
+A DPO might not think to test "what happens when a user asks about GDPR in Mandarin?" But if 50 users do it this week and the agent hallucinates Chinese data protection law, Layer 2 catches it.
+
+### How the Judge Scales
+
+```python
+# The judge was generated from the golden dataset
+# It encodes the expert's error codes as scoring criteria
+judge = make_judge(
+    name="gedd_quality",
+    instructions="""
+    Known failure patterns: dpia_threshold_miss, retention_period_omission
+    
+    Score 1-5:
+    - Does the response identify mandatory DPIA triggers?
+    - Are retention periods included in data mapping guidance?
+    - Are GDPR article numbers cited?
+    """,
+    feedback_value_type=int,
+)
+
+# Score every production response
+for interaction in production_stream:
+    score = judge(inputs=interaction.query, outputs=interaction.response)
+    log_metric("quality", score.value)
+    
+    if score.value <= 2:
+        flag_for_review(interaction)  # → Flywheel trigger
+```
+
+### The Key Insight
+
+The judge's quality is bounded by the golden dataset's quality. A judge trained on 20 generic queries will score generically. A judge trained on 109 expert-curated queries with specific error codes (`dpia_threshold_miss`, `retention_period_omission`) will score with domain precision.
+
+**Layer 1 quality determines Layer 2 accuracy.** That's why the domain expert's 90 minutes matter more than any amount of synthetic scaling.
+
+---
+
+## Layer 3: The Flywheel
+
+### What It Is
+
+The feedback loop that makes the system improve over time:
+
+```
+Production failure detected (Layer 2)
+    ↓
+Domain expert reviews the failure
+    ↓
+Expert decides: "Yes, this is a real failure pattern"
+    ↓
+Expert names it: "transfer_mechanism_outdated"
+    ↓
+Expert writes 2-3 golden queries targeting this pattern
+    ↓
+Golden dataset grows: 109 → 112
+    ↓
+Judge is regenerated with new error code
+    ↓
+CI/CD now catches this pattern forever
+    ↓
+Production scoring now flags this pattern in real-time
+```
+
+### Why the Domain Expert Gates the Flywheel
+
+Not every production "failure" deserves promotion to the golden dataset. The expert filters:
+
+| Production Signal | Expert Decision | Rationale |
+|-------------------|:---------------:|-----------|
+| Agent scored 2/5 on a query about LGPD (Brazil) | ❌ Don't promote | We only operate in EU — LGPD isn't in scope |
+| Agent cited Article 25 instead of Article 35 for DPIA | ✅ Promote | Wrong article = wrong legal basis = audit failure |
+| Agent gave a long response to a simple question | ❌ Don't promote | Verbose but correct — not a compliance issue |
+| Agent said "consent" when legitimate interest applies | ✅ Promote | Over-cautious legal basis = unnecessary friction for users |
+
+Without the expert gate, the golden dataset fills with noise. With it, every addition is a genuine compliance requirement.
+
+### Growth Rate
+
+| Month | Golden Dataset Size | Error Codes | Source of New Queries |
+|:-----:|:-------------------:|:-----------:|----------------------|
+| 1 | 109 | 2 | Initial GEDD session |
+| 2 | 115 | 3 | EDPB guidance on AI Act |
+| 3 | 122 | 4 | Production: users asking about Schrems III |
+| 4 | 128 | 5 | Supervisory authority fine (new violation pattern) |
+| 6 | 140 | 7 | Accumulated production discoveries |
+| 12 | 180 | 12 | Full regulatory year covered |
+
+The dataset grows at ~5-10 queries/month — the rate at which real new patterns emerge. Not faster (that's noise). Not slower (that's neglect).
+
+---
+
+## Why This Architecture Works
+
+### For the Domain Expert
+
+- **Time investment:** 90 minutes initially, then 15-30 min/month to review production failures
+- **No code required:** Uses `/gedd` in Claude Code for everything
+- **Their knowledge becomes permanent:** Error codes and golden queries persist across team changes
+- **They control quality:** Nothing enters the golden dataset without their validation
+
+### For the ML Engineer
+
+- **Clear contract:** Receives `session.json`, wires it into CI/CD
+- **Scale without curation burden:** Judge handles 1,000+ daily interactions automatically
+- **Measurable improvement:** Track golden dataset growth, judge accuracy, production failure rate
+- **Model-agnostic:** Same golden dataset benchmarks any model — swap models without rebuilding evals
+
+### For the Organization
+
+- **Audit-ready:** "Here are 140 expert-validated test cases our agent passes on every deploy"
+- **Regression-proof:** Every past failure is permanently encoded as a test
+- **Cost-efficient:** $0.26/CI run + ~$60/month production scoring
+- **Improves with time:** The flywheel means the system gets better, not stale
+
+---
+
+## The Anti-Patterns This Architecture Prevents
+
+| Anti-Pattern | What Goes Wrong | How This Architecture Fixes It |
+|-------------|-----------------|-------------------------------|
+| "Generate 1,000 synthetic evals" | Tests what LLM thinks matters, not what actually matters | Layer 1: expert writes what matters |
+| "Only test in CI" | Misses production-only failure patterns | Layer 2: scores all production traffic |
+| "Only monitor production" | Reactive — catches failures after users are affected | Layer 1: catches failures before deploy |
+| "Let the engineer write evals" | Misses domain-specific compliance requirements | Expert writes Layer 1, engineer wires Layer 2 |
+| "Set it and forget it" | Eval suite goes stale as regulations change | Layer 3: flywheel keeps it current |
+| "More data = better" | Noise drowns signal, CI takes too long | Layer 1 stays small, Layer 2 provides scale |
+
+---
+
+## Implementation Checklist
+
+```
+Week 1:
+  □ Domain expert runs /gedd (90 min) → session.json
+  □ ML engineer runs: grounded-evals mlflow --session session.json --run-eval
+  □ CI/CD gate live (Layer 1)
+
+Week 2:
+  □ Deploy judge to production scoring pipeline (Layer 2)
+  □ Set alert threshold: score ≤ 2 → flag for expert review
+  □ Dashboard: daily quality distribution
+
+Week 3:
+  □ Expert reviews first batch of production flags
+  □ Promotes 2-3 real failures to golden dataset
+  □ Re-run: grounded-evals mlflow (judge updated)
+
+Ongoing (monthly):
+  □ Expert reviews production flags (15-30 min)
+  □ Promotes validated failures to golden dataset
+  □ Golden dataset grows by 5-10 queries/month
+  □ Judge accuracy improves with each cycle
+```
+
+---
+
+## The One Sentence That Explains It All
+
+**The golden dataset is the seed. The judge is the amplifier. Production is the discovery engine. The domain expert is the quality gate.**
+
+Remove any one of these and the system degrades:
+- No golden dataset → judge has nothing to learn from
+- No judge → can't score at scale
+- No production scoring → can't discover new failures
+- No domain expert → noise enters the golden dataset
+
+All four. Working together. That's the architecture.
+
+---
+
+*[GEDD](https://github.com/aws-samples/sample-GEDD) — open source (MIT-0). Start with 100 golden queries. Scale to 1,000 production scores. Let the flywheel do the rest.*
