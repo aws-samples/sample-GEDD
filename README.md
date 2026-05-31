@@ -1,4 +1,4 @@
-# GEDD — find what your AI agent gets wrong
+# GEDD — find what your AI agent gets wrong - A Claude Skill for Product Managers and Domain Experts
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
