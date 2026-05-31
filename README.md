@@ -20,15 +20,18 @@ GEDD is the tool for *before* you have a rubric.
 
 ## What you do in GEDD
 
-Five steps, a conversational coach guiding you through each one. No YAML, no SDK, no Python.
+Six steps. Define → Prompt → **Deploy** → Test → Judge → Ship. A conversational coach guides you through each one. No YAML, no SDK, no Python.
 
 1. **Define your agent.** What it's for, who uses it, what it should do.
-2. **Write a system prompt** with the coach's help.
-3. **Generate golden test queries** — happy path, edge cases, adversarial, ambiguous. The coach proposes; you keep what fits.
-4. **Run them, watch what breaks.** Side-by-side across up to 3 models. Mark each response ✓ / ⚠ / ✗.
-5. **Name the failure patterns in your own words** — "policy hallucination," "missed escalation," "tone collapse under hostility." GEDD turns those names into a deployable judge that engineering can wire into CI.
+2. **Write a system prompt** with the coach's help — the agent's character, rules, and constraints.
+3. **Deploy to AgentCore.** Your agent is live. Everything after this tests the *real thing*.
+4. **Generate golden test queries** — happy path, edge cases, adversarial, ambiguous. Run them against the live agent. The coach proposes; you keep what fits.
+5. **Annotate & judge.** Mark each response ✓ / ⚠ / ✗. Name the failure patterns in your own words — "coverage hallucination," "missed escalation," "bad faith underexplain." GEDD turns those names into a deployable judge.
+6. **Export & redeploy.** Golden dataset, judge prompt, and updated agent — all shipped together.
 
-That's it. The whole flow takes about 90 minutes for a real agent with 8–12 golden queries. The first 30 minutes get you to "I now know my agent's top 3 failure modes." Most teams stop there and ship.
+That's it. The whole flow takes about 90 minutes for a real agent with 15–20 golden queries. The first 30 minutes get you to "I now know my agent's top 3 failure modes." Most teams stop there and ship.
+
+> **Why deploy before testing?** The deployed agent is stateless — it only needs the system prompt from Step 2. By deploying early, your golden queries are tested against the *real endpoint* (latency, IAM, cold starts), not a local mock. If the prompt needs changes, redeployment is one command.
 
 ---
 
@@ -104,7 +107,7 @@ Both read and write the same `session.json` file, so you can switch between them
 
 ### Claude Code skills
 
-#### `/gedd-chat` — full pipeline in one conversation
+#### `/gedd` — full pipeline in one conversation
 
 ```bash
 cd grounded-evals
@@ -112,7 +115,7 @@ claude        # opens Claude Code CLI
 ```
 
 ```
-/gedd-chat
+/gedd
 ```
 
 Claude reads `session.json` if it exists and resumes where you left off. The full 6-step pipeline runs inside the conversation:
@@ -120,16 +123,16 @@ Claude reads `session.json` if it exists and resumes where you left off. The ful
 ```
 Step 1  Define Agent        Name, capabilities, target users, domain → saved to session.json
 Step 2  System Prompt       Draft and refine collaboratively → saved to session.json
-Step 3  Golden Queries      Open Coding: fracture domain → generate queries in batches
-                            Live coverage table shown after every approved batch:
+Step 3  Deploy              Deploy to Amazon Bedrock AgentCore → live endpoint ready
+Step 4  Golden Queries      Open Coding: fracture domain → generate queries in batches
+                            Run against the LIVE agent. Coverage table after every batch:
 
                             Saturation: happy_path 3/3 ✓ | edge_case 2/3 ~ | adversarial 1/3 ✗
-                            Overall: 1/6 categories saturated (17%)
+                            Overall: 1/7 categories saturated (14%)
 
-Step 4  Eval                Runs queries against your model inline — no CLI switch needed
-Step 5  Annotation          Shows each Q/A pair in conversation, collects ✓/⚠/✗ + error codes,
-                            writes annotations to session.json in real time
-Step 6  Export              Summarizes failure modes, offers export/web UI/judge generation
+Step 5  Annotate & Judge    Shows each Q/A pair, collects ✓/⚠/✗ + error codes,
+                            generates G-Eval judge prompt with weighted criteria
+Step 6  Export & Redeploy   Golden dataset + judge exported, agent redeployed with guardrails
 ```
 
 Type `quit` at any point — state is saved after every turn.
