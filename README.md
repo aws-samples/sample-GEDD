@@ -293,13 +293,22 @@ That is the difference between a generic judge and a judge a domain owner can de
 ## Architecture
 
 ```mermaid
-flowchart LR
-    CC["Claude Code / CLI / Web UI<br/><i>guided GEDD workflow</i>"] --> SJ["session.json<br/><i>validated handoff</i>"]
-    SJ --> CLI["grounded-evals<br/><i>export + judge + mlflow</i>"]
-    CLI --> SM["SageMaker MLflow<br/><i>Experiments + Judges</i>"]
-    CLI --> BR["Bedrock / Anthropic<br/><i>AgentCore optional</i>"]
-    SM --> CICD["CI/CD<br/><i>Regression gates</i>"]
-    CICD --> BR
+flowchart TD
+    WEB["Website first<br/><i>Web UI + demo gallery</i>"]
+    ASSIST["Codex skill / CLI<br/><i>guided automation</i>"]
+    SJ["session.json<br/><i>validated handoff</i>"]
+    CLI["grounded-evals CLI<br/><i>export + judge + mlflow</i>"]
+    RT["Runtime evals<br/><i>Bedrock / Anthropic / AgentCore</i>"]
+    SM["SageMaker MLflow<br/><i>experiments + judges</i>"]
+    CICD["CI/CD<br/><i>regression gates</i>"]
+
+    WEB --> SJ
+    ASSIST --> SJ
+    SJ --> CLI
+    CLI --> RT
+    CLI --> SM
+    SM --> CICD
+    CICD --> RT
 ```
 
 AWS-native by default. IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.
