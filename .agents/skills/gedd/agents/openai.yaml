@@ -1,0 +1,7 @@
+interface:
+  display_name: "GEDD"
+  short_description: "Run grounded AI agent evaluations."
+  default_prompt: "Use $gedd to evaluate my AI agent with the website-first GEDD workflow."
+
+policy:
+  allow_implicit_invocation: true

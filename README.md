@@ -38,7 +38,7 @@ The goal is not to make a larger synthetic benchmark. It is to preserve expert j
 
 ```mermaid
 flowchart TD
-    subgraph DE["🧑‍💼 DOMAIN EXPERT — /gedd or grounded-evals chat"]
+    subgraph DE["🧑‍💼 DOMAIN EXPERT — website first, Codex/CLI assisted"]
         direction TB
         S1["1️⃣ Define Agent"]
         S2["2️⃣ System Prompt"]
@@ -143,27 +143,34 @@ Each guide maps to a section of the flywheel:
 <tr>
 <td width="33%">
 
-**Domain Expert**
+**1. Start The Website**
 ```bash
 cd grounded-evals
-pip install -e .
-claude
+pip install -e ".[dev]"
+grounded-evals serve
 ```
-```
-/gedd
-```
-90 min → golden dataset + judge
+Open `localhost:8080`
+17 pre-loaded scenarios
 
-No Claude Code? Use the same coach from the CLI:
+</td>
+<td width="33%">
+
+**2. Use Codex Or CLI**
+```bash
+# In Codex, ask:
+# Use $gedd to evaluate my AI agent
+```
 
 ```bash
 grounded-evals chat --session session.json
 ```
 
+90 min → golden dataset + judge
+
 </td>
 <td width="33%">
 
-**ML Engineer**
+**3. Engineer Handoff**
 ```bash
 cd grounded-evals
 pip install -e ".[dev]"
@@ -179,20 +186,10 @@ grounded-evals mlflow \
 ```
 
 </td>
-<td width="33%">
-
-**Explore Demos**
-```bash
-cd grounded-evals
-pip install -e ".[dev]"
-grounded-evals serve
-```
-Open `localhost:8080`
-17 pre-loaded scenarios
-
-</td>
 </tr>
 </table>
+
+The website is the default first experience because it lets a product manager or domain expert inspect completed demos, tag failures visually, map root causes, build judges, and export a handoff without learning command syntax.
 
 ---
 
@@ -212,6 +209,28 @@ Open `localhost:8080`
 | Report | Handoff view | Review results, model performance, calibration health, and export artifacts |
 
 The UI also supports session import/export from the top navigation so a domain expert can hand a completed session to an ML engineer without copying browser state.
+
+---
+
+## Codex Skill And Plugin
+
+This repo includes Codex-native assistance for the same GEDD workflow:
+
+| Asset | Path | Use |
+|-------|------|-----|
+| Repo skill | `.agents/skills/gedd/SKILL.md` | Auto-discovered when Codex runs inside this repository; invoke with `$gedd` or let Codex select it from matching requests |
+| Plugin package | `plugins/gedd/` | Installable Codex plugin that bundles the GEDD skill for reuse beyond this repo |
+| Repo marketplace | `.agents/plugins/marketplace.json` | Local plugin catalog entry pointing Codex at `./plugins/gedd` |
+
+Use the skill when you want Codex to guide or automate the workflow while still making the website the first-touch experience:
+
+```text
+Use $gedd to evaluate my AI agent with the website-first workflow.
+Use $gedd to package my current session for ML engineering handoff.
+Use $gedd to build a judge from the domain expert's failure codes.
+```
+
+The skill is intentionally website-first. It should recommend `grounded-evals serve` before CLI automation unless the user explicitly asks for scripting, CI, MLflow, or headless execution.
 
 ---
 
