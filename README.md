@@ -134,6 +134,7 @@ Each guide maps to a section of the flywheel:
 | [PM → Production Judge](grounded-evals/docs/pm-to-ml-llm-judge.md) | Turn annotations into CI judge | ML Engineers |
 | [Cohen's Kappa](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | Calibrate judge-human agreement | ML Engineers |
 | [Building an LLM Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Rubric design + few-shot calibration | ML Engineers |
+| [Launch Checklist](grounded-evals/docs/launch-checklist.md) | Release gates, E2E checks, deployment proof, and no-go criteria | Maintainers |
 
 ---
 
