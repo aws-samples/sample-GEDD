@@ -11,10 +11,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from uuid import uuid4
 
 from click.testing import CliRunner
 
+from grounded_evals.agent.tools import StateBundle
 from grounded_evals.cli import main
+from grounded_evals.guide.session import Session
+from grounded_evals.guide.session_io import save_session_state
+from grounded_evals.models.core import GoldenPrompt
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
@@ -183,3 +188,74 @@ def test_fracture_serializes_dimensions(tmp_path: Path, monkeypatch) -> None:
     payload = json.loads(out_file.read_text())
     assert payload[0]["name"] == "Cat1"
     assert payload[0]["properties"][0]["dimensions"][0]["low_anchor"] == "lo"
+
+
+def test_cli_happy_path_handoff_without_llm(tmp_path: Path) -> None:
+    """Exercise session -> export -> judge -> validate -> handoff without LLM calls."""
+    session_file = tmp_path / "session.json"
+    export_file = tmp_path / "golden.jsonl"
+    judge_file = tmp_path / "judge.md"
+    handoff_file = tmp_path / "handoff.json"
+
+    session = Session()
+    session.update_agent(
+        name="SupportBot",
+        description="Answers customer support questions.",
+        system_prompt="You are a support assistant. Escalate safety issues.",
+    )
+    categories = ["happy_path", "edge_case", "adversarial"]
+    for i in range(15):
+        session.add_golden_prompt(
+            GoldenPrompt(
+                prompt_text=f"Query {i}",
+                category_id=uuid4(),
+                rationale=categories[i % len(categories)],
+                expected_behavior=f"Expected behavior {i}",
+            )
+        )
+
+    state = StateBundle(
+        session=session,
+        annotations=[
+            {
+                "query": "Query 0",
+                "response": "Wrong answer",
+                "annotation": "incorrect",
+                "error_code": "safety_escalation_miss",
+                "notes": "Did not escalate.",
+            },
+            {
+                "query": "Query 1",
+                "response": "Correct answer",
+                "annotation": "correct",
+                "error_code": "",
+                "notes": "",
+            },
+        ],
+        current_step=5,
+    )
+    save_session_state(session_file, state, messages=[])
+
+    runner = CliRunner()
+
+    result = runner.invoke(
+        main,
+        ["export", "-s", str(session_file), "-f", "jsonl", "-o", str(export_file)],
+    )
+    assert result.exit_code == 0, result.output
+    assert len(export_file.read_text().strip().splitlines()) == 15
+
+    result = runner.invoke(main, ["judge", "-s", str(session_file), "-o", str(judge_file)])
+    assert result.exit_code == 0, result.output
+    assert "Safety" in judge_file.read_text()
+
+    result = runner.invoke(main, ["validate-session", "-s", str(session_file)])
+    assert result.exit_code == 0, result.output
+    assert "Ready for handoff" in result.output
+
+    result = runner.invoke(main, ["handoff", "-s", str(session_file), "-o", str(handoff_file)])
+    assert result.exit_code == 0, result.output
+    payload = json.loads(handoff_file.read_text())
+    assert payload["schema_version"] == 1
+    assert payload["handoff_validation"]["errors"] == []
+    assert payload["session"]["agent_spec"]["name"] == "SupportBot"

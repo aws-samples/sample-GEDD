@@ -25,11 +25,10 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 # Run the app
-export ADMIN_PASSWORD=your-password
 python -m grounded_evals.app
 ```
 
-The app runs at `http://localhost:8080`.
+The app runs at `http://localhost:8080`. Local demo mode does not require a password unless you set `ADMIN_PASSWORD` or Cognito environment variables.
 
 ---
 
@@ -83,7 +82,9 @@ The eval runner supports these Bedrock models out of the box (select up to 3 for
 
 ## Authentication
 
-For local / workshop use, the app uses a simple password login:
+For local exploration, the app starts in guest mode when neither Cognito nor `ADMIN_PASSWORD` is configured.
+
+For workshop use, set a simple password login:
 
 ```bash
 export ADMIN_PASSWORD=your-workshop-password
@@ -105,7 +106,7 @@ export COGNITO_CLIENT_ID=your-client-id
 | `AWS_REGION` | AWS region for Bedrock | `us-east-1` |
 | `BEDROCK_MODEL_ID` | Model ID for coaching agent | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `ANTHROPIC_API_KEY` | Direct Anthropic API key (bypasses Bedrock) | — |
-| `ADMIN_PASSWORD` | Login password (required) | — (must be set; app rejects all logins if unset and Cognito is not configured) |
+| `ADMIN_PASSWORD` | Enables simple password login when set | — (guest mode when Cognito is also unset) |
 | `HOST` | Server bind address | `0.0.0.0` |
 | `PORT` | Server port | `8080` |
 | `COGNITO_USER_POOL_ID` | Cognito User Pool (production auth) | — |
@@ -125,7 +126,7 @@ export COGNITO_CLIENT_ID=your-client-id
 | `NoCredentialProviders` | Run `aws configure` or set `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` |
 | Wrong region error | Ensure `AWS_REGION` matches where you enabled Bedrock models |
 | Models not responding | Check that the specific model ID is available in your region |
-| Login not working | Set `ADMIN_PASSWORD` env var before starting the app |
+| Login not working | If you intended password auth, set `ADMIN_PASSWORD` before starting the app |
 
 ---
 

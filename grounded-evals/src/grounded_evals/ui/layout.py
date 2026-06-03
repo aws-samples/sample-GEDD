@@ -1,5 +1,7 @@
 """Shared layout and navigation for Agent Playground multi-page app."""
 
+import json
+
 from nicegui import app, ui
 
 NAV_ITEMS = [
@@ -286,9 +288,90 @@ def page_layout(title: str = ""):
                             "size=sm color=negative"
                         )
 
+        def open_session_dialog():
+            with ui.dialog() as dlg:
+                dlg.open()
+                with ui.card().style(
+                    "min-width:380px; padding:1.5rem; background:var(--bg-surface-2); "
+                    "border:1px solid var(--border-default); border-radius:12px"
+                ):
+                    ui.label("Session Handoff").style(
+                        "font-size:1rem; font-weight:600; color:var(--text-primary); "
+                        "margin-bottom:8px"
+                    )
+                    ui.label(
+                        "Export the current session for ML engineering or import a saved session."
+                    ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
+
+                    def export_session():
+                        from grounded_evals.agent.tools import StateBundle
+                        from grounded_evals.guide.session import Session
+                        from grounded_evals.guide.session_io import (
+                            build_session_payload,
+                            validate_session_handoff,
+                        )
+
+                        storage = app.storage.user
+                        session = Session.model_validate(storage.get("session_data", {}))
+                        state = StateBundle(
+                            session=session,
+                            annotations=storage.get("annotations", []),
+                            current_step=storage.get("current_step", session.current_step),
+                            prompt_variants=storage.get("prompt_variants", []),
+                        )
+                        payload = build_session_payload(state, storage.get("messages", []))
+                        validation = validate_session_handoff(state)
+                        payload["handoff_validation"] = {
+                            "errors": validation.errors,
+                            "warnings": validation.warnings,
+                        }
+                        agent_name = (
+                            session.agent_spec.name or "agent"
+                        ).lower().replace(" ", "_")
+                        ui.download(
+                            json.dumps(payload, indent=2).encode(),
+                            f"{agent_name}_handoff_session.json",
+                        )
+
+                    def import_session(e):
+                        from grounded_evals.guide.session import Session
+
+                        try:
+                            payload = json.loads(e.content.read().decode())
+                            session = Session.model_validate(payload["session"])
+                        except Exception as exc:
+                            ui.notify(f"Import failed: {exc}", type="negative")
+                            return
+
+                        storage = app.storage.user
+                        storage["session_data"] = session.model_dump(mode="json")
+                        storage["current_step"] = payload.get(
+                            "current_step", session.current_step
+                        )
+                        storage["annotations"] = payload.get("annotations", [])
+                        storage["messages"] = payload.get("messages", [])
+                        storage["prompt_variants"] = payload.get("prompt_variants", [])
+                        ui.notify("Session imported", type="positive")
+                        dlg.close()
+                        ui.navigate.to("/coach")
+
+                    with ui.row().classes("gap-2 items-center"):
+                        ui.button("Export", icon="download", on_click=export_session).props(
+                            "size=sm outline dark"
+                        )
+                        ui.upload(
+                            label="Import",
+                            on_upload=import_session,
+                            auto_upload=True,
+                        ).props("accept=.json dense color=primary")
+
         ui.button(icon="add_circle_outline", on_click=confirm_new_project).props(
             "flat round size=sm"
         ).style("color: var(--text-muted)").tooltip("New Project")
+
+        ui.button(icon="ios_share", on_click=open_session_dialog).props(
+            "flat round size=sm"
+        ).style("color: var(--text-muted)").tooltip("Session Handoff")
 
         ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
             "color: var(--text-muted)"

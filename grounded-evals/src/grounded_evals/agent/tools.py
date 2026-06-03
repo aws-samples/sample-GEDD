@@ -84,7 +84,7 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "step": {"type": "integer", "description": "1=Define, 2=System Prompt, 3=Golden Queries, 4=Error Analysis"},
+                "step": {"type": "integer", "description": "1=Define, 2=System Prompt, 3=Runtime, 4=Golden Queries, 5=Annotate & Judge"},
             },
             "required": ["step"],
         },
@@ -150,7 +150,7 @@ def handle_tool_call(tool_name: str, tool_input: dict, state: StateBundle) -> st
         return json.dumps({"saved": True, "total_annotations": len(state.annotations)})
 
     elif tool_name == "set_current_step":
-        state.current_step = max(1, min(4, tool_input.get("step", 1)))
+        state.current_step = max(1, min(5, tool_input.get("step", 1)))
         return json.dumps({"step": state.current_step})
 
     elif tool_name == "save_prompt_variant":

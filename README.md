@@ -221,6 +221,8 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 | `eval` | Run golden queries against a model |
 | `annotate` | Mark responses ✓/⚠/✗ with error codes |
 | `judge` | Generate G-Eval judge prompt |
+| `validate-session` | Check whether a session is ready for handoff |
+| `handoff` | Write a validated `session.json` handoff artifact |
 | `mlflow` | Export to SageMaker MLflow (Step 6) |
 | `export` | Write golden dataset as JSONL/CSV/JSON |
 | `status` | Session dashboard |

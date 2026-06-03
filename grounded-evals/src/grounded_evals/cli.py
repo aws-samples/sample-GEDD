@@ -10,38 +10,18 @@ from pathlib import Path
 
 import click
 
-
 # ── Session persistence helpers ──────────────────────────────────────────────
 
 def _load_state(session_file: str):
-    from grounded_evals.agent.tools import StateBundle
-    from grounded_evals.guide.session import Session
+    from grounded_evals.guide.session_io import load_session_state
 
-    path = Path(session_file)
-    if path.exists():
-        data = json.loads(path.read_text())
-        session = Session.model_validate(data["session"])
-        state = StateBundle(
-            session=session,
-            annotations=data.get("annotations", []),
-            current_step=data.get("current_step", 1),
-            prompt_variants=data.get("prompt_variants", []),
-        )
-        return state, data.get("messages", [])
-
-    from grounded_evals.guide.session import Session
-    return StateBundle(session=Session()), []
+    return load_session_state(session_file)
 
 
 def _save_state(session_file: str, state, messages: list[dict]) -> None:
-    data = {
-        "session": state.session.model_dump(mode="json"),
-        "annotations": state.annotations,
-        "current_step": state.current_step,
-        "prompt_variants": state.prompt_variants,
-        "messages": messages,
-    }
-    Path(session_file).write_text(json.dumps(data, indent=2, default=str))
+    from grounded_evals.guide.session_io import save_session_state
+
+    save_session_state(session_file, state, messages)
 
 
 def _infer_dimension(error_code: str) -> str:
@@ -86,18 +66,28 @@ def main() -> None:
     """grounded-evals: Build golden eval datasets and analyse AI agent failures."""
 
 
+STEP_NAMES = {
+    1: "Define Agent",
+    2: "System Prompt",
+    3: "Runtime",
+    4: "Golden Queries",
+    5: "Annotate & Judge",
+    6: "MLflow Handoff",
+}
+
+
 @main.command()
 @click.option("--host", default="127.0.0.1", show_default=True, help="Host to bind")
 @click.option("--port", default=8080, show_default=True, help="Port to listen on")
 @click.option("--reload", is_flag=True, help="Reload on code changes (dev mode)")
 def serve(host: str, port: int, reload: bool) -> None:
     """Start the GEDD web UI."""
-    import grounded_evals.app  # noqa: F401 — registers all pages
-
     import os
     import secrets
 
     from nicegui import ui
+
+    import grounded_evals.app  # noqa: F401 — registers all pages
     ui.run(
         host=host,
         port=port,
@@ -293,26 +283,25 @@ def compare(dataset: str, new_prompt: str) -> None:
 @click.option("--session", "-s", default="session.json", show_default=True,
               help="Session file to load/save state between runs")
 def chat(session: str) -> None:
-    """Interactive coaching session — guided through all 4 steps.
+    """Interactive coaching session — guided through the domain-expert workflow.
 
     Starts fresh or resumes from a saved session file. Type 'quit' to exit.
 
     Steps:\n
       1. Define your agent (name, capabilities, users)\n
       2. Write a system prompt collaboratively\n
-      3. Generate golden test queries via Open Coding\n
-      4. Run queries + annotate responses (error analysis)
+      3. Confirm runtime for test responses\n
+      4. Generate golden test queries via Open Coding\n
+      5. Run queries, annotate failures, and prepare the judge
     """
     from grounded_evals.agent.handler import run_agent_turn
 
     state, messages = _load_state(session)
 
-    step_names = {1: "Define Agent", 2: "System Prompt", 3: "Golden Queries", 4: "Error Analysis"}
-
     if messages:
         n_queries = len(state.session.golden_prompts)
         click.echo(f"Resumed session from {session}")
-        click.echo(f"  Step {state.current_step}/4: {step_names[state.current_step]}  |  {n_queries} queries saved")
+        click.echo(f"  Step {state.current_step}/5: {STEP_NAMES.get(state.current_step, '')}  |  {n_queries} queries saved")
         click.echo("Type 'quit' to exit.\n")
     else:
         click.echo(f"New GEDD session. State will be saved to: {session}")
@@ -344,7 +333,7 @@ def chat(session: str) -> None:
                 saved_query_this_turn = True
             elif name == "set_current_step":
                 s = result.get("step", 1)
-                click.echo(f"  [→ step {s}: {step_names.get(s, '')}]", err=True)
+                click.echo(f"  [→ step {s}: {STEP_NAMES.get(s, '')}]", err=True)
             elif name == "save_agent_info":
                 click.echo("  [agent info saved]", err=True)
             elif name == "save_annotation":
@@ -575,6 +564,74 @@ def export(session: str, fmt: str, output: str | None) -> None:
     click.echo(f"Exported {len(prompts)} queries → {out_path}")
 
 
+@main.command("validate-session")
+@click.option("--session", "-s", default="session.json", show_default=True,
+              help="Session file to validate")
+def validate_session(session: str) -> None:
+    """Validate whether a session is ready for handoff."""
+    from grounded_evals.guide.session_io import validate_session_handoff
+
+    state, _ = _load_state(session)
+    result = validate_session_handoff(state)
+
+    click.echo(f"\nSession validation: {session}\n")
+    if result.errors:
+        click.echo("Errors:")
+        for err in result.errors:
+            click.echo(f"  - {err}")
+    if result.warnings:
+        click.echo("Warnings:")
+        for warning in result.warnings:
+            click.echo(f"  - {warning}")
+    if result.ok:
+        click.echo("Ready for handoff.")
+    else:
+        click.echo("Not ready for handoff.", err=True)
+    click.echo()
+    sys.exit(0 if result.ok else 1)
+
+
+@main.command()
+@click.option("--session", "-s", default="session.json", show_default=True,
+              help="Session file to package")
+@click.option("--output", "-o", default=None,
+              help="Output file (default: <agent_name>_handoff_session.json)")
+@click.option("--force", is_flag=True,
+              help="Write the handoff file even if validation has errors")
+def handoff(session: str, output: str | None, force: bool) -> None:
+    """Write a validated session handoff artifact for ML engineering."""
+    from grounded_evals.guide.session_io import build_session_payload, validate_session_handoff
+
+    state, messages = _load_state(session)
+    validation = validate_session_handoff(state)
+    agent_name = (state.session.agent_spec.name or "agent").lower().replace(" ", "_")
+    out_path = output or f"{agent_name}_handoff_session.json"
+
+    if validation.errors and not force:
+        click.echo("Session has blocking handoff issues:", err=True)
+        for err in validation.errors:
+            click.echo(f"  - {err}", err=True)
+        if validation.warnings:
+            click.echo("Warnings:", err=True)
+            for warning in validation.warnings:
+                click.echo(f"  - {warning}", err=True)
+        click.echo("\nUse --force to write the artifact anyway.", err=True)
+        sys.exit(1)
+
+    payload = build_session_payload(state, messages)
+    payload["handoff_validation"] = {
+        "errors": validation.errors,
+        "warnings": validation.warnings,
+    }
+    Path(out_path).write_text(json.dumps(payload, indent=2, default=str))
+
+    click.echo(f"Wrote handoff session → {out_path}")
+    if validation.warnings:
+        click.echo("Warnings:")
+        for warning in validation.warnings:
+            click.echo(f"  - {warning}")
+
+
 @main.command()
 @click.option("--session", "-s", default="session.json", show_default=True)
 @click.option("--results", "-r", default="eval_results.json", show_default=True)
@@ -593,14 +650,11 @@ def status(session: str, results: str) -> None:
     step = data.get("current_step", 1)
     prompts = sess.get("golden_prompts", [])
     annotations = data.get("annotations", [])
-    step_names = {1: "Define Agent", 2: "System Prompt", 3: "Golden Queries",
-                  4: "Eval", 5: "Annotation", 6: "Export"}
-
     click.echo("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     click.echo("  GEDD Session Status")
     click.echo("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n")
     click.echo(f"  Agent      : {agent_name}")
-    click.echo(f"  Step       : {step} / 6  ({step_names.get(step, '')})")
+    click.echo(f"  Step       : {step} / 6  ({STEP_NAMES.get(step, '')})")
     click.echo(f"  Session    : {session}\n")
 
     if prompts:
@@ -680,7 +734,10 @@ def judge(session: str, results: str, style: str, output: str) -> None:
     from collections import Counter
 
     from grounded_evals.axial_coding.mapper import ErrorMapping
-    from grounded_evals.judge_builder.prompt_gen import generate_geval_judge_prompt, generate_judge_prompt
+    from grounded_evals.judge_builder.prompt_gen import (
+        generate_geval_judge_prompt,
+        generate_judge_prompt,
+    )
     from grounded_evals.judge_builder.rubric import generate_rubric
 
     state, _ = _load_state(session)
@@ -711,10 +768,10 @@ def judge(session: str, results: str, style: str, output: str) -> None:
 
     click.echo(f"\nGenerating judge for: {agent_name}")
     click.echo(f"  Style : {style}")
-    click.echo(f"\n  Criteria:")
+    click.echo("\n  Criteria:")
     for c in rubric.criteria:
         click.echo(f"    • {c.name:<22} weight {c.weight}")
-    click.echo(f"\n  Error codes mapped:")
+    click.echo("\n  Error codes mapped:")
     for code, count in codes.most_common():
         click.echo(f"    {code:<30} ×{count}  → {_infer_dimension(code)}")
     click.echo(f"\n  Saved → {output}  ({len(rubric.criteria)} criteria, {len(prompt_text)} chars)")
@@ -937,7 +994,7 @@ def mlflow_export(session: str, results: str, experiment: str | None,
         feedback_value_type=bool,
     )
     judges.append(overall_judge)
-    click.echo(f"  Judge: gedd_correctness")
+    click.echo("  Judge: gedd_correctness")
     click.echo(f"  Total: {len(judges)} judges")
 
     # ── 4. Log to MLflow ──
@@ -999,7 +1056,7 @@ def mlflow_export(session: str, results: str, experiment: str | None,
             resp = traced_eval_call(client, model_id, system_prompt, query)
             return {"messages": [{"role": "assistant", "content": resp.content[0].text}]}
 
-        eval_result = mlflow.genai.evaluate(
+        mlflow.genai.evaluate(
             data=eval_dataset,
             predict_fn=predict_fn,
             scorers=judges,
@@ -1010,19 +1067,19 @@ def mlflow_export(session: str, results: str, experiment: str | None,
 
     # ── 6. Summary ──
     click.echo(f"\n  {'━' * 50}")
-    click.echo(f"  ✓ GEDD → MLflow pipeline ready")
+    click.echo("  ✓ GEDD → MLflow pipeline ready")
     click.echo(f"  {'━' * 50}")
     click.echo(f"  Experiment : {exp_name}")
     click.echo(f"  Dataset    : {len(eval_dataset)} golden queries")
     click.echo(f"  Judges     : {len(judges)} custom scorers")
     click.echo(f"  Annotations: {len(state.annotations)} human labels")
     if uri and uri.startswith("arn:aws:sagemaker"):
-        click.echo(f"  Backend    : Amazon SageMaker Managed MLflow")
-    click.echo(f"\n  ML Engineer next steps:")
-    click.echo(f"    1. mlflow ui                    # view experiment")
+        click.echo("  Backend    : Amazon SageMaker Managed MLflow")
+    click.echo("\n  ML Engineer next steps:")
+    click.echo("    1. mlflow ui                    # view experiment")
     click.echo(f"    2. Add to CI: grounded-evals mlflow -s {session} --run-eval")
-    click.echo(f"    3. Set regression gate: TSR ≥ 95% on happy_path")
-    click.echo(f"    4. Monitor judge-human agreement (target κ ≥ 0.80)")
+    click.echo("    3. Set regression gate: TSR ≥ 95% on happy_path")
+    click.echo("    4. Monitor judge-human agreement (target κ ≥ 0.80)")
     click.echo()
 
 
