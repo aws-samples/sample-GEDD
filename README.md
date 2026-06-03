@@ -301,10 +301,12 @@ flowchart TD
     ASSIST["Codex skill / CLI<br/><i>guided automation</i>"]
     SJ["session.json<br/><i>validated handoff</i>"]
     CLI["grounded-evals CLI<br/><i>export + judge + mlflow</i>"]
+    CF["CloudFront<br/><i>public web domain</i>"]
     RT["Runtime evals<br/><i>Bedrock / Anthropic / AgentCore</i>"]
     SM["SageMaker MLflow<br/><i>experiments + judges</i>"]
     CICD["CI/CD<br/><i>regression gates</i>"]
 
+    CF --> WEB
     WEB --> SJ
     ASSIST --> SJ
     SJ --> CLI
@@ -314,7 +316,7 @@ flowchart TD
     CICD --> RT
 ```
 
-AWS-native by default. IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.
+AWS-native by default. CloudFront provides the public web domain, IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.
 
 ### Core Components
 

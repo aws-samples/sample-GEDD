@@ -1,7 +1,9 @@
-"""VPC, ALB (HTTPS), WAF, and Security Groups for Agent Playground — Production."""
+"""VPC, ALB, CloudFront, WAF, and Security Groups for Agent Playground."""
 
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_certificatemanager as acm
+from aws_cdk import aws_cloudfront as cloudfront
+from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_elasticloadbalancingv2 as elbv2
 from aws_cdk import aws_wafv2 as wafv2
@@ -9,8 +11,20 @@ from constructs import Construct
 
 
 class NetworkStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, *, domain_name: str = "", certificate_arn: str = "", **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        *,
+        domain_name: str = "",
+        certificate_arn: str = "",
+        cloudfront_domain_names: list[str] | None = None,
+        cloudfront_certificate_arn: str = "",
+        cloudfront_origin_domain_name: str = "",
+        **kwargs,
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
+        cloudfront_domain_names = cloudfront_domain_names or []
 
         # ── VPC: 2 AZs, public + private subnets ─────────────────────────────
         self.vpc = ec2.Vpc(
@@ -182,6 +196,66 @@ class NetworkStack(Stack):
         self.vpc.add_interface_endpoint("Ep-ecr-dkr", service=ec2.InterfaceVpcEndpointAwsService.ECR_DOCKER, subnets=private_subnets, security_groups=[endpoint_sg])
         self.vpc.add_gateway_endpoint("Ep-s3", service=ec2.GatewayVpcEndpointAwsService.S3, subnets=[private_subnets])
 
+        # ── CloudFront public domain ─────────────────────────────────────────
+        # NiceGUI uses cookies, dynamic pages, and websockets, so this behaves
+        # like a secure public edge endpoint rather than a static-cache layer.
+        # The managed policy forwards viewer headers/cookies/query strings but
+        # strips Host so the ALB receives its own origin host.
+        all_viewer_except_host = cloudfront.OriginRequestPolicy.from_origin_request_policy_id(
+            self,
+            "AllViewerExceptHostHeaderPolicy",
+            "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+        )
+
+        if cloudfront_origin_domain_name:
+            cloudfront_origin = origins.HttpOrigin(
+                cloudfront_origin_domain_name,
+                protocol_policy=cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+                read_timeout=Duration.seconds(60),
+                keepalive_timeout=Duration.seconds(60),
+            )
+        else:
+            cloudfront_origin = origins.LoadBalancerV2Origin(
+                self.alb,
+                protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                read_timeout=Duration.seconds(60),
+                keepalive_timeout=Duration.seconds(60),
+            )
+
+        distribution_props = {
+            "comment": "GEDD web app public edge distribution",
+            "default_behavior": cloudfront.BehaviorOptions(
+                origin=cloudfront_origin,
+                viewer_protocol_policy=cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+                allowed_methods=cloudfront.AllowedMethods.ALLOW_ALL,
+                cached_methods=cloudfront.CachedMethods.CACHE_GET_HEAD_OPTIONS,
+                cache_policy=cloudfront.CachePolicy.CACHING_DISABLED,
+                origin_request_policy=all_viewer_except_host,
+                compress=True,
+            ),
+            "http_version": cloudfront.HttpVersion.HTTP2_AND_3,
+            "price_class": cloudfront.PriceClass.PRICE_CLASS_100,
+            "enable_ipv6": True,
+        }
+
+        if cloudfront_certificate_arn and cloudfront_domain_names:
+            distribution_props["certificate"] = acm.Certificate.from_certificate_arn(
+                self,
+                "CloudFrontCert",
+                cloudfront_certificate_arn,
+            )
+            distribution_props["domain_names"] = cloudfront_domain_names
+
+        self.distribution = cloudfront.Distribution(
+            self,
+            "WebDistribution",
+            **distribution_props,
+        )
+
         # ── Outputs ───────────────────────────────────────────────────────────
         CfnOutput(self, "AlbDns", value=self.alb.load_balancer_dns_name)
+        CfnOutput(self, "CloudFrontDomainName", value=self.distribution.distribution_domain_name)
+        CfnOutput(self, "CloudFrontUrl", value=f"https://{self.distribution.distribution_domain_name}")
+        if cloudfront_domain_names:
+            CfnOutput(self, "CloudFrontAliases", value=",".join(cloudfront_domain_names))
         CfnOutput(self, "VpcId", value=self.vpc.vpc_id)

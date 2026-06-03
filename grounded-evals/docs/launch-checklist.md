@@ -302,7 +302,8 @@ Pass criteria:
 | Check | Required result |
 |-------|-----------------|
 | CDK deploy | Completes without manual drift or failed stacks |
-| TLS | Public launch URL uses HTTPS |
+| CloudFront | Network stack outputs `CloudFrontUrl` and it is the public launch URL |
+| TLS | CloudFront launch URL uses HTTPS |
 | ECS health | Service reaches steady state |
 | ALB health | Target group reports healthy tasks |
 | Cognito | Auth callback works against launch URL |
@@ -315,6 +316,8 @@ Useful AWS checks:
 
 ```bash
 aws cloudformation describe-stacks --region "$AWS_REGION"
+aws cloudformation describe-stacks --region "$AWS_REGION" --stack-name AgentPlayground-Network \
+  --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontUrl`].OutputValue' --output text
 aws ecs describe-services --region "$AWS_REGION" --cluster CLUSTER --services SERVICE
 aws elbv2 describe-target-health --region "$AWS_REGION" --target-group-arn TARGET_GROUP_ARN
 aws logs tail /aws/ecs/gedd --since 30m --region "$AWS_REGION"

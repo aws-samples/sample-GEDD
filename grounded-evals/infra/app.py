@@ -15,12 +15,23 @@ env = cdk.Environment(
 )
 
 certificate_arn = app.node.try_get_context("certificate_arn") or ""
+cloudfront_certificate_arn = app.node.try_get_context("cloudfront_certificate_arn") or ""
+cloudfront_origin_domain_name = app.node.try_get_context("cloudfront_origin_domain_name") or ""
+cloudfront_domain_names_raw = app.node.try_get_context("cloudfront_domain_names") or ""
+cloudfront_domain_names = [
+    domain.strip()
+    for domain in cloudfront_domain_names_raw.split(",")
+    if domain.strip()
+]
 
 # ── Stacks ────────────────────────────────────────────────────────────────────
 
 network = NetworkStack(
     app, "AgentPlayground-Network",
     certificate_arn=certificate_arn,
+    cloudfront_domain_names=cloudfront_domain_names,
+    cloudfront_certificate_arn=cloudfront_certificate_arn,
+    cloudfront_origin_domain_name=cloudfront_origin_domain_name,
     env=env,
 )
 

@@ -5,6 +5,7 @@ echo "=== Full Deployment: Agent Playground ==="
 echo ""
 
 SCRIPT_DIR="$(dirname "$0")"
+REGION="${AWS_REGION:-us-east-1}"
 
 echo "Step 1/3: Infrastructure (CDK)"
 echo "==============================="
@@ -23,7 +24,9 @@ echo ""
 
 echo "=== All deployments complete! ==="
 echo ""
-echo "Your app is available at the ALB URL:"
-aws elbv2 describe-load-balancers \
-    --query 'LoadBalancers[?starts_with(LoadBalancerName, `Agent`)].DNSName' \
+echo "Your app is available at the CloudFront URL:"
+aws cloudformation describe-stacks \
+    --stack-name AgentPlayground-Network \
+    --region "$REGION" \
+    --query 'Stacks[0].Outputs[?OutputKey==`CloudFrontUrl`].OutputValue' \
     --output text 2>/dev/null || echo "(Run this after stacks are fully deployed)"

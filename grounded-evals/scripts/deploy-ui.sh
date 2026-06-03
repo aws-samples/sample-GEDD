@@ -37,4 +37,5 @@ aws ecs update-service \
 echo ""
 echo "=== UI deployment complete ==="
 echo "The new container will be live in ~2 minutes"
-echo "Check ALB DNS for the URL: aws elbv2 describe-load-balancers --query 'LoadBalancers[0].DNSName' --output text"
+echo "Check CloudFront URL:"
+echo "aws cloudformation describe-stacks --stack-name AgentPlayground-Network --region ${REGION} --query 'Stacks[0].Outputs[?OutputKey==\`CloudFrontUrl\`].OutputValue' --output text"

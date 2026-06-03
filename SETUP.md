@@ -152,6 +152,8 @@ Core Engine
   └── llm/client       # Bedrock + Anthropic
        ↓
 AWS Infrastructure (optional)
+  ├── CloudFront (public HTTPS domain)
+  ├── ALB (origin)
   ├── ECS Fargate (UI deployment)
   ├── Cognito (authentication)
   ├── ECR (container registry)
@@ -215,7 +217,21 @@ pip install -r requirements.txt
 cdk deploy --all
 ```
 
-Stacks: Network (VPC) → ECR → ECS Fargate (UI) → Cognito (auth) → AgentCore (agent runtime).
+Stacks: Network (VPC, ALB, CloudFront) → ECR → ECS Fargate (UI) → Cognito (auth) → AgentCore (agent runtime).
+
+The Network stack outputs `CloudFrontUrl`, for example `https://dxxxxx.cloudfront.net`. Use that as the public web app URL.
+
+For a custom CloudFront hostname, provide a certificate from `us-east-1`:
+
+```bash
+./scripts/deploy-infra.sh \
+  --cloudfront-domain gedd.example.com \
+  --cloudfront-cert arn:aws:acm:us-east-1:123456789012:certificate/abc123
+```
+
+Then create a DNS `CNAME` or Route 53 alias from your hostname to the emitted `CloudFrontDomainName`.
+
+The `--cert` flag configures an HTTPS listener on the ALB for direct-origin deployments. For the default CloudFront URL, you don't need an ALB certificate because CloudFront terminates public HTTPS.
 
 ---
 
