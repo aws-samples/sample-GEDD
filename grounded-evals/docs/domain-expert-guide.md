@@ -26,16 +26,16 @@ The whole thing is the **eval pipeline** — and the eval pipeline is the produc
 ### What you need
 - A browser (Chrome, Safari, Firefox).
 - The URL your engineer gave you, e.g. `http://localhost:8080` or your team's deployed URL.
-- The login password (in workshops, this is shared on the slide; for local runs, it's whatever the engineer set as `ADMIN_PASSWORD`).
+- The login password if your workshop or deployment requires one. Local demo mode can run in guest mode.
 
 ### What you don't need
 - Python, AWS, Bedrock — those are the engineer's problems. Once the app is up, this is all clicks and typing.
 
 ### Logging in
 1. Open the URL.
-2. You'll be redirected to `/login`.
-3. Enter your email and the password.
-4. You land on the **Home** page.
+2. In local guest mode, you land directly on **Home**.
+3. If your engineer configured `ADMIN_PASSWORD` or Cognito, you'll be redirected to `/login`.
+4. Enter your email and the password.
 
 > **Workshop tip:** Whatever the engineer typed for `ADMIN_PASSWORD` is the password. Any email works — it's used as your annotator name in shared annotations.
 
@@ -47,7 +47,7 @@ When you land on Home, you have two choices:
 
 ### A. **Explore a pre-built domain demo** (recommended for your first session)
 
-Eight industries are pre-loaded — Healthcare (ClinicalBot), Legal (LexBot), Wealth (WealthBot), Crypto (VaultEx AI), HR (HRBot), Education (EduBot), Gaming (PixelGuard), Travel (TravelBot). Each demo ships with a real system prompt, 8–10 golden queries, observed failures, a populated paradigm model, and a generated judge prompt.
+Seventeen domain demos are pre-loaded — TravelBot, ClinicalBot, LexBot, WealthBot, HRBot, EduBot, VaultEx AI, PixelGuard, InsureBot, PropBot, RxBot, TaxBot, ClaimsBot, FoodBot, AutoBot, MigrateBot, and EnergyBot. Each demo ships with a real system prompt, golden queries, observed failures, a populated paradigm model, and a generated judge prompt.
 
 **Use a demo when you want to:**
 - See the whole pipeline end-to-end before doing your own.
@@ -55,10 +55,10 @@ Eight industries are pre-loaded — Healthcare (ClinicalBot), Legal (LexBot), We
 - Borrow a starting structure for an analogous domain.
 
 **To load one:**
-1. On Home, scroll to **"Domain Specialists"**.
-2. Click any card (e.g., "TravelBot").
-3. The app loads the full scenario and navigates you to **Coach**. You'll see the agent already defined, queries already generated, annotations already coded.
-4. From there, click into **Tag Failures**, **Map Root Causes**, **Build Judge**, or **Report** to see what each step looks like with real data.
+1. On Home, start with the domain demo cards or open **Demos** from the left navigation.
+2. Click any card, for example **TravelBot**.
+3. The app loads the full scenario and navigates you into the workflow. You'll see the agent already defined, queries already generated, annotations already coded.
+4. From there, click into **Eval Harness**, **Tag**, **Root Causes**, **Build Judge**, or **Report** to see what each step looks like with real data.
 
 > ⚠️ **Loading a demo overwrites your current session** — there's no "are you sure?" dialog. If you've started your own work, export it first (see [Export your session](#export-your-session)).
 
@@ -68,25 +68,30 @@ Click **"Start your own agent"** or **"Evaluate your own agent →"** on Home. Y
 
 ---
 
-## The 5-step workflow
+## The website-first workflow
 
-GEDD is a 5-step pipeline, with one page per step. The progress dots at the top of the app track where you are.
+GEDD is a website-first workflow. The app has dedicated pages for each major activity, and the left navigation lets you move back and forth as your understanding improves.
 
 ```
-  1. Define & generate          2. Run evals      3. Tag failures
-     (Coach page)                 (Eval page)       (Tag Failures page)
-            │                          │                   │
-            ▼                          ▼                   ▼
-                                                    4. Map root causes
-                                                       (Analysis page)
-                                                              │
-                                                              ▼
-                                                    5. Build judge
-                                                       (Judge Builder)
-                                                              │
-                                                              ▼
-                                                       Final report
-                                                       (Report page)
+  Home / Demos
+       │
+       ▼
+  1. Coach ── define agent, prompt, runtime, golden queries
+       │
+       ▼
+  2. Eval Harness ── run the golden queries
+       │
+       ▼
+  3. Tag ── open-code failures from real outputs
+       │
+       ▼
+  4. Root Causes ── map causal conditions and user impact
+       │
+       ▼
+  5. Build Judge ── create rubric, hard-fails, calibration
+       │
+       ▼
+  6. Report ── review results and export handoff artifacts
 ```
 
 You can go back to any earlier step any time. The work persists in your browser session as long as you don't log out.

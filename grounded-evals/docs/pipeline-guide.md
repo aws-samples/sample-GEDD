@@ -9,7 +9,7 @@ Domain Expert (PM/SME)          ML Engineer
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Step 1: Define Agent            │
 Step 2: System Prompt           │
-Step 3: Deploy to AgentCore     │
+Step 3: Runtime                 │
 Step 4: Golden Queries          │
 Step 5: Annotate & Judge        │
          ─── handoff ───────────┤
@@ -37,26 +37,31 @@ pip install sagemaker-mlflow mlflow>=3.0
 
 ## Domain Expert Workflow (Steps 1-5)
 
-### Option A: Claude Code skill (recommended)
+### Option A: Website (recommended first)
 
 ```bash
 cd grounded-evals
-claude    # opens Claude Code
-```
-```
-/gedd
+grounded-evals serve
 ```
 
-The skill guides you through all 5 steps conversationally.
+Open `http://localhost:8080`. Start with a pre-loaded demo if you are new, then use Coach, Eval Harness, Tag, Root Causes, Build Judge, and Report to create a validated handoff.
 
-### Option B: CLI commands
+### Option B: Codex skill or CLI commands
+
+In Codex, use the repo skill:
+
+```text
+Use $gedd to evaluate my AI agent with the website-first workflow.
+```
+
+For headless or automation-oriented work:
 
 ```bash
 # Step 1-2: Interactive coaching
 grounded-evals chat --session session.json
 
-# Step 3: Deploy
-bash scripts/deploy-agent.sh
+# Step 3: Runtime
+# Use local Bedrock/Anthropic by default, or configure AgentCore for deployed-runtime testing.
 
 # Step 4: Run eval
 grounded-evals eval --session session.json --output eval_results.json
@@ -64,6 +69,8 @@ grounded-evals eval --session session.json --output eval_results.json
 # Step 5: Annotate + generate judge
 grounded-evals annotate --results eval_results.json --session session.json
 grounded-evals judge --session session.json --results eval_results.json
+grounded-evals validate-session --session session.json
+grounded-evals handoff --session session.json
 ```
 
 ### What the Domain Expert produces
@@ -229,8 +236,8 @@ The eval suite grows with the agent. New error codes become new judges automatic
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  Claude Code (/gedd skill)                                    │
-│  └── Domain Expert conversation → session.json               │
+│  Website first + Codex/CLI assistance                         │
+│  └── Domain Expert workflow → validated session.json          │
 └──────────────────────────┬───────────────────────────────────┘
                            │
               grounded-evals mlflow --tracking-uri ARN
@@ -246,10 +253,10 @@ The eval suite grows with the agent. New error codes become new judges automatic
                            │
 ┌──────────────────────────▼───────────────────────────────────┐
 │  Amazon Bedrock                                               │
-│  ├── AgentCore (deployed agent runtime)                       │
-│  ├── Claude Haiku 4.5 (inference for agent + judges)          │
-│  └── Model access (IAM-controlled)                            │
+│  ├── Bedrock models (default runtime evals)                   │
+│  ├── AgentCore (optional deployed agent runtime)              │
+│  └── Direct Anthropic API fallback for local development      │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-All AWS-native. IAM for auth. S3 for artifacts. No external dependencies.
+AWS-native by default. IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.

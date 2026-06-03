@@ -250,6 +250,6 @@ Once κ ≥ 0.80:
 ## Further Reading
 
 - [Building an LLM-as-a-Judge in GEDD](building-llm-as-a-judge.md) — full rubric design and export guide
-- [Domain Expert Guide](domain-expert-guide.md) — end-to-end walkthrough of the 5-step pipeline
+- [Domain Expert Guide](domain-expert-guide.md) — end-to-end walkthrough of the website-first pipeline
 - Landis & Koch (1977) — "The Measurement of Observer Agreement for Categorical Data" — the original kappa interpretation scale
 - Fleiss et al. (2003) — "Statistical Methods for Rates and Proportions" — weighted kappa derivation

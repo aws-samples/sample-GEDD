@@ -26,7 +26,7 @@ pip install -e ".[dev]"
 pip install sagemaker-mlflow
 ```
 
-That's it. The tool has a Claude Code skill (`/gedd`) that guides you through everything conversationally, but my manager wanted me to understand the CLI commands individually first. So I did it step by step.
+That's it. The fastest path is the website (`grounded-evals serve`), and the repo also includes a Codex `$gedd` skill for guided assistance. My manager wanted me to understand the CLI commands individually first, so I did it step by step.
 
 ---
 
@@ -58,9 +58,9 @@ I typed "save it" and the coach stored everything to `session.json`. Total time:
 
 ---
 
-## Day 3: Step 3 — Deploy
+## Day 3: Step 3 — Choose Runtime
 
-My manager had already set up AgentCore, so deployment was one command:
+My manager had already set up AgentCore, but GEDD does not require deployment before you can evaluate. By default, it runs the saved system prompt through Bedrock or Anthropic. When a team wants to test deployed-endpoint behavior, the AgentCore script is available:
 
 ```bash
 bash scripts/deploy-agent.sh
@@ -72,7 +72,7 @@ Output:
   Agent ID stored in SSM parameter
 ```
 
-Now EnergyBot was live. Everything I tested from here would hit the real endpoint — same latency, same IAM auth, same cold starts that production users would experience.
+Now EnergyBot was live. Everything I tested from here could hit the real endpoint — same latency, same IAM auth, same cold starts that production users would experience. For earlier exploration, I could also have stayed with the default Bedrock/Anthropic runtime.
 
 ---
 
@@ -230,9 +230,9 @@ The golden dataset is useful. The judge prompt is useful. But the error codes �
 
 My manager keeps saying this. The agent will change — new models, new prompts, new tools. But the eval pipeline persists. The golden queries, the error codes, the judges — they're the institutional knowledge that prevents regressions.
 
-### 5. Deploy first, test against the real thing
+### 5. Choose the right runtime before testing
 
-I initially wanted to test locally. My manager said "deploy first." She was right — the live endpoint had slightly different behavior (formatting, latency) than local. Testing against the real thing means your golden queries are grounded in reality.
+I initially wanted to treat runtime as an implementation detail. My manager pushed me to choose it deliberately. Local Bedrock/Anthropic runs are fast for discovery; deployed AgentCore runs reveal endpoint-specific behavior such as IAM, latency, formatting, and cold starts.
 
 ---
 
@@ -242,7 +242,7 @@ I initially wanted to test locally. My manager said "deploy first." She was righ
 # Step 1-2: Define agent + system prompt
 grounded-evals chat --session session.json
 
-# Step 3: Deploy
+# Step 3: Optional deployed runtime
 bash scripts/deploy-agent.sh
 
 # Step 4: Run queries against live agent

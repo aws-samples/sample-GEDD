@@ -25,10 +25,11 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 
 # Run the app
-python -m grounded_evals.app
+grounded-evals serve
 ```
 
 The app runs at `http://localhost:8080`. Local demo mode does not require a password unless you set `ADMIN_PASSWORD` or Cognito environment variables.
+If port 8080 is already in use, run `grounded-evals serve --port 8081`.
 
 ---
 

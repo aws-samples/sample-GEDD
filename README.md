@@ -222,6 +222,8 @@ This repo includes Codex-native assistance for the same GEDD workflow:
 | Plugin package | `plugins/gedd/` | Installable Codex plugin that bundles the GEDD skill for reuse beyond this repo |
 | Repo marketplace | `.agents/plugins/marketplace.json` | Local plugin catalog entry pointing Codex at `./plugins/gedd` |
 
+Codex skills are the authoring format for reusable workflows; plugins are the installable distribution unit for those skills. The repo skill is best when you are working inside this repository. The plugin is best when you want the same GEDD guidance available from other projects or shared with teammates through a marketplace.
+
 Use the skill when you want Codex to guide or automate the workflow while still making the website the first-touch experience:
 
 ```text
@@ -377,6 +379,30 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 | `check-saturation` | Check dataset coverage |
 | `coverage` | Bar-chart breakdown by category |
 | `compare` | Check if a new prompt adds unique coverage |
+
+---
+
+## End-To-End Checks
+
+Use these checks when changing the app, docs, Codex skill, or plugin package:
+
+```bash
+cd grounded-evals
+PYTHONPATH=src pytest
+PYTHONPATH=src python3 -m grounded_evals.cli --help
+```
+
+For a local website smoke test:
+
+```bash
+grounded-evals serve --host 127.0.0.1 --port 8080
+
+for p in / /demos /coach /eval /coding /analysis /judge /report /health; do
+  curl -sS -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:8080$p"
+done
+```
+
+Codex skill and plugin validation uses Codex's local `$skill-creator` and `$plugin-creator` validator scripts. Those system paths are installation-specific, so keep their output in release notes or PR checks rather than baking absolute `.codex` paths into copied shell commands.
 
 ---
 
