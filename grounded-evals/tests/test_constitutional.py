@@ -5,10 +5,10 @@ from unittest.mock import MagicMock
 
 from grounded_evals.judge_builder.constitutional import (
     ConstitutionalPrinciple,
+    _format_principles_block,
     build_constitutional_judge_prompt,
     build_constitutional_principles,
     constitutional_judge,
-    _format_principles_block,
 )
 
 
@@ -52,6 +52,7 @@ def _make_annotations():
 
 # ── build_constitutional_principles ──────────────────────────────────────────
 
+
 def test_build_principles_basic():
     principles = build_constitutional_principles(
         _make_codebook(), _make_paradigm(), _make_annotations()
@@ -79,19 +80,29 @@ def test_build_principles_empty_codebook():
 
 
 def test_build_principles_no_annotations():
-    principles = build_constitutional_principles(
-        _make_codebook(), _make_paradigm(), []
-    )
+    principles = build_constitutional_principles(_make_codebook(), _make_paradigm(), [])
     assert len(principles) == 2
     assert "No example available" in principles[0].discriminating_example
 
 
 def test_build_principles_picks_highest_severity_example():
     annotations = [
-        {"query": "q1", "response": "r1", "codes": ["hallucination"],
-         "severity": "cosmetic", "confidence": "low", "memo": ""},
-        {"query": "q2", "response": "r2", "codes": ["hallucination"],
-         "severity": "catastrophic", "confidence": "high", "memo": "worst case"},
+        {
+            "query": "q1",
+            "response": "r1",
+            "codes": ["hallucination"],
+            "severity": "cosmetic",
+            "confidence": "low",
+            "memo": "",
+        },
+        {
+            "query": "q2",
+            "response": "r2",
+            "codes": ["hallucination"],
+            "severity": "catastrophic",
+            "confidence": "high",
+            "memo": "worst case",
+        },
     ]
     principles = build_constitutional_principles(
         [{"name": "hallucination", "definition": "x"}], {}, annotations
@@ -100,6 +111,7 @@ def test_build_principles_picks_highest_severity_example():
 
 
 # ── _format_principles_block ──────────────────────────────────────────────────
+
 
 def test_format_principles_block():
     principles = [
@@ -119,25 +131,37 @@ def test_format_principles_block():
 
 # ── constitutional_judge ──────────────────────────────────────────────────────
 
+
 def test_constitutional_judge_success():
-    verdict_json = json.dumps({
-        "principle_verdicts": [
-            {"code": "hallucination", "reasoning": "No facts invented", "violated": False, "severity": None}
-        ],
-        "violated_codes": [],
-        "overall_pass": True,
-        "confidence": "high",
-        "summary": "Response is clean.",
-    })
+    verdict_json = json.dumps(
+        {
+            "principle_verdicts": [
+                {
+                    "code": "hallucination",
+                    "reasoning": "No facts invented",
+                    "violated": False,
+                    "severity": None,
+                }
+            ],
+            "violated_codes": [],
+            "overall_pass": True,
+            "confidence": "high",
+            "summary": "Response is clean.",
+        }
+    )
     client = MagicMock()
     msg = MagicMock()
     msg.content = [MagicMock(text=verdict_json)]
     client.messages.create.return_value = msg
 
-    principles = [ConstitutionalPrinciple(
-        code_name="hallucination", definition="x",
-        causal_trigger="y", discriminating_example="z",
-    )]
+    principles = [
+        ConstitutionalPrinciple(
+            code_name="hallucination",
+            definition="x",
+            causal_trigger="y",
+            discriminating_example="z",
+        )
+    ]
     result = constitutional_judge("Hello", "Hi there!", principles, client=client, model_id="test")
     assert result.overall_pass is True
     assert result.violated_codes == []
@@ -145,25 +169,38 @@ def test_constitutional_judge_success():
 
 
 def test_constitutional_judge_violation_detected():
-    verdict_json = json.dumps({
-        "principle_verdicts": [
-            {"code": "hallucination", "reasoning": "Invented policy", "violated": True, "severity": "critical"}
-        ],
-        "violated_codes": ["hallucination"],
-        "overall_pass": False,
-        "confidence": "high",
-        "summary": "Hallucination detected.",
-    })
+    verdict_json = json.dumps(
+        {
+            "principle_verdicts": [
+                {
+                    "code": "hallucination",
+                    "reasoning": "Invented policy",
+                    "violated": True,
+                    "severity": "critical",
+                }
+            ],
+            "violated_codes": ["hallucination"],
+            "overall_pass": False,
+            "confidence": "high",
+            "summary": "Hallucination detected.",
+        }
+    )
     client = MagicMock()
     msg = MagicMock()
     msg.content = [MagicMock(text=verdict_json)]
     client.messages.create.return_value = msg
 
-    principles = [ConstitutionalPrinciple(
-        code_name="hallucination", definition="x",
-        causal_trigger="y", discriminating_example="z",
-    )]
-    result = constitutional_judge("Policy?", "30 day refund", principles, client=client, model_id="test")
+    principles = [
+        ConstitutionalPrinciple(
+            code_name="hallucination",
+            definition="x",
+            causal_trigger="y",
+            discriminating_example="z",
+        )
+    ]
+    result = constitutional_judge(
+        "Policy?", "30 day refund", principles, client=client, model_id="test"
+    )
     assert result.overall_pass is False
     assert "hallucination" in result.violated_codes
 
@@ -174,9 +211,14 @@ def test_constitutional_judge_parse_error():
     msg.content = [MagicMock(text="This is not JSON at all")]
     client.messages.create.return_value = msg
 
-    principles = [ConstitutionalPrinciple(
-        code_name="x", definition="x", causal_trigger="x", discriminating_example="x",
-    )]
+    principles = [
+        ConstitutionalPrinciple(
+            code_name="x",
+            definition="x",
+            causal_trigger="x",
+            discriminating_example="x",
+        )
+    ]
     result = constitutional_judge("q", "r", principles, client=client, model_id="test")
     assert result.overall_pass is False
     assert "Parse error" in result.summary
@@ -184,11 +226,14 @@ def test_constitutional_judge_parse_error():
 
 # ── build_constitutional_judge_prompt ─────────────────────────────────────────
 
+
 def test_build_constitutional_judge_prompt():
     principles = [
         ConstitutionalPrinciple(
-            code_name="safety_violation", definition="Harmful content",
-            causal_trigger="Jailbreak attempt", discriminating_example="Example",
+            code_name="safety_violation",
+            definition="Harmful content",
+            causal_trigger="Jailbreak attempt",
+            discriminating_example="Example",
             dimension="safety",
         )
     ]

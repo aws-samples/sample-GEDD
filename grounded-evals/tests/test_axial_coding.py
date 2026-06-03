@@ -14,8 +14,8 @@ from grounded_evals.axial_coding.paradigm import (
 )
 from grounded_evals.models.core import Category, Code, CodeType
 
-
 # ── ErrorMapping ──────────────────────────────────────────────────────────────
+
 
 def test_error_mapping_creation():
     m = ErrorMapping(error_code="hallucination", primary_category="accuracy")
@@ -37,13 +37,23 @@ def test_error_mapping_with_secondary():
 
 # ── STANDARD_ERROR_CATEGORIES ─────────────────────────────────────────────────
 
+
 def test_standard_categories_complete():
-    expected = {"quality", "accuracy", "brand_relevance", "bias", "safety",
-                "completeness", "tone", "instruction_following"}
+    expected = {
+        "quality",
+        "accuracy",
+        "brand_relevance",
+        "bias",
+        "safety",
+        "completeness",
+        "tone",
+        "instruction_following",
+    }
     assert set(STANDARD_ERROR_CATEGORIES.keys()) == expected
 
 
 # ── map_errors_to_categories (mocked LLM) ────────────────────────────────────
+
 
 def test_map_errors_empty():
     result = map_errors_to_categories([])
@@ -51,20 +61,32 @@ def test_map_errors_empty():
 
 
 def test_map_errors_with_mock_llm(monkeypatch):
-    mock_response = json.dumps({
-        "mappings": [
-            {"error_code": "hallucination", "primary_category": "accuracy",
-             "secondary_category": None, "rationale": "Factual error"},
-            {"error_code": "rude_tone", "primary_category": "tone",
-             "secondary_category": "brand_relevance", "rationale": "Tone issue"},
-        ]
-    })
+    mock_response = json.dumps(
+        {
+            "mappings": [
+                {
+                    "error_code": "hallucination",
+                    "primary_category": "accuracy",
+                    "secondary_category": None,
+                    "rationale": "Factual error",
+                },
+                {
+                    "error_code": "rude_tone",
+                    "primary_category": "tone",
+                    "secondary_category": "brand_relevance",
+                    "rationale": "Tone issue",
+                },
+            ]
+        }
+    )
     mock_client = MagicMock()
     msg = MagicMock()
     msg.content = [MagicMock(text=mock_response)]
     mock_client.messages.create.return_value = msg
 
-    monkeypatch.setattr("grounded_evals.axial_coding.mapper.get_default_client", lambda: mock_client)
+    monkeypatch.setattr(
+        "grounded_evals.axial_coding.mapper.get_default_client", lambda: mock_client
+    )
     monkeypatch.setattr("grounded_evals.axial_coding.mapper.get_model_id", lambda: "test-model")
 
     codes = [
@@ -84,16 +106,20 @@ def test_map_errors_parse_failure(monkeypatch):
     msg.content = [MagicMock(text="Not valid JSON at all")]
     mock_client.messages.create.return_value = msg
 
-    monkeypatch.setattr("grounded_evals.axial_coding.mapper.get_default_client", lambda: mock_client)
+    monkeypatch.setattr(
+        "grounded_evals.axial_coding.mapper.get_default_client", lambda: mock_client
+    )
     monkeypatch.setattr("grounded_evals.axial_coding.mapper.get_model_id", lambda: "test-model")
 
     codes = [Code(label="test", code_type=CodeType.IN_VIVO)]
     import pytest
+
     with pytest.raises(RuntimeError, match="failed to parse"):
         map_errors_to_categories(codes)
 
 
 # ── STANDARD_DIMENSIONS ───────────────────────────────────────────────────────
+
 
 def test_standard_dimensions_not_empty():
     assert len(STANDARD_DIMENSIONS) >= 5
@@ -103,21 +129,26 @@ def test_standard_dimensions_not_empty():
 
 # ── build_paradigm_model (mocked LLM) ────────────────────────────────────────
 
+
 def test_build_paradigm_model_success(monkeypatch):
-    mock_response = json.dumps({
-        "phenomenon": {"name": "Agent Hallucination", "definition": "Core failure"},
-        "causal_conditions": [{"name": "Missing context", "definition": "No grounding data"}],
-        "context": [{"name": "Long conversation", "definition": "Multi-turn"}],
-        "intervening_conditions": [{"name": "Model limitations", "definition": "Capacity"}],
-        "action_strategies": [{"name": "Fabrication", "definition": "Makes up facts"}],
-        "consequences": [{"name": "User distrust", "definition": "Loss of confidence"}],
-    })
+    mock_response = json.dumps(
+        {
+            "phenomenon": {"name": "Agent Hallucination", "definition": "Core failure"},
+            "causal_conditions": [{"name": "Missing context", "definition": "No grounding data"}],
+            "context": [{"name": "Long conversation", "definition": "Multi-turn"}],
+            "intervening_conditions": [{"name": "Model limitations", "definition": "Capacity"}],
+            "action_strategies": [{"name": "Fabrication", "definition": "Makes up facts"}],
+            "consequences": [{"name": "User distrust", "definition": "Loss of confidence"}],
+        }
+    )
     mock_client = MagicMock()
     msg = MagicMock()
     msg.content = [MagicMock(text=mock_response)]
     mock_client.messages.create.return_value = msg
 
-    monkeypatch.setattr("grounded_evals.axial_coding.paradigm.get_default_client", lambda: mock_client)
+    monkeypatch.setattr(
+        "grounded_evals.axial_coding.paradigm.get_default_client", lambda: mock_client
+    )
     monkeypatch.setattr("grounded_evals.axial_coding.paradigm.get_model_id", lambda: "test-model")
 
     codes = [Code(label="hallucination", code_type=CodeType.IN_VIVO, definition="Invents facts")]
@@ -136,9 +167,12 @@ def test_build_paradigm_model_parse_failure(monkeypatch):
     msg.content = [MagicMock(text="No JSON here")]
     mock_client.messages.create.return_value = msg
 
-    monkeypatch.setattr("grounded_evals.axial_coding.paradigm.get_default_client", lambda: mock_client)
+    monkeypatch.setattr(
+        "grounded_evals.axial_coding.paradigm.get_default_client", lambda: mock_client
+    )
     monkeypatch.setattr("grounded_evals.axial_coding.paradigm.get_model_id", lambda: "test-model")
 
     import pytest
+
     with pytest.raises(RuntimeError, match="failed to parse"):
         build_paradigm_model([], [])

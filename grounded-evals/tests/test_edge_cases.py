@@ -35,8 +35,8 @@ from grounded_evals.open_coding.saturation import (
     saturation_recommendation,
 )
 
-
 # ── Models edge cases ─────────────────────────────────────────────────────────
+
 
 def test_golden_prompt_empty_text():
     """Empty prompt text is technically valid (no min_length constraint)."""
@@ -63,6 +63,7 @@ def test_coverage_report_zero_division():
 
 
 # ── Saturation edge cases ────────────────────────────────────────────────────
+
 
 def test_saturation_single_category_many_prompts():
     cat = Category(name="Only")
@@ -100,6 +101,7 @@ def test_saturation_recommendation_partial():
 
 # ── Calibration edge cases ────────────────────────────────────────────────────
 
+
 def test_calibrate_single_score():
     manual = [{"accuracy": 3}]
     judge = [{"accuracy": 3}]
@@ -135,6 +137,7 @@ def test_calibrate_all_same_scores():
 
 
 # ── Ensemble edge cases ───────────────────────────────────────────────────────
+
 
 def test_parse_judge_response_nested_json():
     """JSON embedded in prose with extra text."""
@@ -174,11 +177,18 @@ def test_ensemble_judge_partial_failures():
 
 # ── Few-shot edge cases ───────────────────────────────────────────────────────
 
+
 def test_select_exemplars_all_same_code():
     codebook = [{"name": "hallucination"}]
     annotations = [
-        {"query": f"q{i}", "response": f"r{i}", "codes": ["hallucination"],
-         "severity": "critical", "confidence": "high", "memo": ""}
+        {
+            "query": f"q{i}",
+            "response": f"r{i}",
+            "codes": ["hallucination"],
+            "severity": "critical",
+            "confidence": "high",
+            "memo": "",
+        }
         for i in range(10)
     ]
     result = select_exemplars(annotations, codebook, max_per_code=2, max_total=5)
@@ -188,8 +198,14 @@ def test_select_exemplars_all_same_code():
 def test_select_exemplars_truncates_long_text():
     codebook = [{"name": "x"}]
     annotations = [
-        {"query": "q" * 500, "response": "r" * 600, "codes": ["x"],
-         "severity": "critical", "confidence": "high", "memo": ""},
+        {
+            "query": "q" * 500,
+            "response": "r" * 600,
+            "codes": ["x"],
+            "severity": "critical",
+            "confidence": "high",
+            "memo": "",
+        },
     ]
     result = select_exemplars(annotations, codebook)
     for ex in result.exemplars:
@@ -198,6 +214,7 @@ def test_select_exemplars_truncates_long_text():
 
 
 # ── Parser edge cases ─────────────────────────────────────────────────────────
+
 
 def test_parse_agent_spec_empty_file(tmp_path):
     f = tmp_path / "empty.yaml"
@@ -223,6 +240,7 @@ def test_parse_agent_spec_capabilities_as_strings(tmp_path):
 
 
 # ── CLI edge cases ────────────────────────────────────────────────────────────
+
 
 def test_cli_coverage_empty_file(tmp_path):
     dataset = tmp_path / "empty.jsonl"
@@ -252,6 +270,7 @@ def test_cli_saturation_single_prompt(tmp_path):
 
 # ── Rubric edge cases ─────────────────────────────────────────────────────────
 
+
 def test_rubric_single_mapping():
     mappings = [ErrorMapping(error_code="x", primary_category="quality")]
     rubric = generate_rubric(mappings)
@@ -261,8 +280,7 @@ def test_rubric_single_mapping():
 
 def test_rubric_many_errors_same_category():
     mappings = [
-        ErrorMapping(error_code=f"error_{i}", primary_category="accuracy")
-        for i in range(10)
+        ErrorMapping(error_code=f"error_{i}", primary_category="accuracy") for i in range(10)
     ]
     rubric = generate_rubric(mappings)
     assert len(rubric.criteria) == 1  # all grouped under accuracy
@@ -276,6 +294,7 @@ def test_rubric_unknown_category_weight():
 
 
 # ── Session edge cases ────────────────────────────────────────────────────────
+
 
 def test_session_prompts_for_nonexistent_category():
     s = Session()
@@ -294,9 +313,11 @@ def test_session_coverage_no_categories():
 
 # ── LLM config edge cases ────────────────────────────────────────────────────
 
+
 def test_llm_config_both_env_vars(monkeypatch):
     """When both ANTHROPIC_API_KEY and AWS_REGION are set, Anthropic wins."""
     from grounded_evals.llm.client import LLMConfig
+
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-test")
     monkeypatch.setenv("AWS_REGION", "us-west-2")
     cfg = LLMConfig.from_env()
@@ -305,9 +326,12 @@ def test_llm_config_both_env_vars(monkeypatch):
 
 def test_llm_config_yaml_overrides_env(tmp_path, monkeypatch):
     from grounded_evals.llm.client import LLMConfig
+
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     config_file = tmp_path / "config.yaml"
-    config_file.write_text("llm:\n  provider: bedrock\n  region: ap-southeast-1\n  model_id: custom-model\n")
+    config_file.write_text(
+        "llm:\n  provider: bedrock\n  region: ap-southeast-1\n  model_id: custom-model\n"
+    )
     cfg = LLMConfig.from_yaml(config_file)
     assert cfg.region == "ap-southeast-1"
     assert cfg.model_id == "custom-model"

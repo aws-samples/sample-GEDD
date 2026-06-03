@@ -37,8 +37,8 @@ from grounded_evals.open_coding.saturation import (
     check_overall_saturation,
 )
 
-
 # ── Full pipeline: spec → session → coverage ──────────────────────────────────
+
 
 def test_full_session_workflow():
     """Integration: create session, add categories/prompts, check coverage."""
@@ -60,9 +60,7 @@ def test_full_session_workflow():
             GoldenPrompt(prompt_text=f"Normal query {i}", category_id=cats[0].id)
         )
     # Add one prompt to second category
-    session.add_golden_prompt(
-        GoldenPrompt(prompt_text="Edge query", category_id=cats[1].id)
-    )
+    session.add_golden_prompt(GoldenPrompt(prompt_text="Edge query", category_id=cats[1].id))
 
     # Check coverage
     report = session.coverage()
@@ -78,6 +76,7 @@ def test_full_session_workflow():
 
 
 # ── Pipeline: error mappings → rubric → judge prompt ──────────────────────────
+
 
 def test_rubric_to_judge_prompt_pipeline():
     """Integration: error mappings → rubric → all 3 judge prompt modes."""
@@ -101,10 +100,22 @@ def test_rubric_to_judge_prompt_pipeline():
     # Few-shot prompt (with exemplars)
     codebook = [{"name": "hallucination"}, {"name": "rude_tone"}]
     annotations = [
-        {"query": "q1", "response": "r1", "codes": ["hallucination"],
-         "severity": "critical", "confidence": "high", "memo": "Invented policy"},
-        {"query": "q2", "response": "r2", "codes": [],
-         "severity": "cosmetic", "confidence": "high", "memo": ""},
+        {
+            "query": "q1",
+            "response": "r1",
+            "codes": ["hallucination"],
+            "severity": "critical",
+            "confidence": "high",
+            "memo": "Invented policy",
+        },
+        {
+            "query": "q2",
+            "response": "r2",
+            "codes": [],
+            "severity": "cosmetic",
+            "confidence": "high",
+            "memo": "",
+        },
     ]
     exemplars = select_exemplars(annotations, codebook)
     few_shot = generate_few_shot_judge_prompt(rubric, exemplars, agent_name="TestBot")
@@ -112,6 +123,7 @@ def test_rubric_to_judge_prompt_pipeline():
 
 
 # ── Pipeline: saturation check with real data ─────────────────────────────────
+
 
 def test_saturation_pipeline():
     """Integration: categories + prompts → saturation analysis."""
@@ -132,6 +144,7 @@ def test_saturation_pipeline():
 
 
 # ── Pipeline: calibration with realistic scores ───────────────────────────────
+
 
 def test_calibration_pipeline_multi_criterion():
     """Integration: multi-criterion calibration with kappa metrics."""
@@ -157,15 +170,16 @@ def test_calibration_pipeline_multi_criterion():
 
 # ── CLI integration: coverage command with varied data ────────────────────────
 
+
 def test_cli_coverage_multiple_categories(tmp_path):
     dataset = tmp_path / "ds.jsonl"
-    rows = [
-        {"prompt": f"p{i}", "category": "happy"} for i in range(5)
-    ] + [
-        {"prompt": f"e{i}", "category": "edge"} for i in range(2)
-    ] + [
-        {"prompt": "a1", "category": "adversarial"},
-    ]
+    rows = (
+        [{"prompt": f"p{i}", "category": "happy"} for i in range(5)]
+        + [{"prompt": f"e{i}", "category": "edge"} for i in range(2)]
+        + [
+            {"prompt": "a1", "category": "adversarial"},
+        ]
+    )
     dataset.write_text("\n".join(json.dumps(r) for r in rows))
 
     runner = CliRunner()
@@ -178,6 +192,7 @@ def test_cli_coverage_multiple_categories(tmp_path):
 
 
 # ── CLI integration: check-saturation with threshold behavior ─────────────────
+
 
 def test_cli_saturation_threshold_behavior(tmp_path):
     """80% saturation → exit 0, below → exit 1."""
@@ -195,6 +210,7 @@ def test_cli_saturation_threshold_behavior(tmp_path):
 
 
 # ── Agent spec parsing integration ───────────────────────────────────────────
+
 
 def test_parse_complex_agent_spec(tmp_path):
     spec_yaml = tmp_path / "spec.yaml"
@@ -233,6 +249,7 @@ agent:
 
 
 # ── Golden dataset serialization roundtrip ────────────────────────────────────
+
 
 def test_golden_dataset_json_roundtrip():
     cat = Category(name="Test", definition="Testing")

@@ -10,8 +10,8 @@ from grounded_evals.judge_builder.active_learning import (
 )
 from grounded_evals.judge_builder.ensemble import EnsembleResult
 
-
 # ── _find_coverage_gaps ───────────────────────────────────────────────────────
+
 
 def test_find_coverage_gaps_empty():
     assert _find_coverage_gaps([], []) == []
@@ -44,16 +44,23 @@ def test_find_coverage_gaps_some_missing():
 
 # ── _build_priority_guidance ──────────────────────────────────────────────────
 
+
 def test_build_priority_guidance_empty():
     result = _build_priority_guidance([], [])
     assert "looks good" in result
 
 
 def test_build_priority_guidance_with_uncertain():
-    uncertain = [UncertainExample(
-        query="q", response="r", uncertainty_score=0.9,
-        uncertainty_reason="reason", judge_score=0.5, suggested_codes=[],
-    )]
+    uncertain = [
+        UncertainExample(
+            query="q",
+            response="r",
+            uncertainty_score=0.9,
+            uncertainty_reason="reason",
+            judge_score=0.5,
+            suggested_codes=[],
+        )
+    ]
     result = _build_priority_guidance(uncertain, [])
     assert "Annotate" in result
 
@@ -65,6 +72,7 @@ def test_build_priority_guidance_with_gaps():
 
 # ── recommend_from_ensemble_results ───────────────────────────────────────────
 
+
 def test_recommend_from_ensemble_empty():
     report = recommend_from_ensemble_results([], [])
     assert report.n_evaluated == 0
@@ -73,15 +81,39 @@ def test_recommend_from_ensemble_empty():
 
 def test_recommend_from_ensemble_basic():
     results = [
-        EnsembleResult(query="q1", response="r1", n_samples=3,
-                       pass_votes=2, fail_votes=1, majority_pass=True,
-                       pass_fraction=0.67, confidence="medium", is_uncertain=False),
-        EnsembleResult(query="q2", response="r2", n_samples=3,
-                       pass_votes=1, fail_votes=2, majority_pass=False,
-                       pass_fraction=0.33, confidence="low", is_uncertain=True),
-        EnsembleResult(query="q3", response="r3", n_samples=3,
-                       pass_votes=3, fail_votes=0, majority_pass=True,
-                       pass_fraction=1.0, confidence="high", is_uncertain=False),
+        EnsembleResult(
+            query="q1",
+            response="r1",
+            n_samples=3,
+            pass_votes=2,
+            fail_votes=1,
+            majority_pass=True,
+            pass_fraction=0.67,
+            confidence="medium",
+            is_uncertain=False,
+        ),
+        EnsembleResult(
+            query="q2",
+            response="r2",
+            n_samples=3,
+            pass_votes=1,
+            fail_votes=2,
+            majority_pass=False,
+            pass_fraction=0.33,
+            confidence="low",
+            is_uncertain=True,
+        ),
+        EnsembleResult(
+            query="q3",
+            response="r3",
+            n_samples=3,
+            pass_votes=3,
+            fail_votes=0,
+            majority_pass=True,
+            pass_fraction=1.0,
+            confidence="high",
+            is_uncertain=False,
+        ),
     ]
     report = recommend_from_ensemble_results(
         [{"query": f"q{i}"} for i in range(1, 4)], results, top_k=2
@@ -94,9 +126,17 @@ def test_recommend_from_ensemble_basic():
 
 def test_recommend_from_ensemble_with_coverage_gaps():
     results = [
-        EnsembleResult(query="q1", response="r1", n_samples=3,
-                       pass_votes=1, fail_votes=2, majority_pass=False,
-                       pass_fraction=0.33, confidence="low", is_uncertain=True),
+        EnsembleResult(
+            query="q1",
+            response="r1",
+            n_samples=3,
+            pass_votes=1,
+            fail_votes=2,
+            majority_pass=False,
+            pass_fraction=0.33,
+            confidence="low",
+            is_uncertain=True,
+        ),
     ]
     codebook = [{"name": "safety"}, {"name": "tone"}]
     annotations = [{"codes": ["safety"]}]
@@ -107,6 +147,7 @@ def test_recommend_from_ensemble_with_coverage_gaps():
 
 
 # ── recommend_from_judge_scores ───────────────────────────────────────────────
+
 
 def test_recommend_from_judge_scores_empty():
     report = recommend_from_judge_scores([], [])

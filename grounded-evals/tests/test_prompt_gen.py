@@ -24,6 +24,7 @@ def _make_rubric():
 
 # ── _build_criteria_section ───────────────────────────────────────────────────
 
+
 def test_build_criteria_section():
     rubric = _make_rubric()
     section = _build_criteria_section(rubric)
@@ -35,6 +36,7 @@ def test_build_criteria_section():
 
 # ── _build_score_keys ─────────────────────────────────────────────────────────
 
+
 def test_build_score_keys():
     rubric = _make_rubric()
     score_keys, justification_keys = _build_score_keys(rubric)
@@ -43,6 +45,7 @@ def test_build_score_keys():
 
 
 # ── generate_judge_prompt (standard) ──────────────────────────────────────────
+
 
 def test_generate_judge_prompt_basic():
     rubric = _make_rubric()
@@ -67,6 +70,7 @@ def test_generate_judge_prompt_contains_criteria():
 
 # ── generate_geval_judge_prompt ───────────────────────────────────────────────
 
+
 def test_generate_geval_prompt():
     rubric = _make_rubric()
     prompt = generate_geval_judge_prompt(rubric, agent_name="GBot")
@@ -86,6 +90,7 @@ def test_geval_criteria_section_has_questions():
 
 # ── generate_few_shot_judge_prompt ────────────────────────────────────────────
 
+
 def test_generate_few_shot_prompt():
     rubric = _make_rubric()
     exemplar_set = FewShotExemplarSet(
@@ -102,7 +107,9 @@ def test_generate_few_shot_prompt():
                 target_error_code="Hallucination",
             ),
         ],
-        n_positive=1, n_negative=0, coverage=["Hallucination"],
+        n_positive=1,
+        n_negative=0,
+        coverage=["Hallucination"],
     )
     prompt = generate_few_shot_judge_prompt(
         rubric, exemplar_set, agent_name="FewBot", agent_description="A test bot"
@@ -123,6 +130,7 @@ def test_generate_few_shot_prompt_empty_exemplars():
 
 
 # ── Rubric with paradigm model enrichment ────────────────────────────────────
+
 
 def test_rubric_with_paradigm_dict():
     mappings = [ErrorMapping(error_code="hallucination", primary_category="accuracy")]

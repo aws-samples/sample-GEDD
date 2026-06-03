@@ -23,8 +23,8 @@ from grounded_evals.models.core import (
     SaturationStatus,
 )
 
-
 # ── Dimension ─────────────────────────────────────────────────────────────────
+
 
 def test_dimension_basic():
     d = Dimension(name="complexity", low_anchor="simple", high_anchor="complex")
@@ -47,19 +47,24 @@ def test_dimension_serialization():
 
 # ── Property ──────────────────────────────────────────────────────────────────
 
+
 def test_property_empty_dimensions():
     p = Property(name="tone")
     assert p.dimensions == []
 
 
 def test_property_with_dimensions():
-    p = Property(name="tone", dimensions=[
-        Dimension(name="formality", low_anchor="casual", high_anchor="formal"),
-    ])
+    p = Property(
+        name="tone",
+        dimensions=[
+            Dimension(name="formality", low_anchor="casual", high_anchor="formal"),
+        ],
+    )
     assert len(p.dimensions) == 1
 
 
 # ── Code ──────────────────────────────────────────────────────────────────────
+
 
 def test_code_defaults():
     c = Code(label="hallucination", code_type=CodeType.IN_VIVO)
@@ -92,6 +97,7 @@ def test_code_full():
 
 # ── Category ──────────────────────────────────────────────────────────────────
 
+
 def test_category_defaults():
     cat = Category(name="Happy Path")
     assert cat.saturation == SaturationStatus.UNSATURATED
@@ -118,6 +124,7 @@ def test_category_serialization_roundtrip():
 
 # ── GoldenPrompt ──────────────────────────────────────────────────────────────
 
+
 def test_golden_prompt_requires_category_id():
     gp = GoldenPrompt(prompt_text="Hello", category_id=uuid4())
     assert gp.prompt_text == "Hello"
@@ -143,6 +150,7 @@ def test_golden_prompt_edge_case_flags():
 
 # ── ParadigmModel ─────────────────────────────────────────────────────────────
 
+
 def test_paradigm_model_minimal():
     phenomenon = Category(name="Core Failure")
     pm = ParadigmModel(phenomenon=phenomenon)
@@ -164,6 +172,7 @@ def test_paradigm_model_full():
 
 # ── Memo ──────────────────────────────────────────────────────────────────────
 
+
 def test_memo_types():
     assert MemoType.CODE.value == "code"
     assert MemoType.THEORETICAL.value == "theoretical"
@@ -178,6 +187,7 @@ def test_memo_creation():
 
 
 # ── GoldenDataset ─────────────────────────────────────────────────────────────
+
 
 def test_golden_dataset_empty():
     ds = GoldenDataset(agent_name="TestBot")
@@ -194,6 +204,7 @@ def test_golden_dataset_with_prompts():
 
 
 # ── JudgeCriterion / JudgeRubric ─────────────────────────────────────────────
+
 
 def test_judge_criterion_defaults():
     jc = JudgeCriterion(name="Accuracy", description="Factual correctness")
@@ -214,6 +225,7 @@ def test_judge_rubric_with_criteria():
 
 
 # ── CoverageReport ───────────────────────────────────────────────────────────
+
 
 def test_coverage_report_defaults():
     cr = CoverageReport()
@@ -237,6 +249,7 @@ def test_coverage_report_with_data():
 
 
 # ── SaturationStatus enum ────────────────────────────────────────────────────
+
 
 def test_saturation_status_values():
     assert SaturationStatus.UNSATURATED.value == "unsaturated"

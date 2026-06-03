@@ -57,9 +57,7 @@ def test_overall_saturation_with_gaps():
 
 
 def test_saturation_recommendation_empty():
-    report = check_overall_saturation(
-        [_make_category("A")], []
-    )
+    report = check_overall_saturation([_make_category("A")], [])
     rec = saturation_recommendation(report)
     assert "No prompts yet" in rec
 

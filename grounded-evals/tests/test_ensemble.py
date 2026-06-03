@@ -11,8 +11,8 @@ from grounded_evals.judge_builder.ensemble import (
     ensemble_judge,
 )
 
-
 # ── _parse_judge_response ─────────────────────────────────────────────────────
+
 
 def test_parse_judge_response_raw_json():
     text = '{"scores": {"accuracy": 4}, "pass": true, "summary": "Good"}'
@@ -51,6 +51,7 @@ def test_parse_judge_response_malformed_json():
 
 # ── _infer_confidence ─────────────────────────────────────────────────────────
 
+
 def test_infer_confidence_unanimous():
     conf, uncertain = _infer_confidence(1.0, 3)
     assert conf == "high"
@@ -82,6 +83,7 @@ def test_infer_confidence_single_sample():
 
 
 # ── ensemble_judge ────────────────────────────────────────────────────────────
+
 
 def _mock_client_responses(responses: list[str]):
     client = MagicMock()
@@ -139,10 +141,11 @@ def test_ensemble_judge_median_scores():
     client = _mock_client_responses(responses)
     result = ensemble_judge("{query} {response}", "q", "r", client, "model", n_samples=3)
     assert result.median_scores["accuracy"] == 4  # median of [3, 5, 4]
-    assert result.median_scores["tone"] == 4      # median of [4, 4, 2]
+    assert result.median_scores["tone"] == 4  # median of [4, 4, 2]
 
 
 # ── aggregate_ensemble_results ────────────────────────────────────────────────
+
 
 def test_aggregate_empty():
     assert aggregate_ensemble_results([]) == {}
@@ -150,14 +153,30 @@ def test_aggregate_empty():
 
 def test_aggregate_basic():
     results = [
-        EnsembleResult(query="q1", response="r1", n_samples=3,
-                       pass_votes=3, fail_votes=0, majority_pass=True,
-                       pass_fraction=1.0, confidence="high", is_uncertain=False,
-                       median_scores={"accuracy": 4.0}),
-        EnsembleResult(query="q2", response="r2", n_samples=3,
-                       pass_votes=1, fail_votes=2, majority_pass=False,
-                       pass_fraction=0.33, confidence="low", is_uncertain=True,
-                       median_scores={"accuracy": 2.0}),
+        EnsembleResult(
+            query="q1",
+            response="r1",
+            n_samples=3,
+            pass_votes=3,
+            fail_votes=0,
+            majority_pass=True,
+            pass_fraction=1.0,
+            confidence="high",
+            is_uncertain=False,
+            median_scores={"accuracy": 4.0},
+        ),
+        EnsembleResult(
+            query="q2",
+            response="r2",
+            n_samples=3,
+            pass_votes=1,
+            fail_votes=2,
+            majority_pass=False,
+            pass_fraction=0.33,
+            confidence="low",
+            is_uncertain=True,
+            median_scores={"accuracy": 2.0},
+        ),
     ]
     report = aggregate_ensemble_results(results)
     assert report["total_evaluated"] == 2
