@@ -35,7 +35,7 @@ COGNITO_REGION = os.environ.get("AWS_REGION", "us-east-1")
 # Fallback password if Cognito not configured — must be set explicitly; no hardcoded default
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # Guest mode: no auth required when neither Cognito nor ADMIN_PASSWORD is configured.
-# This is the default for local dev / demo runs — just `python -m grounded_evals.app`.
+# This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/_nicegui", "/favicon.ico", "/health"}
 

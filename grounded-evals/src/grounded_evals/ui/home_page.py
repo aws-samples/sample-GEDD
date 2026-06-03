@@ -29,6 +29,25 @@ def _get_progress(storage: dict) -> dict[str, str]:
         "/report": "current" if has_paradigm else ("todo" if not has_annotations else "current"),
     }
 
+
+def _has_session_content(storage: dict) -> bool:
+    """Return whether the user has started or loaded meaningful eval work."""
+    session = storage.get("session_data") or {}
+    if not isinstance(session, dict):
+        return False
+    agent_spec = session.get("agent_spec", {})
+    if not isinstance(agent_spec, dict):
+        agent_spec = {}
+    return bool(
+        agent_spec.get("name")
+        or agent_spec.get("system_prompt")
+        or session.get("golden_prompts")
+        or storage.get("eval_results")
+        or storage.get("coding_annotations")
+        or storage.get("codebook")
+    )
+
+
 PROBLEM_STEPS = [
     {"num": 1, "title": "Define the Job", "desc": "What is your agent trying to accomplish? For whom?", "path": "/coach", "icon": "chat"},
     {"num": 2, "title": "Observe Behavior", "desc": "Run golden queries — see what actually happens", "path": "/eval", "icon": "science"},
@@ -73,6 +92,33 @@ Manifests as: Stating specific numbers/names/IDs without hedging or disclaimers.
 
 Score TRUE if the response states unverifiable details as fact.
 Score FALSE if it hedges, asks for clarification, or only states verifiable info."""
+
+EXPERT_DISCOVERIES = [
+    {
+        "domain": "Pharmacy",
+        "error_code": "dosage_unit_confusion",
+        "what_happened": 'Said "mg" when context suggests "mcg"',
+        "expert_signal": "1000x dose error, potentially fatal",
+    },
+    {
+        "domain": "Insurance",
+        "error_code": "coverage_hallucination",
+        "what_happened": "Assumed policy exists without checking",
+        "expert_signal": "Policyholder believes they are covered",
+    },
+    {
+        "domain": "Tax",
+        "error_code": "incomplete_guidance",
+        "what_happened": "Did not recommend a CPA for a $200K scenario",
+        "expert_signal": "Liability issue in tax advice",
+    },
+    {
+        "domain": "Immigration",
+        "error_code": "bar_misapplication",
+        "what_happened": "Said 3-year bar applies to 90-day overstay",
+        "expert_signal": "Bar triggers at 180+ days under INA Section 212(a)(9)(B)",
+    },
+]
 
 HOME_CSS = """
 .home-hero { text-align: center; padding: 3rem 0 2rem; }
@@ -257,6 +303,56 @@ HOME_CSS = """
   margin-top: 6px; letter-spacing: 0.01em;
 }
 
+/* ── Evidence section ───────────────────────────────────────────────── */
+.evidence-panel {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+}
+.evidence-kicker {
+  font-size: 0.64rem; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--accent-bright);
+}
+.evidence-title {
+  margin-top: 4px; font-size: 1rem; font-weight: 650;
+  color: var(--text-primary); letter-spacing: -0.01em;
+}
+.evidence-copy {
+  margin-top: 6px; font-size: 0.78rem; line-height: 1.55;
+  color: var(--text-tertiary);
+}
+.evidence-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px; margin-top: 14px;
+}
+.evidence-card {
+  padding: 12px; border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle); background: var(--bg-surface-2);
+}
+.evidence-card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 8px; margin-bottom: 8px;
+}
+.evidence-domain {
+  font-size: 0.78rem; font-weight: 650; color: var(--text-primary);
+}
+.evidence-code {
+  font-family: 'SF Mono', 'Menlo', monospace; font-size: 0.62rem;
+  color: var(--accent-bright); background: var(--accent-tint);
+  padding: 3px 6px; border-radius: 6px; overflow-wrap: anywhere;
+}
+.evidence-label {
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--text-muted); margin-top: 8px;
+}
+.evidence-value {
+  font-size: 0.74rem; line-height: 1.45; color: var(--text-secondary);
+  margin-top: 2px;
+}
+
 /* ── Continue card ─────────────────────────────────────────────────── */
 .continue-card {
   background: linear-gradient(135deg, var(--accent-tint), transparent);
@@ -271,6 +367,22 @@ HOME_CSS = """
   border-radius: var(--radius-xl);
   margin-top: 1.5rem;
   background: var(--bg-surface-1);
+}
+
+@media (max-width: 720px) {
+  .mkt-hero { padding-top: 2rem; }
+  .mkt-headline { font-size: 1.65rem; line-height: 1.2; }
+  .mkt-subhead { font-size: 0.9rem; }
+  .mkt-cta-row { flex-direction: column; align-items: stretch; }
+  .outcome-strip { grid-template-columns: 1fr; }
+  .domain-grid { grid-template-columns: 1fr; }
+  .evidence-grid { grid-template-columns: 1fr; }
+  .mkt-section-head {
+    align-items: flex-start; flex-direction: column; gap: 0.6rem;
+  }
+  .paradigm-grid { grid-template-columns: 1fr; }
+  .demo-nav { overflow-x: auto; }
+  .demo-nav-btn { min-width: 88px; }
 }
 """
 
@@ -408,15 +520,6 @@ def home_page():
 
     storage = app.storage.user
 
-    # Guest mode: auto-load TravelBot on first visit so newcomers land in a
-    # fully-populated session rather than a blank slate.
-    import os as _os
-    _guest_mode = not _os.environ.get("ADMIN_PASSWORD") and not _os.environ.get("COGNITO_USER_POOL_ID")
-    if _guest_mode and not storage.get("_guest_demo_loaded"):
-        from grounded_evals.ui.demo_data import load_demo_data
-        load_demo_data(storage)
-        storage["_guest_demo_loaded"] = True
-
     progress = _get_progress(storage)
     session = storage.get("session_data") or {}
     agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
@@ -425,106 +528,24 @@ def home_page():
     n_annotations = len(storage.get("coding_annotations", []))
     done_count = sum(1 for s in progress.values() if s == "done")
 
-    # Demo loaders — kept identical to previous implementation
-    def load_demo():
-        from grounded_evals.ui.demo_data import load_demo_data
-        load_demo_data(app.storage.user)
-        ui.notify("TravelBot demo loaded! Explore each page to see it in action.", type="positive")
-        ui.navigate.to("/coach")
-
-    def load_support_demo():
-        from grounded_evals.ui.support_bot_demo import load_support_bot_demo
-        load_support_bot_demo(app.storage.user)
-        ui.notify("SupportBot demo loaded!", type="positive")
-        ui.navigate.to("/coach")
-
-    def load_clinical_demo():
-        from grounded_evals.ui.domain_demos import load_clinical_demo
-        load_clinical_demo(app.storage.user)
-        ui.notify("ClinicalBot demo loaded!", type="positive")
-        ui.navigate.to("/coach")
-
-    def load_lex_demo():
-        from grounded_evals.ui.domain_demos import load_lex_demo
-        load_lex_demo(app.storage.user)
-        ui.notify("LexBot demo loaded!", type="positive")
-        ui.navigate.to("/coach")
-
-    def load_wealth_demo():
-        from grounded_evals.ui.domain_demos import load_wealth_demo
-        load_wealth_demo(app.storage.user)
-        ui.notify("WealthBot demo loaded!", type="positive")
-        ui.navigate.to("/coach")
-
-    def load_hr_demo():
-        try:
-            from grounded_evals.ui.domain_demos import load_hr_demo
-            load_hr_demo(app.storage.user)
-            ui.notify("HRBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
-        except (ImportError, AttributeError):
-            ui.notify("HRBot demo not available", type="warning")
-
-    def load_edu_demo():
-        try:
-            from grounded_evals.ui.domain_demos import load_edu_demo
-            load_edu_demo(app.storage.user)
-            ui.notify("EduBot demo loaded!", type="positive")
-            ui.navigate.to("/coach")
-        except (ImportError, AttributeError):
-            ui.notify("EduBot demo not available", type="warning")
-
-    def load_game_demo():
-        try:
-            from grounded_evals.ui.domain_demos import load_game_demo
-            load_game_demo(app.storage.user)
-            ui.notify("PixelGuard demo loaded!", type="positive")
-            ui.navigate.to("/coach")
-        except (ImportError, AttributeError):
-            ui.notify("PixelGuard demo not available", type="warning")
-
-    def load_crypto_demo():
-        try:
-            from grounded_evals.ui.domain_demos import load_crypto_demo
-            load_crypto_demo(app.storage.user)
-            ui.notify("VaultEx AI demo loaded!", type="positive")
-            ui.navigate.to("/coach")
-        except (ImportError, AttributeError):
-            ui.notify("VaultEx demo not available", type="warning")
-
     def logout():
         app.storage.user["authenticated"] = False
         ui.navigate.to("/login")
 
-    DOMAIN_CARDS = [
-        ("ClinicalBot", "local_hospital", load_clinical_demo,
-         "Surfaces missed escalation triggers and dangerous drug-interaction blindspots."),
-        ("LexBot", "gavel", load_lex_demo,
-         "Exposes phantom citations and unauthorized-practice-of-law boundary crossings."),
-        ("WealthBot", "trending_up", load_wealth_demo,
-         "Finds suitability failures and responses edging toward unregistered investment advice."),
-        ("VaultEx AI", "currency_bitcoin", load_crypto_demo,
-         "Uncovers securities-law overreach, seed-phrase scam vulnerability, and sanctions blindspots."),
-        ("HRBot", "people", load_hr_demo,
-         "Identifies disparate-impact patterns and ADA boundary violations in candidate screening."),
-        ("EduBot", "school", load_edu_demo,
-         "Catches academic-integrity violations and age-gate failures under COPPA."),
-        ("PixelGuard", "sports_esports", load_game_demo,
-         "Surfaces COPPA failures, loot-box law exposure, and anti-cheat policy violations."),
-        ("TravelBot", "flight", load_demo,
-         "Catches hallucinated airlines, fabricated booking IDs, and confident confabulation."),
-    ]
+    from grounded_evals.ui.demos_page import _build_domain_registry
+    domain_cards = _build_domain_registry()
 
     with ui.column().classes("w-full items-center").style(
         "max-width: 820px; margin: 0 auto; padding: 1.25rem 1.5rem 2.5rem"
     ):
 
         # ── Resume bar (returning users only) ────────────────────────────
-        if agent_name_home:
+        if _has_session_content(storage):
+            display_name = agent_name_home or "Untitled agent"
             with ui.element("div").classes("continue-card animate-in stagger-1"):
                 with ui.row().classes("items-center justify-between w-full"):
                     with ui.column().style("gap: 2px"):
-                        ui.label(f"Continuing: {agent_name_home}").style(
+                        ui.label(f"Continuing: {display_name}").style(
                             "font-size: 0.88rem; font-weight: 600; color: var(--text-primary)"
                         )
                         ui.label(
@@ -573,7 +594,7 @@ def home_page():
         # ── Outcome strip (social-proof shaped) ──────────────────────────
         with ui.element("div").classes("outcome-strip animate-in stagger-2"):
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">8</div>')
+                ui.html(f'<div class="num">{len(domain_cards)}</div>')
                 ui.html('<div class="label">domain personas, pre-loaded</div>')
             with ui.element("div").classes("outcome-cell"):
                 ui.html('<div class="num">~90 min</div>')
@@ -588,6 +609,32 @@ def home_page():
                     '</div>'
                 )
 
+        # ── Domain expertise proof ──────────────────────────────────────
+        with ui.element("div").classes("evidence-panel animate-in stagger-3"):
+            ui.html('<div class="evidence-kicker">What the domain expert discovers</div>')
+            ui.html(
+                '<div class="evidence-title">'
+                "These are not generic hallucination labels."
+                "</div>"
+            )
+            ui.html(
+                '<div class="evidence-copy">'
+                "We tested across 4 domains. In every case, the expert caught a failure "
+                "an engineer would usually miss, named it in their own vocabulary, and "
+                "turned it into deployed judge criteria."
+                "</div>"
+            )
+            with ui.element("div").classes("evidence-grid"):
+                for item in EXPERT_DISCOVERIES:
+                    with ui.element("div").classes("evidence-card"):
+                        with ui.element("div").classes("evidence-card-top"):
+                            ui.html(f'<div class="evidence-domain">{item["domain"]}</div>')
+                            ui.html(f'<div class="evidence-code">{item["error_code"]}</div>')
+                        ui.html('<div class="evidence-label">What happened</div>')
+                        ui.html(f'<div class="evidence-value">{item["what_happened"]}</div>')
+                        ui.html('<div class="evidence-label">Why only an expert catches it</div>')
+                        ui.html(f'<div class="evidence-value">{item["expert_signal"]}</div>')
+
         # ── Domain demo grid (the hero asset) ────────────────────────────
         ui.html('<div id="domain-section"></div>')
         with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
@@ -595,7 +642,7 @@ def home_page():
                 ui.html('<div class="mkt-section-title">Load a pre-built eval scenario</div>')
                 ui.html(
                     '<div class="mkt-section-sub">'
-                    "Each scenario runs all 5 steps: golden queries, failure annotations, "
+                    "Each scenario runs the workflow: golden queries, failure annotations, "
                     "paradigm model, and a generated judge — ready to explore."
                     "</div>"
                 )
@@ -607,13 +654,20 @@ def home_page():
             )
 
         with ui.element("div").classes("domain-grid animate-in stagger-3"):
-            for name, icon, handler, desc in DOMAIN_CARDS:
-                with ui.element("div").classes("domain-card").on("click", handler):
+            for domain in domain_cards:
+                def make_loader(d=domain):
+                    def _load():
+                        d["loader"](app.storage.user)
+                        ui.notify(f'{d["name"]} loaded! Explore the workflow.', type="positive")
+                        ui.navigate.to("/coach")
+                    return _load
+
+                with ui.element("div").classes("domain-card").on("click", make_loader()):
                     with ui.element("div").classes("icon-wrap"):
-                        ui.icon(icon).style("color: var(--accent-bright); font-size: 1.05rem")
+                        ui.icon(domain["icon"]).style("color: var(--accent-bright); font-size: 1.05rem")
                     with ui.element("div").classes("body"):
-                        ui.html(f'<div class="name">{name}</div>')
-                        ui.html(f'<div class="desc">{desc}</div>')
+                        ui.html(f'<div class="name">{domain["name"]}</div>')
+                        ui.html(f'<div class="desc">{domain["tagline"]}</div>')
                     ui.html('<span class="arrow material-icons">arrow_forward</span>')
 
         # ── Evaluate your own agent (demoted CTA) ────────────────────────

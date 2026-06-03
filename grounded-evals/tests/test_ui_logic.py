@@ -6,8 +6,8 @@ from unittest.mock import patch
 
 import pytest
 
-
 # ── _build_failure_patterns (report_page) ────────────────────────────────────
+
 
 def test_build_failure_patterns_empty():
     from grounded_evals.ui.report_page import _build_failure_patterns
@@ -67,6 +67,7 @@ def test_build_failure_patterns_sorted_desc():
 
 # ── _is_similar (coding_page) ─────────────────────────────────────────────────
 
+
 def test_is_similar_identical():
     from grounded_evals.ui.coding_page import _is_similar
 
@@ -101,6 +102,7 @@ def test_is_similar_near_duplicate_codes():
 
 
 # ── _get_progress (home_page) ─────────────────────────────────────────────────
+
 
 def test_get_progress_empty_storage():
     from grounded_evals.ui.home_page import _get_progress
@@ -151,7 +153,51 @@ def test_get_progress_no_agent_name():
     assert progress["/coach"] == "todo"
 
 
+def test_home_empty_session_has_no_content():
+    from grounded_evals.ui.home_page import _has_session_content
+
+    assert _has_session_content({}) is False
+    assert _has_session_content({"session_data": {"agent_spec": {}, "golden_prompts": []}}) is False
+
+
+def test_home_detects_loaded_session_content():
+    from grounded_evals.ui.home_page import _has_session_content
+
+    assert _has_session_content({"session_data": {"agent_spec": {"name": "RxBot"}}}) is True
+    assert (
+        _has_session_content({"session_data": {"golden_prompts": [{"prompt_text": "q"}]}}) is True
+    )
+    assert (
+        _has_session_content({"coding_annotations": [{"codes": ["dosage_unit_confusion"]}]}) is True
+    )
+
+
+def test_domain_registry_includes_all_launch_demos():
+    from grounded_evals.ui.demos_page import _build_domain_registry
+
+    domains = _build_domain_registry()
+    names = {d["name"] for d in domains}
+
+    assert len(domains) == 17
+    assert {"RxBot", "TaxBot", "MigrateBot", "EnergyBot"}.issubset(names)
+
+
+def test_home_expert_discoveries_are_domain_specific():
+    from grounded_evals.ui.home_page import EXPERT_DISCOVERIES
+
+    codes = {item["error_code"] for item in EXPERT_DISCOVERIES}
+
+    assert len(EXPERT_DISCOVERIES) == 4
+    assert {
+        "dosage_unit_confusion",
+        "coverage_hallucination",
+        "incomplete_guidance",
+        "bar_misapplication",
+    } == codes
+
+
 # ── _build_responses (coding_page) ───────────────────────────────────────────
+
 
 def test_build_responses_empty():
     from grounded_evals.ui.coding_page import _build_responses
@@ -180,7 +226,12 @@ def test_build_responses_deduplicates():
             {"query": "q1", "response": "r1", "annotation": "correct", "model": "m1"},
         ],
         "eval_results": [
-            {"query": "q1", "responses": {"m1": "r1"}, "annotations": {"m1": "correct"}, "notes": ""},
+            {
+                "query": "q1",
+                "responses": {"m1": "r1"},
+                "annotations": {"m1": "correct"},
+                "notes": "",
+            },
         ],
     }
     results = _build_responses(storage)
@@ -224,6 +275,7 @@ def test_build_responses_skips_errors():
 
 
 # ── _label_css_color and _get_all_labels (eval_tab) ──────────────────────────
+
 
 def _make_mock_app(storage_dict: dict):
     """Return a mock app whose storage.user behaves like a plain dict."""

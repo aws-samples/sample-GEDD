@@ -166,6 +166,21 @@ body {
 /* Buttons */
 .q-btn { letter-spacing: -0.01em !important; }
 
+.app-header {
+  min-height: 48px;
+}
+.app-nav-row {
+  flex: 1;
+  justify-content: center;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.app-nav-row::-webkit-scrollbar { display: none; }
+.app-action-row {
+  flex-shrink: 0;
+}
+
 /* Animations */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }
@@ -186,6 +201,25 @@ body {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .app-header {
+    height: auto !important;
+    min-height: 48px;
+    padding: 0.35rem 0.75rem !important;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+  .app-nav-row {
+    order: 3;
+    width: 100%;
+    justify-content: flex-start;
+    padding-bottom: 0.1rem;
+  }
+  .app-nav-row .q-btn {
+    flex-shrink: 0;
   }
 }
 
@@ -230,7 +264,7 @@ def page_layout(title: str = ""):
     """Apply shared page layout with navigation header."""
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
 
-    with ui.header().classes("items-center justify-between").style(
+    with ui.header().classes("app-header items-center justify-between").style(
         "background: rgba(8,9,10,0.85); backdrop-filter: blur(20px); "
         "border-bottom: 1px solid rgba(255,255,255,0.06); "
         "padding: 0 1.5rem; height: 48px; "
@@ -239,7 +273,7 @@ def page_layout(title: str = ""):
             ui.icon("auto_awesome").style("color: var(--accent-bright); font-size: 1.1rem")
             ui.html('<span class="brand-title">GEDD</span>')
 
-        with ui.row().classes("items-center gap-none"):
+        with ui.row().classes("app-nav-row items-center gap-none"):
             for item in NAV_ITEMS:
                 ui.button(
                     item["label"], icon=item["icon"],
@@ -365,14 +399,15 @@ def page_layout(title: str = ""):
                             auto_upload=True,
                         ).props("accept=.json dense color=primary")
 
-        ui.button(icon="add_circle_outline", on_click=confirm_new_project).props(
-            "flat round size=sm"
-        ).style("color: var(--text-muted)").tooltip("New Project")
+        with ui.row().classes("app-action-row items-center gap-none"):
+            ui.button(icon="add_circle_outline", on_click=confirm_new_project).props(
+                "flat round size=sm"
+            ).style("color: var(--text-muted)").tooltip("New Project")
 
-        ui.button(icon="ios_share", on_click=open_session_dialog).props(
-            "flat round size=sm"
-        ).style("color: var(--text-muted)").tooltip("Session Handoff")
+            ui.button(icon="ios_share", on_click=open_session_dialog).props(
+                "flat round size=sm"
+            ).style("color: var(--text-muted)").tooltip("Session Handoff")
 
-        ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
-            "color: var(--text-muted)"
-        ).tooltip("Logout")
+            ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
+                "color: var(--text-muted)"
+            ).tooltip("Logout")
