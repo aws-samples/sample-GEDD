@@ -174,6 +174,8 @@ grounded-evals judge --session session.json --output judge.md
 
 ## What the Domain Expert Discovers
 
+**This is the core reason GEDD exists:** domain experts discover failure modes that engineering teams are unlikely to name from the outside.
+
 We tested across 4 domains. In every case, the expert caught failures an engineer would miss:
 
 | Domain | Error Code | What Happened | Why Only an Expert Catches It |
@@ -183,7 +185,7 @@ We tested across 4 domains. In every case, the expert caught failures an enginee
 | 💰 Tax | `incomplete_guidance` | Didn't recommend CPA for $200K scenario | Liability issue in tax advice |
 | 🛂 Immigration | `bar_misapplication` | Said 3-year bar applies to 90-day overstay | Bar triggers at 180+ days (INA §212(a)(9)(B)) |
 
-These aren't generic "hallucination" labels. They're domain-specific failure modes in the expert's own vocabulary — and they become the criteria in the deployed judge.
+> These are not generic "hallucination" labels. They are domain-specific failure modes in the expert's own vocabulary, and they become the criteria in the deployed judge.
 
 ---
 
