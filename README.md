@@ -1,13 +1,13 @@
-# GEDD — find what your AI agent gets wrong - A Claude Skill for Product Managers and Domain Experts
+# GEDD — Grounded Eval-Driven Development for AI Agents
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-You shipped an AI agent. Now you need to prove it works — to your CEO, to compliance, to the team that inherits it. The agent fails in ways no rubric anticipated, and the eval tools expect you to know what to measure before you've seen what breaks.
+You shipped an AI agent. Now you need to prove it works — to your CEO, to compliance, and to the team that inherits it. The agent fails in ways no rubric anticipated, while most eval tools expect you to know what to measure before you've seen what breaks.
 
-**GEDD is the tool for *before* you have a rubric.** A domain expert has a conversation, and 90 minutes later you have a production eval pipeline.
+**GEDD is the workflow for *before* you have a rubric.** A product manager or domain expert has a guided conversation, observes real agent behavior, names the failures in their own vocabulary, and hands engineering a validated `session.json` that can become an automated judge and CI gate.
 
 > *The eval pipeline is the product. The agent is just the thing it produces.*
 
@@ -21,11 +21,11 @@ You shipped an AI agent. Now you need to prove it works — to your CEO, to comp
 
 ```mermaid
 flowchart TD
-    subgraph DE["🧑‍💼 DOMAIN EXPERT — /gedd in Claude Code"]
+    subgraph DE["🧑‍💼 DOMAIN EXPERT — /gedd or grounded-evals chat"]
         direction TB
         S1["1️⃣ Define Agent"]
         S2["2️⃣ System Prompt"]
-        S3["3️⃣ Deploy to AgentCore"]
+        S3["3️⃣ Runtime"]
         S4["4️⃣ Golden Queries"]
         S5["5️⃣ Annotate & Judge"]
         S1 ==> S2 ==> S3 ==> S4 ==> S5
@@ -40,8 +40,8 @@ flowchart TD
         S6["6️⃣ SageMaker MLflow Pipeline"]
     end
 
-    S3 -.->|"deploy"| AC["☁️ Bedrock AgentCore"]
-    S4 -.->|"invoke"| BR["🤖 Claude Haiku 4.5"]
+    S3 -.->|"optional deployed runtime"| AC["☁️ Bedrock AgentCore"]
+    S4 -.->|"invoke"| BR["🤖 Bedrock / Anthropic"]
     S6 -.->|"track"| SM["📊 SageMaker MLflow"]
     S6 -.->|"gate"| CI["🚦 CI/CD Pipeline"]
 
@@ -54,12 +54,12 @@ flowchart TD
 |:----:|-----|-------------|--------|
 | 1 | Domain Expert | "RxBot helps patients with medications" | Bounded context |
 | 2 | Domain Expert | "Never prescribe. Always escalate." | System prompt + safety rules |
-| 3 | Domain Expert | One command → live endpoint | Agent on AgentCore |
+| 3 | Domain Expert | Choose local simulation or deployed runtime | Test runtime |
 | 4 | Domain Expert | 20 test cases via Open Coding | Golden queries + responses |
 | 5 | Domain Expert | ✓/⚠/✗ → name the failures | Error codes + G-Eval rubric |
 | 6 | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> **Why deploy before testing?** The agent only needs the system prompt. By deploying at Step 3, all golden queries run against the *real endpoint* — latency, IAM, cold starts included.
+> **Why runtime before testing?** Golden queries need realistic responses. By default, GEDD uses the saved system prompt with Bedrock or Anthropic. When AgentCore is configured, the same workflow can run against the deployed runtime so latency, IAM, and cold starts are included.
 
 ---
 
@@ -70,7 +70,7 @@ The pipeline isn't linear — it's a loop. Production failures feed back into ne
 ```mermaid
 flowchart TD
     subgraph EXPERT["🧑‍💼 DOMAIN EXPERT"]
-        D["Define + Prompt + Deploy"]
+        D["Define + Prompt + Runtime"]
         Q["Golden Queries<br/><i>Open Coding methodology</i>"]
         A["Annotate<br/><i>✓/⚠/✗ + error codes</i>"]
         D --> Q --> A
@@ -126,7 +126,12 @@ claude
 
 **ML Engineer**
 ```bash
+cd grounded-evals
+pip install -e ".[dev]"
 pip install sagemaker-mlflow
+
+grounded-evals validate-session \
+  --session session.json
 
 grounded-evals mlflow \
   --session session.json \
@@ -139,6 +144,7 @@ grounded-evals mlflow \
 
 **Explore Demos**
 ```bash
+cd grounded-evals
 pip install -e ".[dev]"
 grounded-evals serve
 ```
@@ -148,6 +154,21 @@ Open `localhost:8080`
 </td>
 </tr>
 </table>
+
+---
+
+## Session Handoff
+
+The handoff artifact is the contract between the domain expert and the ML engineer. It contains the agent definition, system prompt, golden queries, annotations, prompt variants, chat history, and validation metadata.
+
+```bash
+grounded-evals validate-session --session session.json
+grounded-evals handoff --session session.json --output rxbot_handoff_session.json
+grounded-evals export --session session.json --format jsonl --output golden.jsonl
+grounded-evals judge --session session.json --output judge.md
+```
+
+`validate-session` fails only on blocking issues such as a missing agent name, missing system prompt, or no golden queries. It warns when the dataset is still thin, for example fewer than 15 queries, fewer than 3 categories, missing expected behaviors, or no failure annotations yet.
 
 ---
 
@@ -170,15 +191,15 @@ These aren't generic "hallucination" labels. They're domain-specific failure mod
 
 ```mermaid
 flowchart LR
-    CC["Claude Code<br/><i>/gedd skill</i>"] --> SJ["session.json"]
-    SJ --> CLI["grounded-evals mlflow"]
+    CC["Claude Code / CLI / Web UI<br/><i>guided GEDD workflow</i>"] --> SJ["session.json<br/><i>validated handoff</i>"]
+    SJ --> CLI["grounded-evals<br/><i>export + judge + mlflow</i>"]
     CLI --> SM["SageMaker MLflow<br/><i>Experiments + Judges</i>"]
-    CLI --> BR["Bedrock<br/><i>AgentCore + Claude</i>"]
+    CLI --> BR["Bedrock / Anthropic<br/><i>AgentCore optional</i>"]
     SM --> CICD["CI/CD<br/><i>Regression gates</i>"]
     CICD --> BR
 ```
 
-All AWS-native. IAM for auth. S3 for artifacts. No external services.
+AWS-native by default. IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.
 
 ---
 
@@ -217,13 +238,13 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 
 | Command | What it does |
 |---------|-------------|
-| `chat` | Conversational coaching (Steps 1-5) |
-| `eval` | Run golden queries against a model |
-| `annotate` | Mark responses ✓/⚠/✗ with error codes |
-| `judge` | Generate G-Eval judge prompt |
+| `chat` | Guided coaching through Steps 1-5 |
+| `eval` | Run golden queries against supported models |
+| `annotate` | Mark responses ✓/⚠/✗ and assign error codes |
+| `judge` | Generate a G-Eval judge prompt from annotations |
 | `validate-session` | Check whether a session is ready for handoff |
-| `handoff` | Write a validated `session.json` handoff artifact |
-| `mlflow` | Export to SageMaker MLflow (Step 6) |
+| `handoff` | Write a validated handoff artifact |
+| `mlflow` | Create SageMaker MLflow artifacts and optionally run evals |
 | `export` | Write golden dataset as JSONL/CSV/JSON |
 | `status` | Session dashboard |
 | `analyze` | Map error codes to eval dimensions |
