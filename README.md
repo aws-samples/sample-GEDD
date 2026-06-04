@@ -76,6 +76,8 @@ flowchart TD
 | 5 | Domain Expert | ✓/⚠/✗ → name the failures | Error codes + G-Eval rubric |
 | 6 | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
+> **Steps 1-5 run inside `grounded-evals chat`.** Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
+
 > **Why runtime before testing?** Golden queries need realistic responses. By default, GEDD uses the saved system prompt with Bedrock or Anthropic. When AgentCore is configured, the same workflow can run against the deployed runtime so latency, IAM, and cold starts are included.
 
 ---
@@ -93,6 +95,23 @@ GEDD borrows from grounded theory because agent failures are often not knowable 
 | Calibration | Compare judge outputs against human annotations | Cohen's weighted kappa and per-criterion weak spots |
 
 This keeps the rubric downstream of evidence. The expert observes what breaks first, then the judge is built from those observations.
+
+**Open Coding generates queries across 7 categories:** Happy Path, Edge Cases, Adversarial, Ambiguous, Multi-turn, Error Recovery, and Persona Variation. Each query varies along dimensions of complexity, tone, specificity, and user expertise. The `grounded-evals fracture` and `check-saturation` commands automate coverage tracking.
+
+**Error codes are mapped to 8 standard evaluation dimensions** used to weight the final judge rubric:
+
+| Dimension | Example error codes |
+|-----------|---------------------|
+| `accuracy` | `hallucination`, `factual_error`, `confabulation` |
+| `tone` | `hostile_response`, `empathy_failure`, `rude_escalation` |
+| `safety` | `missed_escalation`, `harmful_advice`, `refusal_failure` |
+| `completeness` | `incomplete_answer`, `missing_step`, `partial_guidance` |
+| `instruction_following` | `constraint_violation`, `policy_breach` |
+| `brand_relevance` | `off_persona`, `voice_mismatch` |
+| `bias` | `discrimination`, `unfair_treatment` |
+| `quality` | catch-all for style and formatting failures |
+
+The `grounded-evals analyze` command maps expert error codes to these dimensions automatically (keyword-based), or pass `--llm` for richer mapping with rationale.
 
 ---
 
@@ -219,11 +238,13 @@ This repo includes Codex-native assistance for the same GEDD workflow:
 
 | Asset | Path | Use |
 |-------|------|-----|
-| Repo skill | `.agents/skills/gedd/SKILL.md` | Auto-discovered when Codex runs inside this repository; invoke with `$gedd` or let Codex select it from matching requests |
+| Repo skill | `grounded-evals/.claude/commands/gedd.md` | Auto-discovered when Codex runs inside this repository; invoke with `$gedd` or let Codex select it from matching requests |
 | Plugin package | `plugins/gedd/` | Installable Codex plugin that bundles the GEDD skill for reuse beyond this repo |
 | Repo marketplace | `.agents/plugins/marketplace.json` | Local plugin catalog entry pointing Codex at `./plugins/gedd` |
 
 Codex skills are the authoring format for reusable workflows; plugins are the installable distribution unit for those skills. The repo skill is best when you are working inside this repository. The plugin is best when you want the same GEDD guidance available from other projects or shared with teammates through a marketplace.
+
+The skill is **stateful**: on startup it reads `session.json` and resumes from where you left off, greeting you with your current step and query count. A fresh session is created automatically if no file exists.
 
 Use the skill when you want Codex to guide or automate the workflow while still making the website the first-touch experience:
 
@@ -365,23 +386,23 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 
 ## CLI Reference
 
-| Command | What it does |
-|---------|-------------|
-| `chat` | Guided coaching through Steps 1-5 |
-| `eval` | Run golden queries against supported models |
-| `annotate` | Mark responses ✓/⚠/✗ and assign error codes |
-| `judge` | Generate a G-Eval judge prompt from annotations |
-| `validate-session` | Check whether a session is ready for handoff |
-| `handoff` | Write a validated handoff artifact |
-| `mlflow` | Create SageMaker MLflow artifacts and optionally run evals |
-| `export` | Write golden dataset as JSONL/CSV/JSON |
-| `status` | Session dashboard |
-| `analyze` | Map error codes to eval dimensions |
-| `serve` | Start the web UI |
-| `fracture` | Fracture domain into test categories |
-| `check-saturation` | Check dataset coverage |
-| `coverage` | Bar-chart breakdown by category |
-| `compare` | Check if a new prompt adds unique coverage |
+| Command | What it does | Key options |
+|---------|-------------|-------------|
+| `chat` | Guided coaching through Steps 1-5 | `--session` |
+| `eval` | Run golden queries against supported models | `--session`, `--output` |
+| `annotate` | Mark responses ✓/⚠/✗ and assign error codes | `--session`, `--results` |
+| `judge` | Generate a G-Eval judge prompt from annotations | `--style standard\|geval` (`geval` uses chain-of-thought per criterion) |
+| `validate-session` | Check whether a session is ready for handoff (blocks on missing name, prompt, or queries; warns on thin coverage) | `--session` |
+| `handoff` | Write a validated handoff artifact | `--force` to proceed despite warnings |
+| `mlflow` | Create SageMaker MLflow artifacts and optionally run evals (Step 6 — ML Engineer only) | `--tracking-uri`, `--run-eval` |
+| `export` | Write golden dataset | `--format jsonl\|csv\|json` |
+| `status` | Session dashboard | `--session` |
+| `analyze` | Map error codes to 8 standard eval dimensions | `--llm` for LLM-enriched mapping with rationale |
+| `serve` | Start the web UI | `--host`, `--port`, `--reload` |
+| `fracture` | Fracture domain into test categories | |
+| `check-saturation` | Check dataset coverage | |
+| `coverage` | Bar-chart breakdown by category | |
+| `compare` | Check if a new prompt adds unique coverage, identify gaps it fills, and suggest follow-ups | |
 
 ---
 
