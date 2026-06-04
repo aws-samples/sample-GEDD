@@ -290,27 +290,49 @@ That command creates an experiment, registers the golden dataset, logs human fee
 
 **This is the core reason GEDD exists:** domain experts discover failure modes that engineering teams are unlikely to name from the outside.
 
-We tested across 4 domains. In every case, the expert caught failures an engineer would miss:
+The important discovery is usually not "the model hallucinated." It is the domain-specific reason the answer is dangerous: a hidden threshold, a regulatory definition, a missing escalation path, a stale rule, or a plausible shortcut that would cause real-world harm.
 
-| Domain | Error Code | What Happened | Why Only an Expert Catches It |
-|--------|-----------|---------------|-------------------------------|
-| 💊 Pharmacy | `dosage_unit_confusion` | Said "mg" when context suggests "mcg" | 1000x error — potentially fatal |
-| 🏠 Insurance | `coverage_hallucination` | Assumed policy exists without checking | Policyholder believes they're covered |
-| 💰 Tax | `incomplete_guidance` | Didn't recommend CPA for $200K scenario | Liability issue in tax advice |
-| 🛂 Immigration | `bar_misapplication` | Said 3-year bar applies to 90-day overstay | Bar triggers at 180+ days (INA §212(a)(9)(B)) |
+Across the demo domains, the expert does not just mark answers wrong. They name the failure in operational language:
 
-> These are not generic "hallucination" labels. They are domain-specific failure modes in the expert's own vocabulary, and they become the criteria in the deployed judge.
+| Domain | Expert Failure Code | What Happened | What A Generic Eval Would Miss |
+|--------|---------------------|---------------|--------------------------------|
+| 💊 Pharmacy | `dosage_unit_confusion` | Said "mg" when context suggests "mcg" | A 1000x unit error can be fatal even when the answer sounds clinically fluent |
+| 🏠 Insurance | `coverage_hallucination` | Assumed policy coverage without checking exclusions | The user may believe they are covered and delay filing or mitigation |
+| 💰 Tax | `incomplete_guidance` | Did not recommend a CPA for a $200K scenario | The missing escalation creates liability, not just an incomplete answer |
+| 🛂 Immigration | `bar_misapplication` | Said the 3-year bar applies to a 90-day overstay | The statutory threshold starts at 180+ days under INA §212(a)(9)(B) |
+| 🏘️ Real Estate | `fair_housing_steering` | Recommended neighborhoods based on protected-class cues | "Helpful local advice" can become Fair Housing steering |
+| 🛡️ Defense Contracting | `foreign_national_access_error` | Treated an H-1B employee as cleared for ITAR data | Work authorization is not the same as ITAR "US person" status |
+| 🍽️ Food Safety | `anaphylaxis_escalation_failure` | Suggested antihistamines and waiting for throat-tightness symptoms | Benadryl cannot reverse anaphylaxis; delayed epinephrine can be fatal |
+| 🚗 Automotive | `lemon_law_omission` | Answered a warranty dispute without flagging state lemon-law triggers | The consumer may miss time-sensitive statutory remedies |
+| ⚡ Energy | `nem_confusion` | Quoted NEM 2.0 export economics for a NEM 3.0 customer | The customer may make a $40K purchase using phantom payback assumptions |
+| 🎓 Education | `answer_reveal` | Gave the student the final answer instead of teaching the method | The response looks useful but undermines the learning objective |
+
+These are not generic labels like "bad answer," "hallucination," or "low quality." They are the expert's vocabulary for the failure mode, the consequence, and the boundary the agent must respect.
+
+What GEDD preserves is the reasoning behind the label:
+
+| Expert Sees | Why It Matters | GEDD Captures |
+|-------------|----------------|---------------|
+| A threshold was crossed | 90 days vs. 180 days changes the legal answer | Failure code, legal threshold, expected behavior, severity |
+| The wrong authority was used | Botanical "seed" is not the same as FDA allergen classification | Memo explaining the regulatory definition and user risk |
+| The answer skipped escalation | Some situations require a pharmacist, CPA, attorney, safety officer, or emergency services | Hard-fail condition and escalation requirement |
+| The model used stale policy | Solar credits, net metering, filing rules, and compliance frameworks change over time | Time-sensitive assumption and required freshness check |
+| The answer was plausible but unsafe | Fluency hides the fact that the advice would make the user's situation worse | Example response, affected user, consequence, and judge criterion |
 
 The transformation is direct:
 
-| Expert observation | GEDD captures | Engineering receives |
+| Expert Observation | GEDD Captures | Engineering Receives |
 |--------------------|---------------|----------------------|
 | "This says mg when the situation requires mcg." | `dosage_unit_confusion`, catastrophic severity, memo, example response | Hard-fail rule for critical unit mismatch |
 | "This assumes coverage without reading the policy." | `coverage_hallucination`, policy context, affected user impact | Accuracy criterion requiring policy-grounded claims |
 | "This sounds helpful but creates tax liability." | `incomplete_guidance`, risk memo, expected escalation behavior | Rubric anchor for required CPA escalation |
 | "This misapplies the statutory overstay bar." | `bar_misapplication`, legal threshold, consequence | Legal accuracy criterion with explicit threshold check |
+| "This steers buyers using protected-class signals." | `fair_housing_steering`, regulatory boundary, prohibited behavior | Safety criterion that blocks neighborhood recommendations based on protected traits |
+| "This treats a visa holder as ITAR-cleared." | `foreign_national_access_error`, export-control memo, catastrophic severity | Hard-fail rule requiring Empowered Official referral for access determinations |
+| "This tells staff to wait during possible anaphylaxis." | `anaphylaxis_escalation_failure`, emergency trigger, affected user | Hard-fail rule requiring immediate 911/epinephrine guidance |
+| "This quotes outdated solar incentives." | `nem_confusion`, stale-policy memo, financial consequence | Freshness criterion for policy-sensitive claims and model-regression tests |
 
-That is the difference between a generic judge and a judge a domain owner can defend.
+That is the difference between a generic judge and a judge a domain owner can defend: the deployed rubric inherits the expert's definitions, examples, thresholds, and consequences instead of flattening them into a one-size-fits-all score.
 
 ---
 
