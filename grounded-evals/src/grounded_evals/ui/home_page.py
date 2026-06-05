@@ -118,6 +118,35 @@ EXPERT_DISCOVERIES = [
         "what_happened": "Said 3-year bar applies to 90-day overstay",
         "expert_signal": "Bar triggers at 180+ days under INA Section 212(a)(9)(B)",
     },
+    {
+        "domain": "AdTech",
+        "error_code": "consent_bypass_for_targeting",
+        "what_happened": "Helped justify targeted advertising without valid consent",
+        "expert_signal": "Growth pressure does not override privacy law or platform policy",
+    },
+]
+
+ANNOTATION_SURFACES = [
+    {
+        "title": "Chat",
+        "icon": "forum",
+        "copy": "Render the full conversation, prior turns, model variants, and user-visible answer together.",
+    },
+    {
+        "title": "Email",
+        "icon": "mail",
+        "copy": "Show the message as an inbox thread with sender, recipients, subject, attachments, and reply context.",
+    },
+    {
+        "title": "Calendar",
+        "icon": "event_available",
+        "copy": "Review the proposed event as a booking confirmation, not a raw tool-call payload.",
+    },
+    {
+        "title": "AdTech",
+        "icon": "campaign",
+        "copy": "Put campaign objective, audience, consent basis, policy flags, and recommendation in one view.",
+    },
 ]
 
 HOME_CSS = """
@@ -303,6 +332,67 @@ HOME_CSS = """
   margin-top: 6px; letter-spacing: 0.01em;
 }
 
+/* ── Annotation product section ─────────────────────────────────────── */
+.annotation-panel {
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+}
+.annotation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.annotation-surface {
+  padding: 13px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.annotation-surface-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.annotation-surface-title {
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.annotation-surface-copy {
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.principle-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.principle-card {
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  border: 1px solid rgba(94,106,210,0.18);
+}
+.principle-title {
+  font-size: 0.76rem;
+  font-weight: 650;
+  color: var(--accent-bright);
+}
+.principle-copy {
+  margin-top: 4px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
 /* ── Evidence section ───────────────────────────────────────────────── */
 .evidence-panel {
   width: 100%;
@@ -375,6 +465,8 @@ HOME_CSS = """
   .mkt-subhead { font-size: 0.9rem; }
   .mkt-cta-row { flex-direction: column; align-items: stretch; }
   .outcome-strip { grid-template-columns: 1fr; }
+  .annotation-grid { grid-template-columns: 1fr; }
+  .principle-row { grid-template-columns: 1fr; }
   .domain-grid { grid-template-columns: 1fr; }
   .evidence-grid { grid-template-columns: 1fr; }
   .mkt-section-head {
@@ -528,6 +620,16 @@ def home_page():
     n_annotations = len(storage.get("coding_annotations", []))
     done_count = sum(1 for s in progress.values() if s == "done")
 
+    def next_annotation_path() -> str:
+        if storage.get("coding_annotations") or storage.get("codebook"):
+            return "/coding"
+        if storage.get("eval_results"):
+            return "/coding"
+        session_obj = storage.get("session_data") or {}
+        if isinstance(session_obj, dict) and session_obj.get("golden_prompts"):
+            return "/eval"
+        return "/coach"
+
     def logout():
         app.storage.user["authenticated"] = False
         ui.navigate.to("/login")
@@ -553,39 +655,44 @@ def home_page():
                         ).style("font-size: 0.74rem; color: var(--text-tertiary)")
                     ui.button(
                         "Continue", icon="arrow_forward",
-                        on_click=lambda: ui.navigate.to(
-                            next((p for p, s in progress.items() if s == "current"), "/coach")
-                        ),
+                        on_click=lambda: ui.navigate.to(next_annotation_path()),
                     ).props("size=sm color=primary")
 
         # ── Hero ────────────────────────────────────────────────────────
         with ui.element("div").classes("mkt-hero animate-in stagger-1"):
-            ui.html('<div class="mkt-eyebrow">Qualitative Eval Framework</div>')
+            ui.html('<div class="mkt-eyebrow">Annotation is the product</div>')
             ui.html(
                 '<h1 class="mkt-headline">'
-                "Find what your AI gets wrong. <em>Before your customers do.</em>"
+                "Build the review interface your eval actually needs."
                 "</h1>"
             )
             ui.html(
                 '<p class="mkt-subhead">'
-                "GEDD helps product managers and domain experts systematically discover "
-                "failure modes, then turn them into a deployable LLM-as-judge — in your "
-                "own vocabulary, not generic 'helpfulness 1–5'."
+                "GEDD is an annotation workbench for domain experts. Render the agent's "
+                "behavior in context, capture high-quality labels, and turn those labels "
+                "into judges, regression tests, and handoff artifacts."
                 "</p>"
             )
             with ui.row().classes("mkt-cta-row"):
                 ui.button(
-                    "Try a 90-second demo",
-                    icon="play_arrow",
-                    on_click=lambda: ui.run_javascript(
-                        "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
-                    ),
+                    "Open review queue",
+                    icon="rate_review",
+                    on_click=lambda: ui.navigate.to(next_annotation_path()),
                 ).props("color=primary size=md unelevated").style(
                     "font-weight: 600; letter-spacing: -0.01em; padding: 8px 18px"
                 )
                 ui.button(
-                    "Start your own agent",
-                    icon="chat",
+                    "Load a scenario",
+                    icon="collections_bookmark",
+                    on_click=lambda: ui.run_javascript(
+                        "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
+                    ),
+                ).props("flat size=md").style(
+                    "color: var(--text-secondary); font-weight: 500"
+                )
+                ui.button(
+                    "Set up agent",
+                    icon="tune",
                     on_click=lambda: ui.navigate.to("/coach"),
                 ).props("flat size=md").style(
                     "color: var(--text-secondary); font-weight: 500"
@@ -594,20 +701,49 @@ def home_page():
         # ── Outcome strip (social-proof shaped) ──────────────────────────
         with ui.element("div").classes("outcome-strip animate-in stagger-2"):
             with ui.element("div").classes("outcome-cell"):
-                ui.html(f'<div class="num">{len(domain_cards)}</div>')
-                ui.html('<div class="label">domain personas, pre-loaded</div>')
+                ui.html('<div class="num">Native</div>')
+                ui.html('<div class="label">review surfaces for the task</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">~90 min</div>')
-                ui.html('<div class="label">to your first deployable judge</div>')
+                ui.html('<div class="num">1-key</div>')
+                ui.html('<div class="label">verdicts, hotkeys, filters, progress</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">κ ≥ 0.80</div>')
-                ui.html('<div class="label">judge-vs-human calibration target</div>')
+                ui.html('<div class="num">Codebook</div>')
+                ui.html('<div class="label">expert language becomes the eval</div>')
                 ui.html(
                     '<div style="font-size:0.68rem;color:#6e737b;margin-top:4px;line-height:1.4">'
-                    'κ (Cohen\'s Kappa) measures how closely your LLM judge agrees with human verdicts. '
-                    '0.80 = strong agreement — the threshold where the judge can run autonomously in CI.'
+                    'Rubrics, judges, and reports are downstream of annotation quality.'
                     '</div>'
                 )
+
+        # ── Annotation interface proof ──────────────────────────────────
+        with ui.element("div").classes("annotation-panel animate-in stagger-2"):
+            ui.html('<div class="evidence-kicker">Purpose-built annotation</div>')
+            ui.html('<div class="evidence-title">Show reviewers the thing they are judging.</div>')
+            ui.html(
+                '<div class="evidence-copy">'
+                "Every dataset has a natural shape. The reviewer should not reconstruct "
+                "that shape from JSON, traces, or external systems. GEDD makes the label "
+                "capture moment fast, contextual, and domain-specific."
+                "</div>"
+            )
+            with ui.element("div").classes("annotation-grid"):
+                for surface in ANNOTATION_SURFACES:
+                    with ui.element("div").classes("annotation-surface"):
+                        with ui.element("div").classes("annotation-surface-top"):
+                            ui.icon(surface["icon"]).style(
+                                "color: var(--accent-bright); font-size: 1rem"
+                            )
+                            ui.html(f'<div class="annotation-surface-title">{surface["title"]}</div>')
+                        ui.html(f'<div class="annotation-surface-copy">{surface["copy"]}</div>')
+            with ui.element("div").classes("principle-row"):
+                for title, copy in [
+                    ("Reduce context switching", "Put query, response, tools, expected behavior, and evidence in one review frame."),
+                    ("Protect reviewer focus", "Use filters, progress, hotkeys, and save-and-next flows so experts can stay in rhythm."),
+                    ("Preserve expert judgment", "Capture codes, severity, confidence, and memos as training data for the judge."),
+                ]:
+                    with ui.element("div").classes("principle-card"):
+                        ui.html(f'<div class="principle-title">{title}</div>')
+                        ui.html(f'<div class="principle-copy">{copy}</div>')
 
         # ── Domain expertise proof ──────────────────────────────────────
         with ui.element("div").classes("evidence-panel animate-in stagger-3"):
@@ -619,9 +755,9 @@ def home_page():
             )
             ui.html(
                 '<div class="evidence-copy">'
-                "We tested across 4 domains. In every case, the expert caught a failure "
-                "an engineer would usually miss, named it in their own vocabulary, and "
-                "turned it into deployed judge criteria."
+                "Domain experts catch the failures that generic eval labels flatten away. "
+                "The workbench keeps their language intact so engineering receives "
+                "specific failure modes, not vague quality scores."
                 "</div>"
             )
             with ui.element("div").classes("evidence-grid"):
@@ -639,11 +775,11 @@ def home_page():
         ui.html('<div id="domain-section"></div>')
         with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
             with ui.column().style("gap: 2px"):
-                ui.html('<div class="mkt-section-title">Load a pre-built eval scenario</div>')
+                ui.html('<div class="mkt-section-title">Load a pre-built annotation scenario</div>')
                 ui.html(
                     '<div class="mkt-section-sub">'
                     "Each scenario runs the workflow: golden queries, failure annotations, "
-                    "paradigm model, and a generated judge — ready to explore."
+                    "codebook, paradigm model, and a generated judge — ready to inspect."
                     "</div>"
                 )
             ui.button(
@@ -658,8 +794,8 @@ def home_page():
                 def make_loader(d=domain):
                     def _load():
                         d["loader"](app.storage.user)
-                        ui.notify(f'{d["name"]} loaded! Explore the workflow.', type="positive")
-                        ui.navigate.to("/coach")
+                        ui.notify(f'{d["name"]} loaded into the annotation workbench.', type="positive")
+                        ui.navigate.to("/coding")
                     return _load
 
                 with ui.element("div").classes("domain-card").on("click", make_loader()):
@@ -672,7 +808,7 @@ def home_page():
 
         # ── Evaluate your own agent (demoted CTA) ────────────────────────
         ui.button(
-            "Evaluate your own agent →", icon="chat",
+            "Set up your own agent →", icon="tune",
             on_click=lambda: ui.navigate.to("/coach"),
         ).props("flat size=sm no-caps").style(
             "color: var(--text-secondary); margin-top: 1rem; align-self: center"
@@ -680,7 +816,7 @@ def home_page():
 
         # ── Methodology fold (deprioritized; for the curious buyer) ──────
         with ui.expansion(
-            "How GEDD works under the hood — grounded theory for AI eval",
+            "Optional: how labels become judges and CI gates",
             icon="psychology",
         ).classes("w-full animate-in stagger-5").style(
             "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
@@ -692,9 +828,9 @@ def home_page():
                 'line-height:1.6;margin-bottom:0.85rem">'
                 "GEDD applies <strong>Strauss & Corbin's grounded theory</strong> "
                 "(open coding → axial coding → selective coding) to AI evaluation. "
-                "Instead of guessing what to measure, you observe what fails, name "
-                "the patterns in your domain's vocabulary, and build a judge "
-                "calibrated against your own scoring."
+                "The annotation workbench is the measurement instrument: observe real "
+                "behavior, name failures in domain language, then build a judge "
+                "calibrated against those human labels."
                 "</div>"
             )
             _render_demo()
@@ -714,7 +850,7 @@ def home_page():
         ):
             ui.label(
                 "Most eval tools skip straight to rubrics. "
-                "GEDD makes you earn the right to build one."
+                "GEDD starts where the signal is: the expert review interface."
             ).style(
                 "font-size: 0.84rem; color: var(--text-secondary); "
                 "font-weight: 500; letter-spacing: -0.005em"

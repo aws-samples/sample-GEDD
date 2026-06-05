@@ -9,7 +9,7 @@ from grounded_evals.ui.layout import page_layout
 
 @ui.page("/eval")
 def eval_page():
-    page_layout("Evaluation")
+    page_layout("Review Queue")
 
     s = app.storage.user
     session_data = s.get("session_data", {})
@@ -18,6 +18,35 @@ def eval_page():
     prompt_variants = s.get("prompt_variants", [])
 
     with ui.column().classes("w-full").style("max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem"):
+        with ui.element("div").style(
+            "background:var(--bg-surface-1); border:1px solid var(--border-subtle); "
+            "border-radius:var(--radius-xl); padding:16px; margin-bottom:12px"
+        ):
+            with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
+                with ui.column().style("gap:3px; max-width:760px"):
+                    ui.label("Review Queue").style(
+                        "font-size:1.05rem; font-weight:700; color:var(--text-primary); "
+                        "letter-spacing:-0.01em"
+                    )
+                    ui.label(
+                        "First-pass annotation happens here: inspect each user-visible response, "
+                        "apply a quick verdict, and keep enough notes for the deeper codebook pass."
+                    ).style("font-size:0.82rem; color:var(--text-secondary); line-height:1.5")
+                with ui.row().classes("items-center gap-2 flex-wrap"):
+                    for label, icon in [
+                        ("←/→ navigate", "keyboard_arrow_right"),
+                        ("1/2/3 verdicts", "looks_one"),
+                        ("filter unreviewed", "filter_alt"),
+                    ]:
+                        with ui.element("div").style(
+                            "display:flex; align-items:center; gap:6px; padding:6px 9px; "
+                            "border-radius:6px; background:var(--bg-surface-2); "
+                            "border:1px solid var(--border-subtle)"
+                        ):
+                            ui.icon(icon).style("font-size:0.95rem; color:var(--accent-bright)")
+                            ui.label(label).style(
+                                "font-size:0.7rem; color:var(--text-tertiary); white-space:nowrap"
+                            )
 
         # Feature 2: Prompt Diff Viewer
         prompt_history = s.get("prompt_history", [])

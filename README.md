@@ -292,7 +292,7 @@ That command creates an experiment, registers the golden dataset, logs human fee
 
 The important discovery is usually not "the model hallucinated." It is the domain-specific reason the answer is dangerous: a hidden threshold, a regulatory definition, a missing escalation path, a stale rule, or a plausible shortcut that would cause real-world harm.
 
-Across the demo domains, the expert does not just mark answers wrong. They name the failure in operational language:
+Across demo and scenario domains, the expert does not just mark answers wrong. They name the failure in operational language:
 
 | Domain | Expert Failure Code | What Happened | What A Generic Eval Would Miss |
 |--------|---------------------|---------------|--------------------------------|
@@ -306,6 +306,7 @@ Across the demo domains, the expert does not just mark answers wrong. They name 
 | 🚗 Automotive | `lemon_law_omission` | Answered a warranty dispute without flagging state lemon-law triggers | The consumer may miss time-sensitive statutory remedies |
 | ⚡ Energy | `nem_confusion` | Quoted NEM 2.0 export economics for a NEM 3.0 customer | The customer may make a $40K purchase using phantom payback assumptions |
 | 🎓 Education | `answer_reveal` | Gave the student the final answer instead of teaching the method | The response looks useful but undermines the learning objective |
+| 📣 AdTech | `consent_bypass_for_targeting` | Helped justify targeted advertising without valid consent | Growth-oriented advice can become privacy non-compliance under GDPR, ePrivacy, CPRA, or platform policy |
 
 These are not generic labels like "bad answer," "hallucination," or "low quality." They are the expert's vocabulary for the failure mode, the consequence, and the boundary the agent must respect.
 
@@ -317,6 +318,7 @@ What GEDD preserves is the reasoning behind the label:
 | The wrong authority was used | Botanical "seed" is not the same as FDA allergen classification | Memo explaining the regulatory definition and user risk |
 | The answer skipped escalation | Some situations require a pharmacist, CPA, attorney, safety officer, or emergency services | Hard-fail condition and escalation requirement |
 | The model used stale policy | Solar credits, net metering, filing rules, and compliance frameworks change over time | Time-sensitive assumption and required freshness check |
+| Business pressure changed the answer | "A VP needs this campaign live" is not a reason to bypass consent, age gates, or sensitive-category limits | Adversarial pressure pattern, refusal requirement, compliance boundary |
 | The answer was plausible but unsafe | Fluency hides the fact that the advice would make the user's situation worse | Example response, affected user, consequence, and judge criterion |
 
 The transformation is direct:
@@ -331,6 +333,7 @@ The transformation is direct:
 | "This treats a visa holder as ITAR-cleared." | `foreign_national_access_error`, export-control memo, catastrophic severity | Hard-fail rule requiring Empowered Official referral for access determinations |
 | "This tells staff to wait during possible anaphylaxis." | `anaphylaxis_escalation_failure`, emergency trigger, affected user | Hard-fail rule requiring immediate 911/epinephrine guidance |
 | "This quotes outdated solar incentives." | `nem_confusion`, stale-policy memo, financial consequence | Freshness criterion for policy-sensitive claims and model-regression tests |
+| "This helps a marketer rationalize consent bypass." | `consent_bypass_for_targeting`, privacy-law memo, adversarial framing | Hard-fail rule requiring refusal and compliant alternatives for targeting, measurement, and segmentation |
 
 That is the difference between a generic judge and a judge a domain owner can defend: the deployed rubric inherits the expert's definitions, examples, thresholds, and consequences instead of flattening them into a one-size-fits-all score.
 

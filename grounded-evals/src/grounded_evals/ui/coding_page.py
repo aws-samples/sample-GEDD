@@ -107,24 +107,57 @@ CODING_CSS = """
 
 @ui.page('/coding')
 def coding_page():
-    page_layout("Tag Failures")
+    page_layout("Annotation Workbench")
     ui.add_head_html(f"<style>{CODING_CSS}</style>")
 
-    with ui.expansion("💡 What should I do here?", icon="help_outline").classes("w-full max-w-5xl mx-auto").style(
-        "background: var(--yellow-tint); border: 1px solid rgba(240,191,0,0.15); "
-        "border-radius: var(--radius-xl); margin-bottom: 0.5rem; color: var(--text-primary)"
-    ):
-        ui.html(
-            '<div style="font-size:0.82rem;font-weight:500;color:var(--text-primary);margin-bottom:4px">'
-            "You're discovering WHY your AI fails — not just that it fails."
-            '</div>'
-            '<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6">'
-            "Look at each response. Ask: <em>what type of failure is this?</em> Name it in 2–3 words "
-            "(e.g. 'Missed escalation', 'Wrong medication dose'). Don't use a predefined list — let codes "
-            "emerge from what YOU observe. Keep going until the last 3 annotations reveal no new code types. "
-            "<strong>Each code you create becomes an evaluation criterion in your automated judge.</strong>"
-            '</div>'
-        )
+    with ui.column().classes("w-full max-w-5xl mx-auto").style("margin-bottom: 0.75rem"):
+        with ui.element("div").style(
+            "background:var(--bg-surface-1); border:1px solid var(--border-subtle); "
+            "border-radius:var(--radius-xl); padding:16px"
+        ):
+            with ui.row().classes("items-start justify-between gap-3 flex-wrap"):
+                with ui.column().style("gap:4px; max-width:680px"):
+                    ui.label("Annotation Workbench").style(
+                        "font-size:1.05rem; font-weight:700; color:var(--text-primary); "
+                        "letter-spacing:-0.01em"
+                    )
+                    ui.label(
+                        "This is the core product surface. Read the actual response in context, "
+                        "name the failure in domain language, set severity and confidence, and "
+                        "write the memo your judge will learn from."
+                    ).style("font-size:0.82rem; color:var(--text-secondary); line-height:1.5")
+                with ui.row().classes("items-center gap-2 flex-wrap"):
+                    for label, icon in [
+                        ("S saves", "save"),
+                        ("1/2/3 codes", "keyboard"),
+                        ("triage mode", "bolt"),
+                        ("saturation", "show_chart"),
+                    ]:
+                        with ui.element("div").style(
+                            "display:flex; align-items:center; gap:6px; padding:6px 9px; "
+                            "border-radius:6px; background:var(--bg-surface-2); "
+                            "border:1px solid var(--border-subtle)"
+                        ):
+                            ui.icon(icon).style("font-size:0.95rem; color:var(--accent-bright)")
+                            ui.label(label).style(
+                                "font-size:0.7rem; color:var(--text-tertiary); white-space:nowrap"
+                            )
+
+        with ui.expansion("How to produce high-quality labels", icon="help_outline").classes("w-full").style(
+            "background: var(--yellow-tint); border: 1px solid rgba(240,191,0,0.15); "
+            "border-radius: var(--radius-xl); margin-top: 0.5rem; color: var(--text-primary)"
+        ):
+            ui.html(
+                '<div style="font-size:0.82rem;font-weight:500;color:var(--text-primary);margin-bottom:4px">'
+                "You're discovering WHY your AI fails — not just that it fails."
+                '</div>'
+                '<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6">'
+                "Look at each response. Ask: <em>what type of failure is this?</em> Name it in 2–3 words "
+                "(e.g. 'Missed escalation', 'Wrong medication dose'). Don't use a predefined list — let codes "
+                "emerge from what YOU observe. Keep going until the last 3 annotations reveal no new code types. "
+                "<strong>Each code you create becomes an evaluation criterion in your automated judge.</strong>"
+                '</div>'
+            )
 
     storage = app.storage.user
     storage.setdefault('codebook', [])

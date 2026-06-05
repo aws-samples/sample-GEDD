@@ -5,14 +5,14 @@ import json
 from nicegui import app, ui
 
 NAV_ITEMS = [
-    {"path": "/", "label": "Home", "icon": "home"},
-    {"path": "/demos", "label": "Demos", "icon": "collections_bookmark"},
-    {"path": "/coach", "label": "1. Coach", "icon": "chat"},
-    {"path": "/eval", "label": "2. Eval Harness", "icon": "science"},
-    {"path": "/coding", "label": "3. Tag", "icon": "label"},
-    {"path": "/analysis", "label": "4. Root Causes", "icon": "hub"},
-    {"path": "/judge", "label": "5. Build Judge", "icon": "gavel"},
-    {"path": "/report", "label": "6. Report", "icon": "assessment"},
+    {"path": "/", "label": "Workbench", "icon": "dashboard"},
+    {"path": "/eval", "label": "Review", "icon": "rate_review"},
+    {"path": "/coding", "label": "Annotate", "icon": "label"},
+    {"path": "/demos", "label": "Scenarios", "icon": "collections_bookmark"},
+    {"path": "/coach", "label": "Setup", "icon": "tune"},
+    {"path": "/analysis", "label": "Patterns", "icon": "hub"},
+    {"path": "/judge", "label": "Judge", "icon": "gavel"},
+    {"path": "/report", "label": "Handoff", "icon": "ios_share"},
 ]
 
 BRAND_CSS = """
@@ -100,6 +100,11 @@ body {
   letter-spacing: -0.02em;
 }
 .brand-subtitle { font-size: 0.75rem; color: var(--text-tertiary); }
+.brand-stack { display: flex; flex-direction: column; gap: 0; line-height: 1.05; }
+.brand-context {
+  font-size: 0.62rem; color: var(--text-tertiary);
+  letter-spacing: 0.05em; text-transform: uppercase;
+}
 
 /* Cards */
 .page-card {
@@ -270,8 +275,13 @@ def page_layout(title: str = ""):
         "padding: 0 1.5rem; height: 48px; "
     ):
         with ui.row().classes("items-center gap-sm"):
-            ui.icon("auto_awesome").style("color: var(--accent-bright); font-size: 1.1rem")
-            ui.html('<span class="brand-title">GEDD</span>')
+            ui.icon("rate_review").style("color: var(--accent-bright); font-size: 1.1rem")
+            ui.html(
+                '<span class="brand-stack">'
+                '<span class="brand-title">GEDD</span>'
+                '<span class="brand-context">Annotation Workbench</span>'
+                '</span>'
+            )
 
         with ui.row().classes("app-nav-row items-center gap-none"):
             for item in NAV_ITEMS:
