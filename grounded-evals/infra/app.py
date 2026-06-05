@@ -23,6 +23,7 @@ cloudfront_domain_names = [
     for domain in cloudfront_domain_names_raw.split(",")
     if domain.strip()
 ]
+enable_app_auth = app.node.try_get_context("enable_app_auth") in (True, "true", "1", "yes")
 
 # ── Stacks ────────────────────────────────────────────────────────────────────
 
@@ -55,6 +56,7 @@ ecs = EcsStack(
     user_pool_client_id=cognito_stack.user_pool_client.user_pool_client_id,
     user_pool_domain=cognito_stack.domain.domain_name,
     agentcore_agent_id="",
+    enable_app_auth=enable_app_auth,
     env=env,
 )
 

@@ -40,7 +40,7 @@ class NetworkStack(Stack):
         # ── Security Groups ───────────────────────────────────────────────────
         self.alb_sg = ec2.SecurityGroup(
             self, "AlbSg", vpc=self.vpc,
-            description="ALB — HTTPS inbound only",
+            description="ALB - HTTPS inbound only",
             allow_all_outbound=False,
         )
         self.alb_sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(443), "HTTPS")
@@ -48,7 +48,7 @@ class NetworkStack(Stack):
 
         self.ecs_sg = ec2.SecurityGroup(
             self, "EcsSg", vpc=self.vpc,
-            description="ECS tasks — ALB ingress only",
+            description="ECS tasks - ALB ingress only",
             allow_all_outbound=False,
         )
         self.ecs_sg.add_ingress_rule(self.alb_sg, ec2.Port.tcp(8080), "From ALB")
@@ -177,7 +177,7 @@ class NetworkStack(Stack):
         # ── VPC Endpoints (keep AWS API traffic private) ────────────────────────
         endpoint_sg = ec2.SecurityGroup(
             self, "EndpointSg", vpc=self.vpc,
-            description="VPC endpoints — HTTPS from ECS",
+            description="VPC endpoints - HTTPS from ECS",
             allow_all_outbound=False,
         )
         endpoint_sg.add_ingress_rule(self.ecs_sg, ec2.Port.tcp(443), "HTTPS from ECS")

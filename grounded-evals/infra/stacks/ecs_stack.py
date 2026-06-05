@@ -1,9 +1,9 @@
-"""ECS Fargate service — production hardened.
+"""ECS Fargate service - production hardened.
 
 Changes from dev:
-- Secrets from Secrets Manager (STORAGE_SECRET, ADMIN_PASSWORD)
+- Secrets from Secrets Manager (STORAGE_SECRET, optional ADMIN_PASSWORD)
 - EFS for persistent session storage
-- ALB Cognito authentication action
+- Optional app-level Cognito/admin authentication
 - Restricted IAM policies with resource scoping
 - Auto-scaling with request-count metric
 """
@@ -14,7 +14,6 @@ from aws_cdk import aws_ecr as ecr
 from aws_cdk import aws_ecs as ecs
 from aws_cdk import aws_efs as efs
 from aws_cdk import aws_elasticloadbalancingv2 as elbv2
-from aws_cdk import aws_elasticloadbalancingv2_actions as elbv2_actions
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_logs as logs
 from aws_cdk import aws_secretsmanager as secretsmanager
@@ -36,6 +35,7 @@ class EcsStack(Stack):
         user_pool_client_id: str = "",
         user_pool_domain: str = "",
         agentcore_agent_id: str = "",
+        enable_app_auth: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -53,22 +53,34 @@ class EcsStack(Stack):
             ),
         )
 
-        self.admin_secret = secretsmanager.Secret(
-            self, "AdminSecret",
-            secret_name="agent-playground/admin-password",
-            description="Fallback admin password (used when Cognito is unavailable)",
-            generate_secret_string=secretsmanager.SecretStringGenerator(
-                password_length=32, exclude_punctuation=False,
-            ),
-        )
+        self.admin_secret = None
+        if enable_app_auth:
+            self.admin_secret = secretsmanager.Secret(
+                self, "AdminSecret",
+                secret_name="agent-playground/admin-password",
+                description="Fallback admin password (used when Cognito is unavailable)",
+                generate_secret_string=secretsmanager.SecretStringGenerator(
+                    password_length=32, exclude_punctuation=False,
+                ),
+            )
 
         # ── EFS for persistent session storage ────────────────────────────────
         efs_sg = ec2.SecurityGroup(
             self, "EfsSg", vpc=vpc,
-            description="EFS — NFS from ECS tasks",
+            description="EFS - NFS from ECS tasks",
             allow_all_outbound=False,
         )
         efs_sg.add_ingress_rule(ecs_sg, ec2.Port.tcp(2049), "NFS from ECS")
+        ec2.CfnSecurityGroupEgress(
+            self,
+            "EcsToEfsEgress",
+            group_id=ecs_sg.security_group_id,
+            ip_protocol="tcp",
+            from_port=2049,
+            to_port=2049,
+            destination_security_group_id=efs_sg.security_group_id,
+            description="NFS to EFS",
+        )
 
         file_system = efs.FileSystem(
             self, "SessionStorage",
@@ -103,7 +115,8 @@ class EcsStack(Stack):
         )
         # Allow pulling secrets into env vars
         self.storage_secret.grant_read(execution_role)
-        self.admin_secret.grant_read(execution_role)
+        if self.admin_secret:
+            self.admin_secret.grant_read(execution_role)
 
         task_role = iam.Role(
             self, "TaskRole",
@@ -147,27 +160,35 @@ class EcsStack(Stack):
         )
         file_system.grant_read_write(task_role)
 
+        container_environment = {
+            "HOST": "0.0.0.0",
+            "PORT": "8080",
+            "NICEGUI_RELOAD": "false",
+            "AWS_REGION": region,
+            "AGENTCORE_AGENT_ID": agentcore_agent_id,
+            "NICEGUI_STORAGE_PATH": "/mnt/storage",
+        }
+        if enable_app_auth:
+            container_environment.update({
+                "COGNITO_USER_POOL_ID": user_pool_id,
+                "COGNITO_CLIENT_ID": user_pool_client_id,
+                "COGNITO_DOMAIN": user_pool_domain,
+            })
+
+        container_secrets = {
+            "STORAGE_SECRET": ecs.Secret.from_secrets_manager(self.storage_secret),
+        }
+        if self.admin_secret:
+            container_secrets["ADMIN_PASSWORD"] = ecs.Secret.from_secrets_manager(self.admin_secret)
+
         container = task_def.add_container(
             "App",
             image=ecs.ContainerImage.from_ecr_repository(ecr_repo, tag="latest"),
             logging=ecs.LogDrivers.aws_logs(
                 stream_prefix="gedd", log_retention=logs.RetentionDays.ONE_MONTH,
             ),
-            environment={
-                "HOST": "0.0.0.0",
-                "PORT": "8080",
-                "NICEGUI_RELOAD": "false",
-                "AWS_REGION": region,
-                "AGENTCORE_AGENT_ID": agentcore_agent_id,
-                "COGNITO_USER_POOL_ID": user_pool_id,
-                "COGNITO_CLIENT_ID": user_pool_client_id,
-                "COGNITO_DOMAIN": user_pool_domain,
-                "NICEGUI_STORAGE_PATH": "/mnt/storage",
-            },
-            secrets={
-                "STORAGE_SECRET": ecs.Secret.from_secrets_manager(self.storage_secret),
-                "ADMIN_PASSWORD": ecs.Secret.from_secrets_manager(self.admin_secret),
-            },
+            environment=container_environment,
+            secrets=container_secrets,
             health_check=ecs.HealthCheck(
                 command=["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"],
                 interval=Duration.seconds(30),
@@ -214,34 +235,14 @@ class EcsStack(Stack):
         )
         target_group.add_target(service)
 
-        # ── ALB Listener Rule (Cognito auth if configured) ────────────────────
-        if user_pool_id and user_pool_client_id and user_pool_domain:
-            from aws_cdk import aws_cognito as cognito
-
-            imported_pool = cognito.UserPool.from_user_pool_id(self, "ImportedPool", user_pool_id)
-            imported_client = cognito.UserPoolClient.from_user_pool_client_id(self, "ImportedClient", user_pool_client_id)
-            imported_domain = cognito.UserPoolDomain.from_domain_name(self, "ImportedDomain", user_pool_domain)
-
-            elbv2.ApplicationListenerRule(
-                self, "CognitoAuthRule",
-                listener=listener,
-                priority=10,
-                conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
-                action=elbv2_actions.AuthenticateCognitoAction(
-                    user_pool=imported_pool,
-                    user_pool_client=imported_client,
-                    user_pool_domain=imported_domain,
-                    next=elbv2.ListenerAction.forward([target_group]),
-                ),
-            )
-        else:
-            elbv2.ApplicationListenerRule(
-                self, "ForwardRule",
-                listener=listener,
-                priority=50,
-                conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
-                action=elbv2.ListenerAction.forward([target_group]),
-            )
+        # ── ALB Listener Rule ─────────────────────────────────────────────────
+        elbv2.ApplicationListenerRule(
+            self, "ForwardRule",
+            listener=listener,
+            priority=50,
+            conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
+            action=elbv2.ListenerAction.forward([target_group]),
+        )
 
         # ── Auto-scaling ──────────────────────────────────────────────────────
         scaling = service.auto_scale_task_count(min_capacity=1, max_capacity=4)
@@ -251,4 +252,3 @@ class EcsStack(Stack):
             scale_in_cooldown=Duration.seconds(300),
             scale_out_cooldown=Duration.seconds(60),
         )
-

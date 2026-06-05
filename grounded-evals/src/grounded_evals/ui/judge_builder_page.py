@@ -777,13 +777,19 @@ def judge_builder_page():
                     ui.html('<div style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.04em">Calibrate Judge</div>')
                     n_anns = len(coding_annotations)
                     ann_color = "var(--green-bright)" if n_anns >= 10 else ("var(--yellow)" if n_anns >= 5 else "var(--red)")
-                    ui.html(
+                    annotation_hint = (
+                        ""
+                        if n_anns >= 5
+                        else " <span style='color:var(--yellow)'>Add at least 5 annotations in the Tag tab for meaningful results.</span>"
+                    )
+                    calibration_help = (
                         f'<div style="font-size:0.75rem;color:var(--text-muted)">'
                         f'Run judge against your <span style="color:{ann_color};font-weight:600">{n_anns} annotated examples</span> '
                         f'and measure Cohen\'s κ agreement with human labels.'
-                        f'{"" if n_anns >= 5 else " <span style=\'color:var(--yellow)\'>Add at least 5 annotations in the Tag tab for meaningful results.</span>"}'
+                        f'{annotation_hint}'
                         f'</div>'
                     )
+                    ui.html(calibration_help)
 
             calibration_result_container = ui.column().classes("w-full")
 
