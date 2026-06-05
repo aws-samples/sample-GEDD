@@ -5,11 +5,11 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-You shipped an AI agent. Now you need to prove it works — to your CEO, to compliance, and to the team that inherits it. The agent fails in ways no rubric anticipated, while most eval tools expect you to know what to measure before you've seen what breaks.
+You shipped an AI agent. Now you need to prove it works — to your CEO, to compliance, and to the team that inherits it. The agent fails in ways no rubric anticipated, while most eval tools expect reviewers to score raw traces, generic tables, or dashboards that were not built for their domain.
 
-**GEDD is the workflow for *before* you have a rubric.** A product manager or domain expert has a guided conversation, observes real agent behavior, names the failures in their own vocabulary, and hands engineering a validated `session.json` that can become an automated judge and CI gate.
+**GEDD is an annotation workbench for *before* you have a rubric.** A product manager or domain expert reviews agent behavior in context, applies fast first-pass verdicts, names failure modes in their own vocabulary, and hands engineering a validated `session.json` that can become an automated judge and CI gate.
 
-> *The eval pipeline is the product. The agent is just the thing it produces.*
+> *The annotation workbench is the product. Judges, reports, and CI gates are downstream of label quality.*
 
 ![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
 
@@ -19,36 +19,53 @@ You shipped an AI agent. Now you need to prove it works — to your CEO, to comp
 
 ## What GEDD Builds
 
-GEDD turns domain expertise into production evaluation assets:
+GEDD turns high-quality human annotation into production evaluation assets:
 
 | Artifact | Created by | Why it matters |
 |----------|------------|----------------|
-| `session.json` | Domain expert workflow | Canonical handoff: agent spec, system prompt, golden queries, annotations, prompt variants, and chat history |
+| Annotation workbench | Domain expert review | Native review surface for queries, responses, verdicts, failure codes, severity, confidence, memos, filters, hotkeys, and progress |
+| `session.json` | Workbench handoff | Canonical handoff: agent spec, system prompt, golden queries, annotations, prompt variants, and chat history |
 | Golden dataset | Open Coding | Queries that cover happy paths, edge cases, adversarial inputs, ambiguity, and multi-turn behavior |
 | Failure codebook | Human annotation | Domain-specific failure vocabulary such as `dosage_unit_confusion`, not generic "bad answer" labels |
 | Paradigm model | Axial Coding | Causal map of triggers, contexts, amplifiers, observed behavior, and user impact |
 | Judge prompt | Selective Coding | G-Eval rubric with weighted criteria and hard-fail rules grounded in the expert's annotations |
 | MLflow pipeline | ML engineer handoff | SageMaker experiment, custom judges, eval dataset, and CI/CD regression gates |
 
-The goal is not to make a larger synthetic benchmark. It is to preserve expert judgment in a form engineering can automate.
+The goal is not to make a larger synthetic benchmark. It is to preserve expert judgment at the moment of review, then automate from that evidence.
 
 ---
 
-## The Pipeline
+## Annotation Workbench Principles
+
+The reviewer should see the thing they are judging. If the task is email, show an email. If the task is chat, show chat. If the agent booked a calendar event, show the booking confirmation instead of making the reviewer inspect tool-call JSON.
+
+| Principle | In GEDD |
+|-----------|---------|
+| Native review context | `Review` keeps the query, response, model, notes, verdicts, filters, and progress in one queue |
+| Low-friction labeling | Hotkeys, unreviewed filters, quick verdicts, triage mode, and save-and-next flows protect reviewer focus |
+| Domain-specific vocabulary | `Annotate` turns expert language into failure codes, severity, confidence, and memos |
+| Evidence before rubrics | The judge is built only after real failures have been observed, coded, and mapped into patterns |
+| Portable handoff | `session.json`, exports, judge prompts, and MLflow artifacts preserve the review evidence for engineering |
+
+Every downstream artifact is only as good as the labels that produced it. GEDD treats the annotation interface as the measurement instrument, not a side panel on an eval dashboard.
+
+---
+
+## The Annotation-First Workflow
 
 ```mermaid
 flowchart TD
-    subgraph DE["🧑‍💼 DOMAIN EXPERT — website first, Codex/CLI assisted"]
+    subgraph DE["🧑‍💼 DOMAIN EXPERT — annotation workbench"]
         direction TB
-        S1["1️⃣ Define Agent"]
-        S2["2️⃣ System Prompt"]
-        S3["3️⃣ Runtime"]
-        S4["4️⃣ Golden Queries"]
-        S5["5️⃣ Annotate & Judge"]
-        S1 ==> S2 ==> S3 ==> S4 ==> S5
+        SETUP["Setup<br/><i>agent, prompt, runtime, golden queries</i>"]
+        REVIEW["Review Queue<br/><i>native response view + fast verdicts</i>"]
+        ANNOTATE["Annotation Workbench<br/><i>failure codes, severity, memos</i>"]
+        PATTERNS["Patterns<br/><i>root causes + saturation</i>"]
+        JUDGE["Judge<br/><i>rubric + hard-fails</i>"]
+        SETUP ==> REVIEW ==> ANNOTATE ==> PATTERNS ==> JUDGE
     end
 
-    S5 ==>|"📄 session.json"| HANDOFF:::handoff
+    JUDGE ==>|"📄 session.json"| HANDOFF:::handoff
 
     HANDOFF ==> S6
 
@@ -57,26 +74,27 @@ flowchart TD
         S6["6️⃣ SageMaker MLflow Pipeline"]
     end
 
-    S3 -.->|"optional deployed runtime"| AC["☁️ Bedrock AgentCore"]
-    S4 -.->|"invoke"| BR["🤖 Bedrock / Anthropic"]
+    SETUP -.->|"optional deployed runtime"| AC["☁️ Bedrock AgentCore"]
+    REVIEW -.->|"invoke"| BR["🤖 Bedrock / Anthropic"]
     S6 -.->|"track"| SM["📊 SageMaker MLflow"]
     S6 -.->|"gate"| CI["🚦 CI/CD Pipeline"]
 
     classDef handoff fill:#fce4ec,stroke:#c62828,stroke-width:3px,stroke-dasharray: 5 5
 ```
 
-**Two personas. Six steps. One file connects them.**
+**Two personas. One workbench. One file connects them.**
 
-| Step | Who | What happens | Output |
-|:----:|-----|-------------|--------|
-| 1 | Domain Expert | "RxBot helps patients with medications" | Bounded context |
-| 2 | Domain Expert | "Never prescribe. Always escalate." | System prompt + safety rules |
-| 3 | Domain Expert | Choose local simulation or deployed runtime | Test runtime |
-| 4 | Domain Expert | 20 test cases via Open Coding | Golden queries + responses |
-| 5 | Domain Expert | ✓/⚠/✗ → name the failures | Error codes + G-Eval rubric |
-| 6 | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
+| Surface | Who | What happens | Output |
+|---------|-----|-------------|--------|
+| Workbench | Domain Expert | Review the agent's behavior in context | Verdicts, notes, and reviewer signal |
+| Workbench | Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
+| Workbench | Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
+| Workbench | Domain Expert | Convert labels into judge criteria | G-Eval rubric, hard-fail rules, calibration set |
+| Handoff | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> **Steps 1-5 run inside `grounded-evals chat`.** Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
+> The web app is now organized around the annotation workbench: `Review` for first-pass verdicts, `Annotate` for codebook creation, `Patterns` for root causes, `Judge` for rubric generation, and `Handoff` for export. `Setup` and `Scenarios` exist to feed the workbench.
+
+> **CLI parity:** Steps 1-5 can still run inside `grounded-evals chat`. Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
 
 > **Why runtime before testing?** Golden queries need realistic responses. By default, GEDD uses the saved system prompt with Bedrock or Anthropic. When AgentCore is configured, the same workflow can run against the deployed runtime so latency, IAM, and cold starts are included.
 
@@ -175,7 +193,7 @@ Open `localhost:8080`
 </td>
 <td width="33%">
 
-**2. Use Codex Or CLI**
+**2. Annotate Behavior**
 ```bash
 # In Codex, ask:
 # Use $gedd to evaluate my AI agent
@@ -185,7 +203,7 @@ Open `localhost:8080`
 grounded-evals chat --session session.json
 ```
 
-90 min → golden dataset + judge
+Review → Annotate → Judge
 
 </td>
 <td width="33%">
@@ -209,24 +227,24 @@ grounded-evals mlflow \
 </tr>
 </table>
 
-The website is the default first experience because it lets a product manager or domain expert inspect completed demos, tag failures visually, map root causes, build judges, and export a handoff without learning command syntax.
+The website is the default first experience because it is the annotation workbench: a product manager or domain expert can load completed scenarios, inspect behavior in context, tag failures visually, map root causes, build judges, and export a handoff without learning command syntax.
 
 ---
 
 ## Web App Workflow
 
-`grounded-evals serve` starts a NiceGUI app for workshops, stakeholder demos, and full annotation sessions. It runs in guest mode locally unless `ADMIN_PASSWORD` or Cognito is configured.
+`grounded-evals serve` starts a NiceGUI annotation workbench for workshops, stakeholder demos, and full labeling sessions. It runs in guest mode locally unless `ADMIN_PASSWORD` or Cognito is configured.
 
 | Page | Purpose | What you do there |
 |------|---------|-------------------|
-| Home | Start or load work | Launch a new agent session or continue a saved one |
-| Demos | Explore finished examples | Load one of 17 high-stakes domain demos with queries, annotations, codebooks, and judge prompts |
-| Coach | Define the agent | Capture agent spec, system prompt, runtime choice, and golden queries |
-| Eval Harness | Generate responses | Run golden queries against supported Bedrock/Anthropic models |
-| Tag | Open Coding | Mark ✓/⚠/✗ responses, create failure codes, write memos, and track saturation |
-| Root Causes | Axial Coding | Map codes into the paradigm model and priority matrix |
-| Build Judge | Selective Coding | Convert codebook and root-cause analysis into judge dimensions, hard-fails, and calibration |
-| Report | Handoff view | Review results, model performance, calibration health, and export artifacts |
+| Workbench | Annotation-first home | Continue active review work, open the review queue, load a scenario, or set up a new agent |
+| Review | First-pass annotation | Inspect user-visible responses, apply quick verdicts with hotkeys, filter unreviewed items, and keep notes for deeper coding |
+| Annotate | Open Coding workbench | Create failure codes, apply severity/confidence, write memos, use triage mode, track saturation, and share/import annotations |
+| Scenarios | Finished examples | Load one of 17 high-stakes domain scenarios directly into the annotation workbench |
+| Setup | Feed the workbench | Capture agent spec, system prompt, runtime choice, and golden queries |
+| Patterns | Axial Coding | Map codes into the paradigm model and priority matrix |
+| Judge | Selective Coding | Convert codebook and root-cause analysis into judge dimensions, hard-fails, and calibration |
+| Handoff | Export view | Review results, model performance, calibration health, and export artifacts |
 
 The UI also supports session import/export from the top navigation so a domain expert can hand a completed session to an ML engineer without copying browser state.
 
@@ -246,15 +264,15 @@ Codex skills are the authoring format for reusable workflows; plugins are the in
 
 The skill is **stateful**: on startup it reads `session.json` and resumes from where you left off, greeting you with your current step and query count. A fresh session is created automatically if no file exists.
 
-Use the skill when you want Codex to guide or automate the workflow while still making the website the first-touch experience:
+Use the skill when you want Codex to guide or automate the workflow while still making the annotation workbench the first-touch experience:
 
 ```text
-Use $gedd to evaluate my AI agent with the website-first workflow.
+Use $gedd to evaluate my AI agent with the annotation-first workflow.
 Use $gedd to package my current session for ML engineering handoff.
 Use $gedd to build a judge from the domain expert's failure codes.
 ```
 
-The skill is intentionally website-first. It should recommend `grounded-evals serve` before CLI automation unless the user explicitly asks for scripting, CI, MLflow, or headless execution.
+The skill is intentionally workbench-first. It should recommend `grounded-evals serve` before CLI automation unless the user explicitly asks for scripting, CI, MLflow, or headless execution.
 
 ---
 
@@ -343,7 +361,7 @@ That is the difference between a generic judge and a judge a domain owner can de
 
 ```mermaid
 flowchart TD
-    WEB["Website first<br/><i>Web UI + demo gallery</i>"]
+    WEB["Annotation workbench<br/><i>Review + Annotate + Scenarios</i>"]
     ASSIST["Codex skill / CLI<br/><i>guided automation</i>"]
     SJ["session.json<br/><i>validated handoff</i>"]
     CLI["grounded-evals CLI<br/><i>export + judge + mlflow</i>"]
@@ -362,7 +380,7 @@ flowchart TD
     CICD --> RT
 ```
 
-AWS-native by default. CloudFront provides the public web domain, IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.
+AWS-native by default. CloudFront provides the public workbench domain, IAM handles Bedrock auth, S3 stores artifacts, and SageMaker MLflow tracks experiments. A direct Anthropic API key is available for local fallback.
 
 ### Core Components
 
@@ -373,7 +391,7 @@ AWS-native by default. CloudFront provides the public web domain, IAM handles Be
 | Open Coding | `grounded_evals.open_coding` | Fractures domains into categories, compares query coverage, and checks saturation |
 | Axial Coding | `grounded_evals.axial_coding` | Maps observed failure codes into root-cause dimensions and paradigm-model structure |
 | Judge builder | `grounded_evals.judge_builder` | Builds rubrics, G-Eval prompts, few-shot variants, calibration, ensembles, and active-learning hooks |
-| Web UI | `grounded_evals.ui` | Runs the multi-page NiceGUI app and preloaded domain demo gallery |
+| Web UI | `grounded_evals.ui` | Runs the multi-page NiceGUI annotation workbench and preloaded domain scenario gallery |
 | CLI | `grounded_evals.cli` | Provides chat, eval, annotate, judge, handoff, export, and MLflow automation |
 
 ---
