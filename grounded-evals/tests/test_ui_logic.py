@@ -187,12 +187,13 @@ def test_home_expert_discoveries_are_domain_specific():
 
     codes = {item["error_code"] for item in EXPERT_DISCOVERIES}
 
-    assert len(EXPERT_DISCOVERIES) == 4
+    assert len(EXPERT_DISCOVERIES) == 5
     assert {
         "dosage_unit_confusion",
         "coverage_hallucination",
         "incomplete_guidance",
         "bar_misapplication",
+        "consent_bypass_for_targeting",
     } == codes
 
 
