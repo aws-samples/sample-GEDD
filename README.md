@@ -5,11 +5,11 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-You shipped an AI agent. Now you need to prove it works — to your CEO, to compliance, and to the team that inherits it. The agent fails in ways no rubric anticipated, while most eval tools expect reviewers to score raw traces, generic tables, or dashboards that were not built for their domain.
+You shipped an AI agent. Now you need trustworthy labels from the people who understand the work. That is where most eval workflows break down: reviewers score raw traces, generic tables, or dashboards that were not built for the task they are judging.
 
-**GEDD is an annotation workbench for *before* you have a rubric.** A product manager or domain expert reviews agent behavior in context, applies fast first-pass verdicts, names failure modes in their own vocabulary, and hands engineering a validated `session.json` that can become an automated judge and CI gate.
+**GEDD is a purpose-built annotation workbench for evaluating AI agents before you have a defensible rubric.** A product manager or domain expert reviews the agent in the shape of the task, applies fast verdicts, names failure modes in their own vocabulary, and hands engineering a validated `session.json` that can become an automated judge and CI gate.
 
-> *The annotation workbench is the product. Judges, reports, and CI gates are downstream of label quality.*
+> *The product is the annotation interface. Judges, reports, and CI gates are downstream of label quality.*
 
 ![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
 
@@ -17,19 +17,32 @@ You shipped an AI agent. Now you need to prove it works — to your CEO, to comp
 
 ---
 
-## What GEDD Builds
+## Product Thesis
 
-GEDD turns high-quality human annotation into production evaluation assets:
+Building a custom annotation tool is usually the highest-leverage investment an eval team can make. GEDD exists because every task has its own review surface:
 
-| Artifact | Created by | Why it matters |
-|----------|------------|----------------|
-| Annotation workbench | Domain expert review | Native review surface for queries, responses, verdicts, failure codes, severity, confidence, memos, filters, hotkeys, and progress |
-| `session.json` | Workbench handoff | Canonical handoff: agent spec, system prompt, golden queries, annotations, prompt variants, and chat history |
-| Golden dataset | Open Coding | Queries that cover happy paths, edge cases, adversarial inputs, ambiguity, and multi-turn behavior |
-| Failure codebook | Human annotation | Domain-specific failure vocabulary such as `dosage_unit_confusion`, not generic "bad answer" labels |
-| Paradigm model | Axial Coding | Causal map of triggers, contexts, amplifiers, observed behavior, and user impact |
-| Judge prompt | Selective Coding | G-Eval rubric with weighted criteria and hard-fail rules grounded in the expert's annotations |
-| MLflow pipeline | ML engineer handoff | SageMaker experiment, custom judges, eval dataset, and CI/CD regression gates |
+- If the agent writes email, the reviewer should see an email.
+- If the agent chats with a customer, the reviewer should see a chat.
+- If the agent books an appointment, the reviewer should see the booking confirmation.
+- If the agent changes a policy, recommends a dose, files a claim, or targets an ad, the reviewer should see the context a real domain owner would use to decide whether the right thing happened.
+
+The core question is not "did the model produce a plausible answer?" It is **did the right thing happen for the user, in this domain, under these constraints?**
+
+GEDD reduces the friction around that question: one queue, task-shaped context, fast keyboardable verdicts, progress tracking, reusable failure codes, severity, confidence, and memos. The better the annotation interface, the more consistent the labels. The more consistent the labels, the more defensible the judge.
+
+---
+
+## What The Reviewer Does
+
+GEDD turns domain review into production evaluation assets:
+
+| Reviewer action | Product surface | Engineering artifact |
+|-----------------|-----------------|----------------------|
+| Inspect the agent behavior in context | Review queue with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
+| Explain what went wrong | Annotation workbench with failure codes, severity, confidence, and memos | Domain-specific codebook |
+| Compare failures across examples | Patterns view with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
+| Convert observed failures into criteria | Judge builder with rubric dimensions, hard-fail rules, and calibration | G-Eval judge prompt |
+| Package the evidence | Handoff view and CLI export | `session.json`, golden dataset, judge prompt, MLflow artifacts |
 
 The goal is not to make a larger synthetic benchmark. It is to preserve expert judgment at the moment of review, then automate from that evidence.
 
@@ -41,11 +54,11 @@ The reviewer should see the thing they are judging. If the task is email, show a
 
 | Principle | In GEDD |
 |-----------|---------|
-| Native review context | `Review` keeps the query, response, model, notes, verdicts, filters, and progress in one queue |
-| Low-friction labeling | Hotkeys, unreviewed filters, quick verdicts, triage mode, and save-and-next flows protect reviewer focus |
-| Domain-specific vocabulary | `Annotate` turns expert language into failure codes, severity, confidence, and memos |
-| Evidence before rubrics | The judge is built only after real failures have been observed, coded, and mapped into patterns |
-| Portable handoff | `session.json`, exports, judge prompts, and MLflow artifacts preserve the review evidence for engineering |
+| Show the real task | The workbench keeps query, response, model, notes, verdicts, filters, and progress in one review queue |
+| Protect reviewer focus | Hotkeys, unreviewed filters, quick verdicts, triage mode, and save-and-next flows reduce context switching |
+| Capture expert language | `Annotate` turns domain vocabulary into failure codes, severity, confidence, and memos |
+| Build from observed evidence | The judge is built only after real failures have been observed, coded, and mapped into patterns |
+| Preserve handoff context | `session.json`, exports, judge prompts, and MLflow artifacts carry the review evidence into engineering |
 
 Every downstream artifact is only as good as the labels that produced it. GEDD treats the annotation interface as the measurement instrument, not a side panel on an eval dashboard.
 
