@@ -13,6 +13,111 @@ from grounded_evals.feedback_loop import compute_eval_health
 
 from grounded_evals.ui.layout import page_layout
 
+REPORT_CSS = """
+.rr-hero {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+  padding: 18px;
+}
+.rr-eyebrow {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.rr-title {
+  font-size: 1.35rem;
+  font-weight: 750;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+.rr-subtitle {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  max-width: 680px;
+  margin-top: 6px;
+}
+.rr-decision {
+  border-radius: var(--radius-lg);
+  padding: 12px 14px;
+  min-width: 190px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.rr-decision-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.rr-decision-value {
+  font-size: 1.05rem;
+  font-weight: 750;
+  margin-top: 4px;
+}
+.rr-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.rr-metric {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 13px 14px;
+}
+.rr-metric-value {
+  font-size: 1.35rem;
+  font-weight: 750;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.rr-metric-label {
+  font-size: 0.66rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+.rr-action-card {
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-2);
+  padding: 14px 16px;
+}
+.rr-action-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.rr-action-copy {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  margin-top: 3px;
+}
+.rr-section-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+@media (max-width: 760px) {
+  .rr-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 520px) {
+  .rr-metric-grid { grid-template-columns: 1fr; }
+}
+"""
+
 
 def _build_failure_patterns(codebook: list[dict], coding_annotations: list[dict]) -> list[dict]:
     """Derive failure_patterns from codebook usage across coding annotations."""
@@ -132,6 +237,7 @@ def _build_html_report(
 @ui.page("/report")
 def report_page():
     page_layout("Release Report")
+    ui.add_head_html(f"<style>{REPORT_CSS}</style>")
     storage = app.storage.user
     session = storage.get("session_data", {})
     annotations = storage.get("annotations", [])
@@ -161,35 +267,120 @@ def report_page():
         if code:
             error_counts[code] = error_counts.get(code, 0) + 1
 
+    pass_rate_pct = (correct / total * 100) if total else 0
+    blocking_annotations = [
+        ann for ann in coding_annotations
+        if ann.get("severity") in ("critical", "catastrophic")
+    ]
+    n_blockers = len(blocking_annotations)
+    n_codes = len(codebook)
+    n_patterns = len(patterns)
+    top_pattern = patterns[0]["name"] if patterns else "No dominant pattern yet"
+    _health = compute_eval_health(dict(app.storage.user))
+    _total_color = (
+        "#4ade80" if _health.total >= 75
+        else ("#f0bf00" if _health.total >= 40 else "#eb5757")
+    )
+    if n_blockers:
+        decision_label = "Do not ship"
+        decision_color = "var(--red)"
+        next_action = (
+            f"Resolve {n_blockers} critical/catastrophic annotation"
+            f"{'s' if n_blockers != 1 else ''} before release."
+        )
+    elif _health.total < 40 or not total:
+        decision_label = "Not ready"
+        decision_color = "var(--red)"
+        next_action = "Add enough annotated evidence to support a defensible launch decision."
+    elif _health.total < 75 or pass_rate_pct < 80:
+        decision_label = "Fix before GA"
+        decision_color = "var(--yellow)"
+        next_action = "Use the top failure patterns below to prioritize fixes, then re-run the judge."
+    else:
+        decision_label = "Pilot ready"
+        decision_color = "var(--green-bright)"
+        next_action = "Proceed with gated rollout and keep these judge criteria in CI."
+
+    def download_html_report():
+        html = _build_html_report(
+            agent_name=agent_name,
+            date_str=date.today().isoformat(),
+            total=total,
+            correct=correct,
+            partial=partial,
+            incorrect=incorrect,
+            patterns=patterns,
+            codebook=codebook,
+            system_prompt=system_prompt,
+            judge_prompt=storage.get("_generated_judge_prompt", ""),
+            exec_summary=storage.get("_exec_summary", ""),
+            annotations=annotations,
+        )
+        safe_name = agent_name.replace(" ", "_").replace("/", "-")
+        ui.download(html.encode(), f"release_readiness_report_{safe_name}.html")
+
     with ui.column().classes("w-full max-w-5xl mx-auto").style("padding: 1.5rem; gap: 16px"):
 
-        # ── Header ─────────────────────────────────────────────────────────
-        with ui.element("div").classes("page-card"):
-            with ui.row().classes("items-center justify-between w-full"):
-                ui.label("Release Readiness Report").style("font-size: 1.1rem; font-weight: 600; color: var(--text-primary)")
-                ui.label(date.today().isoformat()).style("font-size: 0.75rem; color: var(--text-muted)")
-            with ui.row().classes("gap-4 mt-2"):
-                ui.label(f"Agent: {agent_name}").style("font-size: 0.8rem; color: var(--text-secondary)")
-                ui.label(f"Queries: {len(golden_prompts)}").style("font-size: 0.8rem; color: var(--text-secondary)")
+        # ── Release readiness hero ─────────────────────────────────────────
+        with ui.element("div").classes("rr-hero"):
+            with ui.row().classes("items-start justify-between gap-4 flex-wrap"):
+                with ui.column().style("gap: 0; flex: 1; min-width: 260px"):
+                    ui.html('<div class="rr-eyebrow">AI PM Release Readiness</div>')
+                    ui.html(f'<div class="rr-title">{agent_name}</div>')
+                    ui.html(
+                        '<div class="rr-subtitle">'
+                        'This page is the release evidence artifact: what the expert reviewed, '
+                        'which failures block launch, what the judge should enforce, and what '
+                        'engineering needs to fix next.'
+                        '</div>'
+                    )
+                with ui.element("div").classes("rr-decision").style(
+                    f"border-left:3px solid {decision_color}"
+                ):
+                    ui.html('<div class="rr-decision-label">Decision</div>')
+                    ui.html(
+                        f'<div class="rr-decision-value" style="color:{decision_color}">'
+                        f'{decision_label}</div>'
+                    )
+                    ui.label(date.today().isoformat()).style(
+                        "font-size:0.68rem; color:var(--text-muted); margin-top:4px"
+                    )
 
-        # ── Eval Health Score (Uber-inspired composite readiness metric) ──────
-        _health = compute_eval_health(dict(app.storage.user))
-        _total_color = (
-            "#4ade80" if _health.total >= 75
-            else ("#f0bf00" if _health.total >= 40 else "#eb5757")
-        )
-        with ui.element("div").classes("page-card").style(
-            "border-left:4px solid " + _total_color
-        ):
+            with ui.element("div").classes("rr-metric-grid").style("margin-top: 16px"):
+                for value, label, color in [
+                    (f"{_health.total}/100", "Readiness score", _total_color),
+                    (f"{pass_rate_pct:.0f}%", "Pass rate", "var(--green-bright)" if pass_rate_pct >= 80 else "var(--yellow)"),
+                    (str(n_blockers), "Release blockers", "var(--red)" if n_blockers else "var(--green-bright)"),
+                    (str(n_codes), "Expert failure codes", "var(--accent-bright)"),
+                ]:
+                    with ui.element("div").classes("rr-metric"):
+                        ui.html(f'<div class="rr-metric-value" style="color:{color}">{value}</div>')
+                        ui.html(f'<div class="rr-metric-label">{label}</div>')
+
+            with ui.element("div").classes("rr-action-card").style("margin-top: 14px"):
+                with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
+                    with ui.column().style("gap:0; flex:1; min-width:260px"):
+                        ui.html('<div class="rr-action-title">Next PM action</div>')
+                        ui.html(
+                            f'<div class="rr-action-copy">{next_action} '
+                            f'Top observed pattern: <strong>{top_pattern}</strong>.</div>'
+                        )
+                    with ui.row().classes("gap-2 flex-wrap"):
+                        ui.button(
+                            "Export report", icon="download", on_click=download_html_report
+                        ).props("size=sm color=primary no-caps")
+                        ui.button(
+                            "Open judge", icon="gavel", on_click=lambda: ui.navigate.to("/judge")
+                        ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
+
+        # ── Evidence quality score ─────────────────────────────────────────
+        with ui.element("div").classes("page-card").style("border-left:4px solid " + _total_color):
             with ui.row().classes("items-center justify-between w-full").style("margin-bottom:10px"):
-                ui.label("Eval Health Score").style(
-                    "font-size: 0.7rem; font-weight: 700; color: var(--text-tertiary); "
-                    "text-transform: uppercase; letter-spacing: 0.04em"
-                )
+                ui.label("Evidence Quality").classes("rr-section-title")
                 ui.html(
-                    f'<span style="font-size:1.6rem; font-weight:800; color:{_total_color}">'
+                    f'<span style="font-size:1.25rem; font-weight:800; color:{_total_color}">'
                     f'{_health.total}</span>'
-                    f'<span style="font-size:0.85rem; color:var(--text-muted)">/100</span>'
+                    f'<span style="font-size:0.78rem; color:var(--text-muted)">/100</span>'
                 )
             _bar_data = [
                 ("Rubric Freshness", _health.rubric_freshness,
@@ -229,26 +420,13 @@ def report_page():
                         f'<div style="font-size:0.7rem; color:#f0bf00; margin-bottom:2px">⚠ {_gap}</div>'
                     )
 
-        # ── Annotation stats ───────────────────────────────────────────────
-        with ui.row().classes("w-full gap-3"):
-            stats = [
-                ("Total", str(total), "var(--text-primary)"),
-                ("Correct", f"{(correct/total*100):.0f}%" if total else "0%", "var(--green-bright)"),
-                ("Partial", f"{(partial/total*100):.0f}%" if total else "0%", "var(--yellow)"),
-                ("Incorrect", f"{(incorrect/total*100):.0f}%" if total else "0%", "var(--red)"),
-            ]
-            for label, value, color in stats:
-                with ui.card().classes("stat-card flex-1"):
-                    ui.label(value).classes("stat-value").style(f"color: {color}")
-                    ui.label(label).classes("stat-label")
-
         # ── Verdict Distribution Chart ──────────────────────────────────────
         if total:
             with ui.element("div").classes("page-card"):
                 with ui.row().classes("w-full gap-4 items-start"):
                     # Donut chart — verdict breakdown
                     with ui.column().classes("flex-1").style("min-width:220px"):
-                        ui.label("Verdict Distribution").style(
+                        ui.label("Evidence Breakdown").style(
                             "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                             "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
                         )
@@ -323,7 +501,7 @@ def report_page():
 
                     if code_counts:
                         with ui.column().classes("flex-1").style("min-width:220px"):
-                            ui.label("Error Code Frequency").style(
+                            ui.label("Failure Code Frequency").style(
                                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
                             )
@@ -387,7 +565,7 @@ def report_page():
 
         # ── Failure Patterns (from Open Coding) — clickable drill-down ──────
         with ui.element("div").classes("page-card"):
-            ui.label("Failure Patterns").style(
+            ui.label("Release-Blocking Failure Patterns").style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
             )
@@ -461,7 +639,7 @@ def report_page():
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
             )
-            ui.label("Severity × Frequency — fix these first.").style("font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px")
+            ui.label("Severity × frequency — fix these before widening release.").style("font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px")
 
             # Calculate priority from coding annotations
             code_stats = {}
@@ -507,7 +685,7 @@ def report_page():
         memos = storage.get("memos", [])
         if memos:
             with ui.element("div").classes("page-card"):
-                ui.label("Analyst Notes").style(
+                ui.label("Expert Memos").style(
                     "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                     "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
                 )
@@ -533,7 +711,7 @@ def report_page():
 
         # ── Root Cause Analysis ────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label("Root Cause Analysis").style(
+            ui.label("Root Cause Evidence").style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
             )
@@ -566,7 +744,7 @@ def report_page():
             n_phenomena = len(phenomena_list)
             with ui.row().classes("items-start justify-between w-full").style("margin-bottom: 4px"):
                 with ui.column().style("gap: 2px"):
-                    ui.label("LLM-as-Judge Generation").style(
+                    ui.label("Release Gate Generation").style(
                         "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                         "text-transform: uppercase; letter-spacing: 0.04em"
                     )
@@ -892,7 +1070,7 @@ def report_page():
                     gen_btn.props(remove="loading")
 
             gen_btn = ui.button(
-                "Generate Full Rubric Judge (AI)", icon="auto_fix_high", on_click=generate_full_judge
+                "Generate Release Gate Judge", icon="auto_fix_high", on_click=generate_full_judge
             ).props("size=sm").style(
                 "margin-top: 14px; background: var(--accent); color: white; border-radius: var(--radius-md)"
             )
@@ -903,7 +1081,7 @@ def report_page():
 
         # ── ML-Enhanced Judge Generation ──────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label("ML-Enhanced Judge Generation").style(
+            ui.label("Advanced Judge Variants").style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
             )
@@ -1424,7 +1602,7 @@ def report_page():
 
         # ── Interactive Judge Test ─────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label("Test Your Judge").style(
+            ui.label("Test Release Gate").style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px"
             )
@@ -1493,7 +1671,7 @@ def report_page():
 
         # ── "So What?" Summary ────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
-            ui.label('"So What?" — Executive Summary').style(
+            ui.label("Executive Summary").style(
                 "font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); "
                 "text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px"
             )
