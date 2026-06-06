@@ -19,15 +19,16 @@ from pathlib import Path
 ROUTES = ["/", "/demos", "/coach", "/eval", "/coding", "/analysis", "/judge", "/report", "/health"]
 CONTENT_CHECKS = {
     "/": [
-        "Annotation is the product",
-        "Build the review interface",
+        "AI PM release readiness",
+        "Find the failures that decide whether an agent is shippable",
         "Purpose-built annotation",
         "AdTech",
         "What the domain expert discovers",
     ],
-    "/demos": ["RxBot", "MigrateBot", "EnergyBot", "BudgetAir"],
-    "/coding": ["Annotation Workbench", "domain language", "severity", "confidence", "memo", "judge"],
-    "/judge": ["rubric", "Generate"],
+    "/demos": ["Scenario Library", "AdTechBot", "Consent Bypass", "RxBot", "MigrateBot", "EnergyBot"],
+    "/coding": ["PM Annotation Workbench", "product risk", "severity", "confidence", "memo", "judge"],
+    "/judge": ["Judge Builder", "Release Gate", "Generate"],
+    "/report": ["AI PM Release Readiness", "Next PM action"],
 }
 
 
@@ -40,11 +41,33 @@ class CheckResult:
 
 def fetch(url: str, timeout: float = 20.0) -> tuple[int, str, bytes]:
     request = urllib.request.Request(url, headers={"User-Agent": "gedd-release-check/1.0"})
-    with urllib.request.urlopen(request, timeout=timeout) as response:
+    opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+    with opener.open(request, timeout=timeout) as response:
         status = int(response.status)
         content_type = response.headers.get("content-type", "")
         body = response.read()
     return status, content_type, body
+
+
+def fetch_no_redirect(url: str, timeout: float = 20.0) -> tuple[int, str, bytes, str]:
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            return None
+
+    request = urllib.request.Request(url, headers={"User-Agent": "gedd-release-check/1.0"})
+    opener = urllib.request.build_opener(NoRedirect)
+    try:
+        with opener.open(request, timeout=timeout) as response:
+            status = int(response.status)
+            content_type = response.headers.get("content-type", "")
+            body = response.read()
+            location = response.headers.get("location", "")
+    except urllib.error.HTTPError as exc:
+        status = int(exc.code)
+        content_type = exc.headers.get("content-type", "")
+        body = exc.read()
+        location = exc.headers.get("location", "")
+    return status, content_type, body, location
 
 
 def check_routes(base_url: str, expect_auth: bool = False) -> list[CheckResult]:
@@ -52,19 +75,23 @@ def check_routes(base_url: str, expect_auth: bool = False) -> list[CheckResult]:
     for route in ROUTES:
         url = f"{base_url}{route}"
         try:
-            status, content_type, body = fetch(url)
+            if expect_auth and route != "/health":
+                status, content_type, body, location = fetch_no_redirect(url)
+            else:
+                status, content_type, body = fetch(url)
+                location = ""
         except urllib.error.URLError as exc:
             results.append(CheckResult(f"route {route}", False, str(exc)))
             continue
         if expect_auth and route != "/health":
-            ok = status == 200 and b"Sign in" in body
+            ok = status in (302, 303, 307, 308) and "amazoncognito.com/login" in location
         else:
             ok = status == 200 and (route != "/health" or b'"status":"ok"' in body)
         results.append(
             CheckResult(
                 f"route {route}",
                 ok,
-                f"{status} {content_type} {len(body)} bytes",
+                f"{status} {content_type} {len(body)} bytes" + (f" -> {location}" if location else ""),
             )
         )
     return results
@@ -108,11 +135,11 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         browser = await p.chromium.launch()
         page = await browser.new_page(viewport={"width": 1440, "height": 1000})
         for route, selector_text in [
-            ("/", "Annotation is the product"),
-            ("/demos", "Domain Specialists"),
-            ("/coding", "Annotation Workbench"),
-            ("/judge", "Generate"),
-            ("/report", "Handoff"),
+            ("/", "AI PM release readiness"),
+            ("/demos", "Scenario Library"),
+            ("/coding", "PM Annotation Workbench"),
+            ("/judge", "Judge Builder"),
+            ("/report", "AI PM Release Readiness"),
         ]:
             try:
                 response = await page.goto(f"{base_url}{route}", wait_until="networkidle", timeout=30000)

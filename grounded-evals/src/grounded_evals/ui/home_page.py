@@ -726,7 +726,7 @@ def home_page():
         # ── Scenario-first outcome strip ─────────────────────────────────
         with ui.element("div").classes("outcome-strip animate-in stagger-2"):
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">17</div>')
+                ui.html(f'<div class="num">{len(domain_cards)}</div>')
                 ui.html('<div class="label">launch-risk scenarios</div>')
             with ui.element("div").classes("outcome-cell"):
                 ui.html('<div class="num">Evidence</div>')

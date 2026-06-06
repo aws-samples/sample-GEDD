@@ -206,7 +206,7 @@ pip install -e ".[dev]"
 grounded-evals serve
 ```
 Open `localhost:8080`
-17 pre-loaded scenarios
+18 pre-loaded scenarios
 
 </td>
 <td width="33%">
@@ -256,7 +256,7 @@ The website is the default first experience because it is the annotation workben
 | Page | Purpose | What you do there |
 |------|---------|-------------------|
 | Home | PM-oriented entry | Continue active review work, open scenarios, or start a custom agent |
-| Scenarios | Core product surface | Load one of 17 high-stakes AI agent scenarios with queries, labels, codebooks, and judges already attached |
+| Scenarios | Core product surface | Load one of 18 high-stakes AI agent scenarios with queries, labels, codebooks, and judges already attached |
 | Annotate | PM Annotation Workbench | Identify product risks, create failure codes, apply severity/confidence, write memos, use triage mode, and track saturation |
 | Patterns | Pattern Map | Map codes into user-impact root causes and release priorities |
 | Judge | Release gate builder | Convert codebook and pattern analysis into judge dimensions, hard-fails, and calibration |
@@ -414,15 +414,16 @@ AWS-native by default. CloudFront provides the public workbench domain, IAM hand
 
 ---
 
-## 17 Demo Scenarios
+## 18 Demo Scenarios
 
 No LLM calls needed. Each is pre-loaded with golden queries, annotations, error codes, and a generated judge.
 
 <details>
-<summary><b>View all 17 demos</b></summary>
+<summary><b>View all 18 demos</b></summary>
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
+| **AdTechBot** | Advertising / MarTech | Consent bypass, sensitive targeting, dark patterns, attribution overclaim |
 | **TravelBot** | Flight booking | Hallucinated entities, fabricated booking data |
 | **ClinicalBot** | Clinical triage | Missed escalation, contraindication miss |
 | **LexBot** | Legal assistant | Jurisdiction error, unauthorized legal advice |
