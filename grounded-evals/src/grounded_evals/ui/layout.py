@@ -11,8 +11,6 @@ NAV_ITEMS = [
     {"path": "/analysis", "label": "Patterns", "icon": "hub", "core": True},
     {"path": "/judge", "label": "Judge", "icon": "gavel", "core": True},
     {"path": "/report", "label": "Report", "icon": "assessment", "core": True},
-    {"path": "/eval", "label": "Run", "icon": "rate_review"},
-    {"path": "/coach", "label": "Setup", "icon": "tune"},
 ]
 
 BRAND_CSS = """
@@ -344,7 +342,7 @@ def page_layout(title: str = ""):
                             for key in keys_to_clear:
                                 app.storage.user.pop(key, None)
                             dlg.close()
-                            ui.navigate.to("/coach")
+                            ui.navigate.to("/")
                         ui.button("Start Fresh", icon="refresh", on_click=do_reset).props(
                             "size=sm color=negative"
                         )
@@ -414,7 +412,7 @@ def page_layout(title: str = ""):
                         storage["prompt_variants"] = payload.get("prompt_variants", [])
                         ui.notify("Session imported", type="positive")
                         dlg.close()
-                        ui.navigate.to("/coach")
+                        ui.navigate.to("/")
 
                     with ui.row().classes("gap-2 items-center"):
                         ui.button("Export", icon="download", on_click=export_session).props(

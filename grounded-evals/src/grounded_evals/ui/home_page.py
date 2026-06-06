@@ -451,6 +451,30 @@ HOME_CSS = """
   padding: 14px 16px; margin-bottom: 1.5rem;
 }
 
+.custom-agent-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 1.25rem;
+  padding: 15px 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+}
+.custom-agent-card .title {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.custom-agent-card .copy {
+  font-size: 0.76rem;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+  margin-top: 2px;
+}
+
 /* ── Methodology fold ──────────────────────────────────────────────── */
 .method-fold {
   border: 1px solid var(--border-subtle);
@@ -472,6 +496,7 @@ HOME_CSS = """
   .mkt-section-head {
     align-items: flex-start; flex-direction: column; gap: 0.6rem;
   }
+  .custom-agent-card { flex-direction: column; align-items: flex-start; }
   .paradigm-grid { grid-template-columns: 1fr; }
   .demo-nav { overflow-x: auto; }
   .demo-nav-btn { min-width: 88px; }
@@ -806,13 +831,22 @@ def home_page():
                         ui.html(f'<div class="desc">{domain["tagline"]}</div>')
                     ui.html('<span class="arrow material-icons">arrow_forward</span>')
 
-        # ── Evaluate your own agent (demoted CTA) ────────────────────────
-        ui.button(
-            "Set up your own agent →", icon="tune",
-            on_click=lambda: ui.navigate.to("/coach"),
-        ).props("flat size=sm no-caps").style(
-            "color: var(--text-secondary); margin-top: 1rem; align-self: center"
-        )
+        # ── Custom agent setup is a branch, not a main product tab ───────
+        with ui.element("div").classes("custom-agent-card animate-in stagger-4"):
+            with ui.column().style("gap: 0; max-width: 560px"):
+                ui.html('<div class="title">Evaluating your own agent?</div>')
+                ui.html(
+                    '<div class="copy">'
+                    'Use setup only when you need to define a custom agent, prompt, runtime, '
+                    'and golden queries. The main PM loop still runs through Annotate, Patterns, Judge, and Report.'
+                    '</div>'
+                )
+            ui.button(
+                "Set up custom agent", icon="tune",
+                on_click=lambda: ui.navigate.to("/coach"),
+            ).props("outline size=sm no-caps").style(
+                "color: var(--accent-bright); border-color: var(--accent); flex-shrink: 0"
+            )
 
         # ── Methodology fold (deprioritized; for the curious buyer) ──────
         with ui.expansion(

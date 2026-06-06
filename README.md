@@ -107,7 +107,7 @@ flowchart TD
 | Report | AI PM + ML Engineer | Review release readiness and export evidence | Release report, `session.json`, judge prompt |
 | MLflow | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> The web app is now organized around the AI PM release loop: `Scenarios` for launch-risk examples, `Annotate` for codebook creation, `Patterns` for root causes, `Judge` for release gates, and `Report` for executive evidence. `Setup` and `Run` support custom agents but no longer carry the product story.
+> The web app is now organized around the AI PM release loop: `Scenarios` for launch-risk examples, `Annotate` for codebook creation, `Patterns` for root causes, `Judge` for release gates, and `Report` for executive evidence. Custom setup and response-running are contextual actions from Home or empty states, not primary tabs.
 
 > **CLI parity:** Steps 1-5 can still run inside `grounded-evals chat`. Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
 
@@ -258,8 +258,8 @@ The website is the default first experience because it is the annotation workben
 | Patterns | Pattern Map | Map codes into user-impact root causes and release priorities |
 | Judge | Release gate builder | Convert codebook and pattern analysis into judge dimensions, hard-fails, and calibration |
 | Report | Release readiness | Review executive summary, failure patterns, model performance, calibration health, and export artifacts |
-| Run | Supporting queue | Generate or compare model responses, apply quick verdicts, and send misses into annotation |
-| Setup | Supporting setup | Capture agent spec, system prompt, runtime choice, and golden queries for custom agents |
+| Custom setup | Home option | Capture agent spec, system prompt, runtime choice, and golden queries only when evaluating a new custom agent |
+| Run responses | Contextual action | Generate or compare model responses when a custom workflow needs fresh outputs before annotation |
 
 The UI also supports session import/export from the top navigation so a domain expert can hand a completed session to an ML engineer without copying browser state.
 
