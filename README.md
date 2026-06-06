@@ -9,6 +9,9 @@ You shipped an AI agent. Now you need trustworthy labels from the people who und
 
 **GEDD is a scenario-first release-readiness workbench for AI Product Managers and domain experts.** A PM loads realistic launch-risk scenarios, reviews the agent in the shape of the task, names failure modes in the expert's vocabulary, and leaves with a release report plus a validated `session.json` that engineering can turn into an automated judge and CI gate.
 
+<img width="1512" height="776" alt="Screenshot 2026-06-05 at 9 15 46 PM" src="https://github.com/user-attachments/assets/e54440e6-1e7f-4762-80c9-6f371f4df7ae" />
+
+
 > *The product is the PM review loop: scenarios, expert labels, failure patterns, judge rules, and a release report engineering can act on.*
 
 ![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
