@@ -476,12 +476,15 @@ def main_page() -> None:
                 needs_container.clear()
                 with needs_container:
                     for i, need in enumerate(s['user_needs']):
+                        description = need.get('description') or need.get('need') or ""
+                        importance = need.get('importance', 'medium')
+                        satisfaction = need.get('satisfaction', 'ok')
                         imp_color = {'critical': 'var(--red)', 'high': 'var(--yellow)', 'medium': 'var(--text-secondary)', 'low': 'var(--text-muted)'}
                         sat_color = {'poor': 'var(--red)', 'ok': 'var(--yellow)', 'good': 'var(--green-bright)'}
                         with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
-                            ui.label(need['description']).style(f"flex: 1; font-size: 0.8rem; color: var(--text-primary)")
-                            ui.badge(need['importance'], color='grey').props('outline').style(f"color: {imp_color.get(need['importance'], '')}")
-                            ui.badge(need['satisfaction'], color='grey').props('outline').style(f"color: {sat_color.get(need['satisfaction'], '')}")
+                            ui.label(description).style(f"flex: 1; font-size: 0.8rem; color: var(--text-primary)")
+                            ui.badge(importance, color='grey').props('outline').style(f"color: {imp_color.get(importance, '')}")
+                            ui.badge(satisfaction, color='grey').props('outline').style(f"color: {sat_color.get(satisfaction, '')}")
 
                             def remove_need(idx=i):
                                 s['user_needs'].pop(idx)
@@ -524,10 +527,11 @@ def main_page() -> None:
                 hyp_container.clear()
                 with hyp_container:
                     for i, h in enumerate(s['hypotheses']):
+                        text = h.get('text') or h.get('hypothesis') or ""
                         status_icons = {'active': '🔵', 'confirmed': '✅', 'invalidated': '❌', 'revised': '🔄'}
                         with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
                             ui.label(status_icons.get(h.get('status', 'active'), '🔵')).style("font-size: 0.9rem")
-                            ui.label(h['text']).style("flex: 1; font-size: 0.8rem; color: var(--text-primary)")
+                            ui.label(text).style("flex: 1; font-size: 0.8rem; color: var(--text-primary)")
 
                             def cycle_status(idx=i):
                                 statuses = ['active', 'confirmed', 'invalidated', 'revised']

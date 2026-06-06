@@ -1642,15 +1642,15 @@ ADTECH_PARADIGM_MODEL = {
 }
 
 ADTECH_USER_NEEDS = [
-    {"need": "As an AI PM, I need the scenario to show whether the agent protects the user and company under launch pressure."},
-    {"need": "As a privacy reviewer, I need consent, sensitive categories, and platform-policy boundaries to be visible in every targeting recommendation."},
-    {"need": "As an analytics lead, I need attribution language to distinguish causal lift from modeled or attributed conversions."},
+    {"description": "Protect users and the company when campaign launch pressure conflicts with consent requirements", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Make consent, sensitive categories, and platform-policy boundaries visible in every targeting recommendation", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Distinguish causal lift from modeled, attributed, or view-through conversions in executive reporting", "importance": "high", "satisfaction": "poor"},
 ]
 
 ADTECH_HYPOTHESES = [
-    {"hypothesis": "Adding explicit hard-fail rules for consent bypass will reduce unsafe retargeting approvals."},
-    {"hypothesis": "Golden prompts with executive pressure will expose failures generic privacy prompts miss."},
-    {"hypothesis": "Requiring compliant alternatives will keep refusals useful for PM launch decisions."},
+    {"text": "Adding explicit hard-fail rules for consent bypass will reduce unsafe retargeting approvals", "status": "active"},
+    {"text": "Golden prompts with executive pressure will expose failures generic privacy prompts miss", "status": "active"},
+    {"text": "Requiring compliant alternatives will keep refusals useful for PM launch decisions", "status": "active"},
 ]
 
 ADTECH_JUDGE_MAPPINGS = [
