@@ -42,6 +42,7 @@ agentcore = AgentCoreStack(app, "AgentPlayground-AgentCore", env=env)
 cognito_stack = CognitoStack(
     app, "AgentPlayground-Cognito",
     alb_dns=network.alb.load_balancer_dns_name,
+    public_base_url=f"https://{network.distribution.distribution_domain_name}",
     env=env,
 )
 
@@ -49,12 +50,12 @@ ecs = EcsStack(
     app, "AgentPlayground-Ecs",
     vpc=network.vpc,
     alb=network.alb,
-    listener=network.listener,
     ecs_sg=network.ecs_sg,
     ecr_repo=ecr.repo,
     user_pool_id=cognito_stack.user_pool.user_pool_id,
     user_pool_client_id=cognito_stack.user_pool_client.user_pool_client_id,
     user_pool_domain=cognito_stack.domain.domain_name,
+    public_base_url=f"https://{network.distribution.distribution_domain_name}",
     agentcore_agent_id="",
     enable_app_auth=enable_app_auth,
     env=env,

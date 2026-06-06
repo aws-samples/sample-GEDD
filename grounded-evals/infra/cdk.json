@@ -1,6 +1,7 @@
 {
-  "app": "python3 app.py",
+  "app": ".venv/bin/python app.py",
   "context": {
-    "@aws-cdk/aws-ecs:enableExecuteCommand": true
+    "@aws-cdk/aws-ecs:enableExecuteCommand": true,
+    "enable_app_auth": true
   }
 }

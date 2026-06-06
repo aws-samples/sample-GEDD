@@ -1,4 +1,4 @@
-"""Eval Report page — summary, failure patterns, full judge pipeline, calibration, exports."""
+"""Release report page — summary, failure patterns, judge pipeline, calibration, exports."""
 
 import asyncio
 import csv
@@ -79,7 +79,7 @@ def _build_html_report(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>GEDD Eval Report — {agent_name}</title>
+<title>GEDD Release Readiness Report — {agent_name}</title>
 <style>
   body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:2rem;color:#1a1a1a;line-height:1.6}}
   h1{{font-size:1.6rem;font-weight:700;border-bottom:2px solid #e2e8f0;padding-bottom:.5rem}}
@@ -102,9 +102,9 @@ def _build_html_report(
 </style>
 </head>
 <body>
-<h1>Evaluation Report — {agent_name}</h1>
+<h1>Release Readiness Report — {agent_name}</h1>
 <p class="meta">Generated {date_str} &nbsp;·&nbsp; {total} total annotations</p>
-<h2>Overall Results</h2>
+<h2>Readiness Snapshot</h2>
 <div class="stats">
   <div class="stat"><div class="sv">{total}</div><div class="sl">Total</div></div>
   <div class="stat"><div class="sv correct">{correct}</div><div class="sl">Correct</div></div>
@@ -114,7 +114,7 @@ def _build_html_report(
 </div>
 <h2>Executive Summary</h2>
 {summary_html}
-<h2>Failure Patterns</h2>
+<h2>Release-Blocking Failure Patterns</h2>
 {"<table><thead><tr><th>Pattern</th><th>Severity</th><th>Freq</th><th>Definition</th></tr></thead><tbody>" + patterns_rows + "</tbody></table>" if patterns else "<p>No failure patterns recorded yet.</p>"}
 <h2>Error Codebook</h2>
 {"<ul>" + codebook_items + "</ul>" if codebook else "<p>No error codes defined yet.</p>"}
@@ -131,7 +131,7 @@ def _build_html_report(
 
 @ui.page("/report")
 def report_page():
-    page_layout("Report")
+    page_layout("Release Report")
     storage = app.storage.user
     session = storage.get("session_data", {})
     annotations = storage.get("annotations", [])
@@ -166,7 +166,7 @@ def report_page():
         # ── Header ─────────────────────────────────────────────────────────
         with ui.element("div").classes("page-card"):
             with ui.row().classes("items-center justify-between w-full"):
-                ui.label("Evaluation Report").style("font-size: 1.1rem; font-weight: 600; color: var(--text-primary)")
+                ui.label("Release Readiness Report").style("font-size: 1.1rem; font-weight: 600; color: var(--text-primary)")
                 ui.label(date.today().isoformat()).style("font-size: 0.75rem; color: var(--text-muted)")
             with ui.row().classes("gap-4 mt-2"):
                 ui.label(f"Agent: {agent_name}").style("font-size: 0.8rem; color: var(--text-secondary)")
@@ -2094,7 +2094,7 @@ Respond in JSON only:
                         annotations=annotations,
                     )
                     safe_name = agent_name.replace(" ", "_").replace("/", "-")
-                    ui.download(html.encode(), f"eval_report_{safe_name}.html")
+                    ui.download(html.encode(), f"release_readiness_report_{safe_name}.html")
 
                 ui.button(
                     "HTML Report", on_click=download_html_report, icon="picture_as_pdf"

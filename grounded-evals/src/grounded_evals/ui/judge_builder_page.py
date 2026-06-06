@@ -72,16 +72,16 @@ def _failure_summary():
 @ui.page("/judge")
 def judge_builder_page():
     _init_state()
-    page_layout("Build Judge")
+    page_layout("Judge Builder")
 
     with ui.column().classes("w-full max-w-4xl mx-auto").style("padding: 1.5rem; gap: 1rem"):
 
         # ── Page header ──────────────────────────────────────────────────────
         ui.html(
             '<div style="margin-bottom: 4px">'
-            '<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:4px">5. BUILD JUDGE</div>'
-            '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:2px">LLM-as-a-Judge Builder</div>'
-            '<div style="font-size:0.82rem;color:var(--text-secondary)">Turn your root cause findings into a production-ready evaluation rubric — step by step.</div>'
+            '<div style="font-size:0.65rem;font-weight:700;letter-spacing:0.1em;color:var(--text-tertiary);text-transform:uppercase;margin-bottom:4px">Release Gate</div>'
+            '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);margin-bottom:2px">Judge Builder</div>'
+            '<div style="font-size:0.82rem;color:var(--text-secondary)">Turn PM-defined failure patterns into automated release criteria, hard-fail rules, and examples engineering can defend.</div>'
             '</div>'
         )
 

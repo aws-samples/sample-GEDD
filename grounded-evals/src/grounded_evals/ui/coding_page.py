@@ -107,7 +107,7 @@ CODING_CSS = """
 
 @ui.page('/coding')
 def coding_page():
-    page_layout("Annotation Workbench")
+    page_layout("PM Annotation Workbench")
     ui.add_head_html(f"<style>{CODING_CSS}</style>")
 
     with ui.column().classes("w-full max-w-5xl mx-auto").style("margin-bottom: 0.75rem"):
@@ -117,14 +117,14 @@ def coding_page():
         ):
             with ui.row().classes("items-start justify-between gap-3 flex-wrap"):
                 with ui.column().style("gap:4px; max-width:680px"):
-                    ui.label("Annotation Workbench").style(
+                    ui.label("PM Annotation Workbench").style(
                         "font-size:1.05rem; font-weight:700; color:var(--text-primary); "
                         "letter-spacing:-0.01em"
                     )
                     ui.label(
-                        "This is the core product surface. Read the actual response in context, "
-                        "name the failure in domain language, set severity and confidence, and "
-                        "write the memo your judge will learn from."
+                        "This is the core product surface. Read the response the user would see, "
+                        "name the product failure in domain language, set release severity and confidence, "
+                        "and write the memo your judge and engineers will learn from."
                     ).style("font-size:0.82rem; color:var(--text-secondary); line-height:1.5")
                 with ui.row().classes("items-center gap-2 flex-wrap"):
                     for label, icon in [
@@ -149,10 +149,10 @@ def coding_page():
         ):
             ui.html(
                 '<div style="font-size:0.82rem;font-weight:500;color:var(--text-primary);margin-bottom:4px">'
-                "You're discovering WHY your AI fails — not just that it fails."
+                "You're discovering what blocks release, not just whether the answer looks wrong."
                 '</div>'
                 '<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6">'
-                "Look at each response. Ask: <em>what type of failure is this?</em> Name it in 2–3 words "
+                "Look at each response. Ask: <em>what product risk does this create for the user?</em> Name it in 2–3 words "
                 "(e.g. 'Missed escalation', 'Wrong medication dose'). Don't use a predefined list — let codes "
                 "emerge from what YOU observe. Keep going until the last 3 annotations reveal no new code types. "
                 "<strong>Each code you create becomes an evaluation criterion in your automated judge.</strong>"

@@ -28,12 +28,12 @@ class EcsStack(Stack):
         *,
         vpc: ec2.IVpc,
         alb: elbv2.IApplicationLoadBalancer,
-        listener: elbv2.IApplicationListener,
         ecs_sg: ec2.ISecurityGroup,
         ecr_repo: ecr.IRepository,
         user_pool_id: str = "",
         user_pool_client_id: str = "",
         user_pool_domain: str = "",
+        public_base_url: str = "",
         agentcore_agent_id: str = "",
         enable_app_auth: bool = False,
         **kwargs,
@@ -71,16 +71,6 @@ class EcsStack(Stack):
             allow_all_outbound=False,
         )
         efs_sg.add_ingress_rule(ecs_sg, ec2.Port.tcp(2049), "NFS from ECS")
-        ec2.CfnSecurityGroupEgress(
-            self,
-            "EcsToEfsEgress",
-            group_id=ecs_sg.security_group_id,
-            ip_protocol="tcp",
-            from_port=2049,
-            to_port=2049,
-            destination_security_group_id=efs_sg.security_group_id,
-            description="NFS to EFS",
-        )
 
         file_system = efs.FileSystem(
             self, "SessionStorage",
@@ -173,6 +163,7 @@ class EcsStack(Stack):
                 "COGNITO_USER_POOL_ID": user_pool_id,
                 "COGNITO_CLIENT_ID": user_pool_client_id,
                 "COGNITO_DOMAIN": user_pool_domain,
+                "PUBLIC_BASE_URL": public_base_url,
             })
 
         container_secrets = {
@@ -235,13 +226,19 @@ class EcsStack(Stack):
         )
         target_group.add_target(service)
 
-        # ── ALB Listener Rule ─────────────────────────────────────────────────
-        elbv2.ApplicationListenerRule(
-            self, "ForwardRule",
-            listener=listener,
-            priority=50,
-            conditions=[elbv2.ListenerCondition.path_patterns(["/*"])],
-            action=elbv2.ListenerAction.forward([target_group]),
+        # ── ALB Listener ──────────────────────────────────────────────────────
+        elbv2.CfnListener(
+            self,
+            "PublicHttpListener",
+            load_balancer_arn=alb.load_balancer_arn,
+            port=80,
+            protocol="HTTP",
+            default_actions=[
+                elbv2.CfnListener.ActionProperty(
+                    type="forward",
+                    target_group_arn=target_group.target_group_arn,
+                ),
+            ],
         )
 
         # ── Auto-scaling ──────────────────────────────────────────────────────

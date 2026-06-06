@@ -9,7 +9,7 @@ from grounded_evals.ui.layout import page_layout
 
 @ui.page("/eval")
 def eval_page():
-    page_layout("Review Queue")
+    page_layout("Run Responses")
 
     s = app.storage.user
     session_data = s.get("session_data", {})
@@ -24,13 +24,13 @@ def eval_page():
         ):
             with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                 with ui.column().style("gap:3px; max-width:760px"):
-                    ui.label("Review Queue").style(
+                    ui.label("Run Responses").style(
                         "font-size:1.05rem; font-weight:700; color:var(--text-primary); "
                         "letter-spacing:-0.01em"
                     )
                     ui.label(
-                        "First-pass annotation happens here: inspect each user-visible response, "
-                        "apply a quick verdict, and keep enough notes for the deeper codebook pass."
+                        "Use this as the supporting run queue: compare model outputs, apply quick verdicts, "
+                        "and send the important misses into deeper PM annotation."
                     ).style("font-size:0.82rem; color:var(--text-secondary); line-height:1.5")
                 with ui.row().classes("items-center gap-2 flex-wrap"):
                     for label, icon in [

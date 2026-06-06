@@ -235,7 +235,7 @@ def _show_audit_dialog():
 @ui.page('/analysis')
 def analysis_page():
     _ensure_state()
-    page_layout('Map Root Causes')
+    page_layout('Pattern Map')
 
     view_mode = {'value': 'canvas'}  # 'canvas' | 'table'
 
@@ -245,13 +245,13 @@ def analysis_page():
             "background: var(--yellow-tint); border: 1px solid rgba(240,191,0,0.15); "
             "border-radius: var(--radius-xl); margin-bottom: 1rem; color: var(--text-primary)"
         ):
-            ui.label("Organize your failure codes into a causal map:").style("font-size: 0.82rem; font-weight: 500; color: var(--text-primary)")
+            ui.label("Turn expert labels into a PM-ready risk map:").style("font-size: 0.82rem; font-weight: 500; color: var(--text-primary)")
             ui.label("• What TRIGGERS it? → Triggered By\n"
                      "• WHEN does it happen? → Occurs When\n"
                      "• What makes it WORSE? → Gets Worse If\n"
                      "• HOW does the agent fail? → Manifests As\n"
                      "• What's the USER IMPACT? → User Impact\n\n"
-                     "Click any chip to see which agent responses triggered that code.").style(
+                     "Click any chip to inspect the evidence behind that product risk.").style(
                 "font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; white-space: pre-line"
             )
 

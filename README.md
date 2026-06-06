@@ -7,9 +7,9 @@
 
 You shipped an AI agent. Now you need trustworthy labels from the people who understand the work. That is where most eval workflows break down: reviewers score raw traces, generic tables, or dashboards that were not built for the task they are judging.
 
-**GEDD is a purpose-built annotation workbench for evaluating AI agents before you have a defensible rubric.** A product manager or domain expert reviews the agent in the shape of the task, applies fast verdicts, names failure modes in their own vocabulary, and hands engineering a validated `session.json` that can become an automated judge and CI gate.
+**GEDD is a scenario-first release-readiness workbench for AI Product Managers and domain experts.** A PM loads realistic launch-risk scenarios, reviews the agent in the shape of the task, names failure modes in the expert's vocabulary, and leaves with a release report plus a validated `session.json` that engineering can turn into an automated judge and CI gate.
 
-> *The product is the annotation interface. Judges, reports, and CI gates are downstream of label quality.*
+> *The product is the PM review loop: scenarios, expert labels, failure patterns, judge rules, and a release report engineering can act on.*
 
 ![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
 
@@ -36,13 +36,14 @@ GEDD reduces the friction around that question: one queue, task-shaped context, 
 
 GEDD turns domain review into production evaluation assets:
 
-| Reviewer action | Product surface | Engineering artifact |
-|-----------------|-----------------|----------------------|
-| Inspect the agent behavior in context | Review queue with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
-| Explain what went wrong | Annotation workbench with failure codes, severity, confidence, and memos | Domain-specific codebook |
-| Compare failures across examples | Patterns view with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
-| Convert observed failures into criteria | Judge builder with rubric dimensions, hard-fail rules, and calibration | G-Eval judge prompt |
-| Package the evidence | Handoff view and CLI export | `session.json`, golden dataset, judge prompt, MLflow artifacts |
+| PM action | Product surface | Engineering artifact |
+|-----------|-----------------|----------------------|
+| Pick a realistic launch-risk scenario | Scenario Library with preloaded domains, golden queries, labels, codebooks, and judges | Reusable release-risk scenario |
+| Inspect the agent behavior in context | Run queue with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
+| Explain what went wrong | PM Annotation Workbench with failure codes, severity, confidence, and memos | Domain-specific codebook |
+| Compare failures across examples | Pattern Map with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
+| Convert observed failures into criteria | Judge Builder with rubric dimensions, hard-fail rules, and calibration | G-Eval judge prompt |
+| Package the evidence | Release Report and CLI export | `session.json`, golden dataset, judge prompt, MLflow artifacts |
 
 The goal is not to make a larger synthetic benchmark. It is to preserve expert judgment at the moment of review, then automate from that evidence.
 
@@ -64,21 +65,21 @@ Every downstream artifact is only as good as the labels that produced it. GEDD t
 
 ---
 
-## The Annotation-First Workflow
+## The AI PM Release Workflow
 
 ```mermaid
 flowchart TD
     subgraph DE["🧑‍💼 DOMAIN EXPERT — annotation workbench"]
         direction TB
-        SETUP["Setup<br/><i>agent, prompt, runtime, golden queries</i>"]
-        REVIEW["Review Queue<br/><i>native response view + fast verdicts</i>"]
-        ANNOTATE["Annotation Workbench<br/><i>failure codes, severity, memos</i>"]
+        SCENARIOS["Scenarios<br/><i>launch-risk examples</i>"]
+        ANNOTATE["Annotate<br/><i>failure codes, severity, memos</i>"]
         PATTERNS["Patterns<br/><i>root causes + saturation</i>"]
         JUDGE["Judge<br/><i>rubric + hard-fails</i>"]
-        SETUP ==> REVIEW ==> ANNOTATE ==> PATTERNS ==> JUDGE
+        REPORT["Report<br/><i>release evidence</i>"]
+        SCENARIOS ==> ANNOTATE ==> PATTERNS ==> JUDGE ==> REPORT
     end
 
-    JUDGE ==>|"📄 session.json"| HANDOFF:::handoff
+    REPORT ==>|"📄 session.json"| HANDOFF:::handoff
 
     HANDOFF ==> S6
 
@@ -87,8 +88,8 @@ flowchart TD
         S6["6️⃣ SageMaker MLflow Pipeline"]
     end
 
-    SETUP -.->|"optional deployed runtime"| AC["☁️ Bedrock AgentCore"]
-    REVIEW -.->|"invoke"| BR["🤖 Bedrock / Anthropic"]
+    SCENARIOS -.->|"optional deployed runtime"| AC["☁️ Bedrock AgentCore"]
+    ANNOTATE -.->|"invoke"| BR["🤖 Bedrock / Anthropic"]
     S6 -.->|"track"| SM["📊 SageMaker MLflow"]
     S6 -.->|"gate"| CI["🚦 CI/CD Pipeline"]
 
@@ -99,13 +100,14 @@ flowchart TD
 
 | Surface | Who | What happens | Output |
 |---------|-----|-------------|--------|
-| Workbench | Domain Expert | Review the agent's behavior in context | Verdicts, notes, and reviewer signal |
-| Workbench | Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
-| Workbench | Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
-| Workbench | Domain Expert | Convert labels into judge criteria | G-Eval rubric, hard-fail rules, calibration set |
-| Handoff | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
+| Scenarios | AI PM / Domain Expert | Load a realistic agent risk scenario | Queries, annotations, codebook, judge seed |
+| Annotate | AI PM / Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
+| Patterns | AI PM / Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
+| Judge | AI PM + ML Engineer | Convert labels into judge criteria | G-Eval rubric, hard-fail rules, calibration set |
+| Report | AI PM + ML Engineer | Review release readiness and export evidence | Release report, `session.json`, judge prompt |
+| MLflow | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> The web app is now organized around the annotation workbench: `Review` for first-pass verdicts, `Annotate` for codebook creation, `Patterns` for root causes, `Judge` for rubric generation, and `Handoff` for export. `Setup` and `Scenarios` exist to feed the workbench.
+> The web app is now organized around the AI PM release loop: `Scenarios` for launch-risk examples, `Annotate` for codebook creation, `Patterns` for root causes, `Judge` for release gates, and `Report` for executive evidence. `Setup` and `Run` support custom agents but no longer carry the product story.
 
 > **CLI parity:** Steps 1-5 can still run inside `grounded-evals chat`. Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
 
@@ -216,7 +218,7 @@ Open `localhost:8080`
 grounded-evals chat --session session.json
 ```
 
-Review → Annotate → Judge
+Scenarios → Annotate → Patterns → Judge → Report
 
 </td>
 <td width="33%">
@@ -250,14 +252,14 @@ The website is the default first experience because it is the annotation workben
 
 | Page | Purpose | What you do there |
 |------|---------|-------------------|
-| Workbench | Annotation-first home | Continue active review work, open the review queue, load a scenario, or set up a new agent |
-| Review | First-pass annotation | Inspect user-visible responses, apply quick verdicts with hotkeys, filter unreviewed items, and keep notes for deeper coding |
-| Annotate | Open Coding workbench | Create failure codes, apply severity/confidence, write memos, use triage mode, track saturation, and share/import annotations |
-| Scenarios | Finished examples | Load one of 17 high-stakes domain scenarios directly into the annotation workbench |
-| Setup | Feed the workbench | Capture agent spec, system prompt, runtime choice, and golden queries |
-| Patterns | Axial Coding | Map codes into the paradigm model and priority matrix |
-| Judge | Selective Coding | Convert codebook and root-cause analysis into judge dimensions, hard-fails, and calibration |
-| Handoff | Export view | Review results, model performance, calibration health, and export artifacts |
+| Home | PM-oriented entry | Continue active review work, open scenarios, or start a custom agent |
+| Scenarios | Core product surface | Load one of 17 high-stakes AI agent scenarios with queries, labels, codebooks, and judges already attached |
+| Annotate | PM Annotation Workbench | Identify product risks, create failure codes, apply severity/confidence, write memos, use triage mode, and track saturation |
+| Patterns | Pattern Map | Map codes into user-impact root causes and release priorities |
+| Judge | Release gate builder | Convert codebook and pattern analysis into judge dimensions, hard-fails, and calibration |
+| Report | Release readiness | Review executive summary, failure patterns, model performance, calibration health, and export artifacts |
+| Run | Supporting queue | Generate or compare model responses, apply quick verdicts, and send misses into annotation |
+| Setup | Supporting setup | Capture agent spec, system prompt, runtime choice, and golden queries for custom agents |
 
 The UI also supports session import/export from the top navigation so a domain expert can hand a completed session to an ML engineer without copying browser state.
 

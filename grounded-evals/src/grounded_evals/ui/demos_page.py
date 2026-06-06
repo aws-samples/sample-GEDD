@@ -630,10 +630,10 @@ def demos_page():
         with ui.row().classes("items-center gap-3").style("margin-bottom: 1.25rem"):
             with ui.column().style("gap: 3px"):
                 ui.html(
-                    '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary)">Domain Specialists</div>'
+                    '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary)">Scenario Library</div>'
                     '<div style="font-size:0.82rem;color:var(--text-secondary)">'
-                    'Pre-loaded eval scenarios for high-stakes AI agents — each with golden queries, '
-                    'failure codes, paradigm models, and production-ready judge prompts.'
+                    'Start here as an AI PM: load a realistic high-stakes agent scenario, inspect the '
+                    'user impact, and see how expert labels become release gates and report evidence.'
                     '</div>'
                 )
 

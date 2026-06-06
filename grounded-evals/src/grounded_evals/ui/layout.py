@@ -5,14 +5,14 @@ import json
 from nicegui import app, ui
 
 NAV_ITEMS = [
-    {"path": "/", "label": "Workbench", "icon": "dashboard"},
-    {"path": "/eval", "label": "Review", "icon": "rate_review"},
-    {"path": "/coding", "label": "Annotate", "icon": "label"},
-    {"path": "/demos", "label": "Scenarios", "icon": "collections_bookmark"},
+    {"path": "/", "label": "Home", "icon": "dashboard"},
+    {"path": "/demos", "label": "Scenarios", "icon": "collections_bookmark", "featured": True},
+    {"path": "/coding", "label": "Annotate", "icon": "label", "core": True},
+    {"path": "/analysis", "label": "Patterns", "icon": "hub", "core": True},
+    {"path": "/judge", "label": "Judge", "icon": "gavel", "core": True},
+    {"path": "/report", "label": "Report", "icon": "assessment", "core": True},
+    {"path": "/eval", "label": "Run", "icon": "rate_review"},
     {"path": "/coach", "label": "Setup", "icon": "tune"},
-    {"path": "/analysis", "label": "Patterns", "icon": "hub"},
-    {"path": "/judge", "label": "Judge", "icon": "gavel"},
-    {"path": "/report", "label": "Handoff", "icon": "ios_share"},
 ]
 
 BRAND_CSS = """
@@ -185,6 +185,18 @@ body {
 .app-action-row {
   flex-shrink: 0;
 }
+.scenario-nav-btn {
+  color: var(--accent-bright) !important;
+  background: var(--accent-tint) !important;
+  border: 1px solid rgba(94,106,210,0.22) !important;
+}
+.scenario-nav-btn:hover {
+  background: rgba(94,106,210,0.2) !important;
+  border-color: var(--accent) !important;
+}
+.core-nav-btn {
+  color: var(--text-secondary) !important;
+}
 
 /* Animations */
 @keyframes fadeInUp {
@@ -279,16 +291,21 @@ def page_layout(title: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">Annotation Workbench</span>'
+                '<span class="brand-context">AI PM Eval Workbench</span>'
                 '</span>'
             )
 
         with ui.row().classes("app-nav-row items-center gap-none"):
             for item in NAV_ITEMS:
-                ui.button(
+                button = ui.button(
                     item["label"], icon=item["icon"],
                     on_click=lambda p=item["path"]: ui.navigate.to(p),
-                ).props("flat no-caps size=sm").style(
+                ).props("flat no-caps size=sm")
+                if item.get("featured"):
+                    button.classes("scenario-nav-btn").tooltip("Open the scenario library")
+                elif item.get("core"):
+                    button.classes("core-nav-btn")
+                button.style(
                     "color: var(--text-tertiary); font-weight: 500; font-size: 0.8rem; "
                     "border-radius: 6px; padding: 4px 10px;"
                 )
@@ -339,12 +356,12 @@ def page_layout(title: str = ""):
                     "min-width:380px; padding:1.5rem; background:var(--bg-surface-2); "
                     "border:1px solid var(--border-default); border-radius:12px"
                 ):
-                    ui.label("Session Handoff").style(
+                    ui.label("Report Handoff").style(
                         "font-size:1rem; font-weight:600; color:var(--text-primary); "
                         "margin-bottom:8px"
                     )
                     ui.label(
-                        "Export the current session for ML engineering or import a saved session."
+                        "Export the evidence bundle behind the release report, or import a saved PM review session."
                     ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
 
                     def export_session():
@@ -416,7 +433,7 @@ def page_layout(title: str = ""):
 
             ui.button(icon="ios_share", on_click=open_session_dialog).props(
                 "flat round size=sm"
-            ).style("color: var(--text-muted)").tooltip("Session Handoff")
+            ).style("color: var(--text-muted)").tooltip("Report Handoff")
 
             ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
                 "color: var(--text-muted)"

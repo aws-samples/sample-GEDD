@@ -42,6 +42,7 @@ class NetworkStack(Stack):
             self, "AlbSg", vpc=self.vpc,
             description="ALB - HTTPS inbound only",
             allow_all_outbound=False,
+            disable_inline_rules=True,
         )
         self.alb_sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(443), "HTTPS")
         self.alb_sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(80), "HTTP (redirect)")
@@ -50,10 +51,16 @@ class NetworkStack(Stack):
             self, "EcsSg", vpc=self.vpc,
             description="ECS tasks - ALB ingress only",
             allow_all_outbound=False,
+            disable_inline_rules=True,
         )
         self.ecs_sg.add_ingress_rule(self.alb_sg, ec2.Port.tcp(8080), "From ALB")
         # Egress: HTTPS to AWS services + NAT
         self.ecs_sg.add_egress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(443), "HTTPS to AWS APIs")
+        self.ecs_sg.add_egress_rule(
+            ec2.Peer.ipv4(self.vpc.vpc_cidr_block),
+            ec2.Port.tcp(2049),
+            "NFS to EFS mount targets",
+        )
 
         # ALB → ECS egress
         self.alb_sg.add_egress_rule(self.ecs_sg, ec2.Port.tcp(8080), "To ECS targets")
@@ -66,41 +73,6 @@ class NetworkStack(Stack):
         )
         self.alb.set_attribute("idle_timeout.timeout_seconds", "3600")
         self.alb.set_attribute("routing.http.drop_invalid_header_fields.enabled", "true")
-
-        # ── TLS Certificate ───────────────────────────────────────────────────
-        if certificate_arn:
-            certificate = acm.Certificate.from_certificate_arn(self, "Cert", certificate_arn)
-        else:
-            # Create a DNS-validated cert (requires domain_name and Route53 hosted zone)
-            certificate = None
-
-        # ── HTTPS Listener ────────────────────────────────────────────────────
-        if certificate:
-            self.https_listener = self.alb.add_listener(
-                "HttpsListener", port=443,
-                certificates=[certificate],
-                ssl_policy=elbv2.SslPolicy.TLS13_RES,
-                open=False,
-                default_action=elbv2.ListenerAction.fixed_response(
-                    status_code=503, content_type="text/plain", message_body="Service starting",
-                ),
-            )
-            # HTTP → HTTPS redirect
-            self.alb.add_listener(
-                "HttpRedirect", port=80, open=False,
-                default_action=elbv2.ListenerAction.redirect(
-                    protocol="HTTPS", port="443", permanent=True,
-                ),
-            )
-            self.listener = self.https_listener
-        else:
-            # Fallback: HTTP-only (for dev/testing without a domain)
-            self.listener = self.alb.add_listener(
-                "HttpListener", port=80, open=False,
-                default_action=elbv2.ListenerAction.fixed_response(
-                    status_code=503, content_type="text/plain", message_body="Service starting",
-                ),
-            )
 
         # ── WAF WebACL ────────────────────────────────────────────────────────
         waf_acl = wafv2.CfnWebACL(

@@ -8,6 +8,8 @@ import io
 import json
 import os
 import secrets
+import urllib.parse
+import urllib.request
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
@@ -31,13 +33,63 @@ from grounded_evals.ui.layout import BRAND_CSS, page_layout
 # --- Authentication via Cognito ---
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID", "")
 COGNITO_CLIENT_ID = os.environ.get("COGNITO_CLIENT_ID", "")
+COGNITO_DOMAIN = os.environ.get("COGNITO_DOMAIN", "")
 COGNITO_REGION = os.environ.get("AWS_REGION", "us-east-1")
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
 # Fallback password if Cognito not configured — must be set explicitly; no hardcoded default
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # Guest mode: no auth required when neither Cognito nor ADMIN_PASSWORD is configured.
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
-UNRESTRICTED_PATHS = {"/login", "/_nicegui", "/favicon.ico", "/health"}
+UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
+
+
+def _cognito_hosted_domain() -> str:
+    if "." in COGNITO_DOMAIN:
+        return COGNITO_DOMAIN
+    return f"{COGNITO_DOMAIN}.auth.{COGNITO_REGION}.amazoncognito.com"
+
+
+def _public_base_url(request: Request | None = None) -> str:
+    if PUBLIC_BASE_URL:
+        return PUBLIC_BASE_URL
+    if request is None:
+        return ""
+    forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme)
+    forwarded_host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
+    return f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+
+
+def _cognito_login_redirect(request: Request) -> RedirectResponse:
+    base_url = _public_base_url(request)
+    redirect_uri = f"{base_url}/auth/callback"
+    state = secrets.token_urlsafe(24)
+    app.storage.user["oauth_state"] = state
+    params = urllib.parse.urlencode({
+        "client_id": COGNITO_CLIENT_ID,
+        "response_type": "code",
+        "scope": "openid email profile",
+        "redirect_uri": redirect_uri,
+        "state": state,
+    })
+    return RedirectResponse(f"https://{_cognito_hosted_domain()}/login?{params}")
+
+
+def _exchange_cognito_code(code: str, redirect_uri: str) -> dict:
+    data = urllib.parse.urlencode({
+        "grant_type": "authorization_code",
+        "client_id": COGNITO_CLIENT_ID,
+        "code": code,
+        "redirect_uri": redirect_uri,
+    }).encode()
+    request = urllib.request.Request(
+        f"https://{_cognito_hosted_domain()}/oauth2/token",
+        data=data,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.loads(response.read().decode("utf-8"))
 
 
 def _cognito_auth(email: str, password: str) -> bool:
@@ -56,9 +108,9 @@ def _cognito_auth(email: str, password: str) -> bool:
         )
         return True
     except client.exceptions.NotAuthorizedException:
-        return False
+        return bool(ADMIN_PASSWORD and password == ADMIN_PASSWORD)
     except client.exceptions.UserNotFoundException:
-        return False
+        return bool(ADMIN_PASSWORD and password == ADMIN_PASSWORD)
     except Exception as e:
         import warnings
         warnings.warn(f"Cognito auth error (non-credential): {e}", stacklevel=2)
@@ -73,6 +125,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             app.storage.user["authenticated"] = True
             return await call_next(request)
         if not app.storage.user.get("authenticated", False):
+            if COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID and COGNITO_DOMAIN:
+                return _cognito_login_redirect(request)
             return RedirectResponse("/login")
         return await call_next(request)
 
@@ -94,6 +148,9 @@ def login_page():
         app.storage.user["authenticated"] = True
         ui.navigate.to("/")
         return
+    if COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID and COGNITO_DOMAIN:
+        ui.navigate.to("/")
+        return
 
     def try_login():
         if _cognito_auth(email.value, password.value):
@@ -113,6 +170,24 @@ def login_page():
             ui.button("Login", on_click=try_login).classes("w-full").style(
                 "margin-top: 1rem; background: #5e6ad2; color: white; border-radius: 6px"
             )
+
+
+@app.get("/auth/callback")
+def auth_callback(request: Request, code: str = "", state: str = ""):
+    expected_state = app.storage.user.get("oauth_state", "")
+    if not code or not state or state != expected_state:
+        return RedirectResponse("/login")
+    base_url = _public_base_url(request)
+    try:
+        tokens = _exchange_cognito_code(code, f"{base_url}/auth/callback")
+    except Exception as exc:
+        import warnings
+        warnings.warn(f"Cognito OAuth callback failed: {exc}", stacklevel=2)
+        return RedirectResponse("/login")
+    app.storage.user["authenticated"] = True
+    app.storage.user["oauth_tokens"] = tokens
+    app.storage.user.pop("oauth_state", None)
+    return RedirectResponse("/")
 
 def _user_state() -> dict:
     """Get or initialize per-user state from app.storage.user."""

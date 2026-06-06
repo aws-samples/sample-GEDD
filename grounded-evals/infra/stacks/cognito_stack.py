@@ -6,7 +6,15 @@ from constructs import Construct
 
 
 class CognitoStack(Stack):
-    def __init__(self, scope: Construct, construct_id: str, *, alb_dns: str = "", **kwargs) -> None:
+    def __init__(
+        self,
+        scope: Construct,
+        construct_id: str,
+        *,
+        alb_dns: str = "",
+        public_base_url: str = "",
+        **kwargs,
+    ) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
         self.user_pool = cognito.UserPool(
@@ -42,6 +50,16 @@ class CognitoStack(Stack):
             auth_flows=cognito.AuthFlow(
                 user_srp=True,
                 user_password=True,
+            ),
+            o_auth=cognito.OAuthSettings(
+                flows=cognito.OAuthFlows(authorization_code_grant=True),
+                scopes=[
+                    cognito.OAuthScope.OPENID,
+                    cognito.OAuthScope.EMAIL,
+                    cognito.OAuthScope.PROFILE,
+                ],
+                callback_urls=[f"{public_base_url}/auth/callback"] if public_base_url else [],
+                logout_urls=[public_base_url] if public_base_url else [],
             ),
         )
 

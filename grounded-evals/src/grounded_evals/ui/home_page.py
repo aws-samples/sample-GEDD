@@ -660,30 +660,30 @@ def home_page():
 
         # ── Hero ────────────────────────────────────────────────────────
         with ui.element("div").classes("mkt-hero animate-in stagger-1"):
-            ui.html('<div class="mkt-eyebrow">Annotation is the product</div>')
+            ui.html('<div class="mkt-eyebrow">AI PM release readiness</div>')
             ui.html(
                 '<h1 class="mkt-headline">'
-                "Build the review interface your eval actually needs."
+                "Find the failures that decide whether an agent is shippable."
                 "</h1>"
             )
             ui.html(
                 '<p class="mkt-subhead">'
-                "GEDD is an annotation workbench for domain experts. Render the agent's "
-                "behavior in context, capture high-quality labels, and turn those labels "
-                "into judges, regression tests, and handoff artifacts."
+                "GEDD gives AI Product Managers a scenario-first workflow: inspect realistic "
+                "agent behavior, capture expert labels, turn repeat failures into judge rules, "
+                "and leave with a release report engineering can act on."
                 "</p>"
             )
             with ui.row().classes("mkt-cta-row"):
                 ui.button(
-                    "Open review queue",
-                    icon="rate_review",
-                    on_click=lambda: ui.navigate.to(next_annotation_path()),
+                    "Open scenario library",
+                    icon="collections_bookmark",
+                    on_click=lambda: ui.navigate.to("/demos"),
                 ).props("color=primary size=md unelevated").style(
                     "font-weight: 600; letter-spacing: -0.01em; padding: 8px 18px"
                 )
                 ui.button(
-                    "Load a scenario",
-                    icon="collections_bookmark",
+                    "Preview scenarios",
+                    icon="travel_explore",
                     on_click=lambda: ui.run_javascript(
                         "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
                     ),
@@ -691,39 +691,39 @@ def home_page():
                     "color: var(--text-secondary); font-weight: 500"
                 )
                 ui.button(
-                    "Set up agent",
-                    icon="tune",
-                    on_click=lambda: ui.navigate.to("/coach"),
+                    "Continue workflow",
+                    icon="rate_review",
+                    on_click=lambda: ui.navigate.to(next_annotation_path()),
                 ).props("flat size=md").style(
                     "color: var(--text-secondary); font-weight: 500"
                 )
 
-        # ── Outcome strip (social-proof shaped) ──────────────────────────
+        # ── Scenario-first outcome strip ─────────────────────────────────
         with ui.element("div").classes("outcome-strip animate-in stagger-2"):
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">Native</div>')
-                ui.html('<div class="label">review surfaces for the task</div>')
+                ui.html('<div class="num">17</div>')
+                ui.html('<div class="label">launch-risk scenarios</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">1-key</div>')
-                ui.html('<div class="label">verdicts, hotkeys, filters, progress</div>')
+                ui.html('<div class="num">Evidence</div>')
+                ui.html('<div class="label">labels, memos, failure patterns</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">Codebook</div>')
-                ui.html('<div class="label">expert language becomes the eval</div>')
+                ui.html('<div class="num">Handoff</div>')
+                ui.html('<div class="label">judge rules and executive report</div>')
                 ui.html(
                     '<div style="font-size:0.68rem;color:#6e737b;margin-top:4px;line-height:1.4">'
-                    'Rubrics, judges, and reports are downstream of annotation quality.'
+                    'The workflow is built around the PM question: what must change before release?'
                     '</div>'
                 )
 
         # ── Annotation interface proof ──────────────────────────────────
         with ui.element("div").classes("annotation-panel animate-in stagger-2"):
             ui.html('<div class="evidence-kicker">Purpose-built annotation</div>')
-            ui.html('<div class="evidence-title">Show reviewers the thing they are judging.</div>')
+            ui.html('<div class="evidence-title">Give experts the context needed to make a product call.</div>')
             ui.html(
                 '<div class="evidence-copy">'
-                "Every dataset has a natural shape. The reviewer should not reconstruct "
-                "that shape from JSON, traces, or external systems. GEDD makes the label "
-                "capture moment fast, contextual, and domain-specific."
+                "AI PMs need labels that explain user impact, not just pass/fail scores. "
+                "The workbench keeps the user request, model response, expected behavior, "
+                "risk, memo, and codebook in one review path."
                 "</div>"
             )
             with ui.element("div").classes("annotation-grid"):
@@ -737,9 +737,9 @@ def home_page():
                         ui.html(f'<div class="annotation-surface-copy">{surface["copy"]}</div>')
             with ui.element("div").classes("principle-row"):
                 for title, copy in [
-                    ("Reduce context switching", "Put query, response, tools, expected behavior, and evidence in one review frame."),
-                    ("Protect reviewer focus", "Use filters, progress, hotkeys, and save-and-next flows so experts can stay in rhythm."),
-                    ("Preserve expert judgment", "Capture codes, severity, confidence, and memos as training data for the judge."),
+                    ("See the user impact", "Review the scenario as the customer experiences it, with expected behavior and risk in the same frame."),
+                    ("Prioritize release blockers", "Use severity, frequency, and confidence to separate must-fix failures from product polish."),
+                    ("Create engineering-ready gates", "Convert expert codes, memos, and examples into judge criteria and hard-fail rules."),
                 ]:
                     with ui.element("div").classes("principle-card"):
                         ui.html(f'<div class="principle-title">{title}</div>')
@@ -775,11 +775,11 @@ def home_page():
         ui.html('<div id="domain-section"></div>')
         with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
             with ui.column().style("gap: 2px"):
-                ui.html('<div class="mkt-section-title">Load a pre-built annotation scenario</div>')
+                ui.html('<div class="mkt-section-title">Scenario library</div>')
                 ui.html(
                     '<div class="mkt-section-sub">'
-                    "Each scenario runs the workflow: golden queries, failure annotations, "
-                    "codebook, paradigm model, and a generated judge — ready to inspect."
+                    "This is the fastest way into the product. Each scenario shows the PM loop: golden queries, expert annotations, "
+                    "failure codebook, pattern map, judge prompt, and report-ready evidence."
                     "</div>"
                 )
             ui.button(
