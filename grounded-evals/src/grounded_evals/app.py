@@ -42,6 +42,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
+APP_RELEASE = "2026-06-07-coach-first"
 
 
 def _cognito_hosted_domain() -> str:
@@ -120,20 +121,30 @@ def _cognito_auth(email: str, password: str) -> bool:
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         if any(request.url.path.startswith(p) for p in UNRESTRICTED_PATHS):
-            return await call_next(request)
+            response = await call_next(request)
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            return response
         if GUEST_MODE:
             app.storage.user["authenticated"] = True
-            return await call_next(request)
+            response = await call_next(request)
+            response.headers["Cache-Control"] = "no-store, max-age=0"
+            response.headers["X-GEDD-Release"] = APP_RELEASE
+            return response
         if not app.storage.user.get("authenticated", False):
             if COGNITO_USER_POOL_ID and COGNITO_CLIENT_ID and COGNITO_DOMAIN:
                 return _cognito_login_redirect(request)
             return RedirectResponse("/login")
-        return await call_next(request)
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        response.headers["X-GEDD-Release"] = APP_RELEASE
+        return response
 
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "ok", "release": APP_RELEASE}
 
 
 app.add_middleware(AuthMiddleware)
