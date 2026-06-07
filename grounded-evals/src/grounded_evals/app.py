@@ -208,6 +208,25 @@ def _user_state() -> dict:
         s['paradigm_model'] = {'phenomenon': [], 'causal_conditions': [], 'context': [], 'intervening_conditions': [], 'strategies': [], 'consequences': []}
     if 'failure_patterns' not in s:
         s['failure_patterns'] = []
+    s['user_needs'] = [
+        {
+            'description': item.get('description') or item.get('need') or str(item),
+            'importance': item.get('importance', 'medium'),
+            'satisfaction': item.get('satisfaction', 'ok'),
+        }
+        if isinstance(item, dict)
+        else {'description': str(item), 'importance': 'medium', 'satisfaction': 'ok'}
+        for item in s.get('user_needs', [])
+    ]
+    s['hypotheses'] = [
+        {
+            'text': item.get('text') or item.get('hypothesis') or str(item),
+            'status': item.get('status', 'active'),
+        }
+        if isinstance(item, dict)
+        else {'text': str(item), 'status': 'active'}
+        for item in s.get('hypotheses', [])
+    ]
     return s
 
 
