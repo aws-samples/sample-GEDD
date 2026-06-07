@@ -831,18 +831,18 @@ def home_page():
                         ui.html(f'<div class="desc">{domain["tagline"]}</div>')
                     ui.html('<span class="arrow material-icons">arrow_forward</span>')
 
-        # ── Custom agent setup is a branch, not a main product tab ───────
+        # ── Coach is the primary path for a custom AI PM eval loop ───────
         with ui.element("div").classes("custom-agent-card animate-in stagger-4"):
             with ui.column().style("gap: 0; max-width: 560px"):
-                ui.html('<div class="title">Evaluating your own agent?</div>')
+                ui.html('<div class="title">Start with Coach</div>')
                 ui.html(
                     '<div class="copy">'
-                    'Use setup only when you need to define a custom agent, prompt, runtime, '
-                    'and golden queries. The main PM loop still runs through Annotate, Patterns, Judge, and Report.'
+                    'Coach turns the AI PM context into an eval plan: target users, release decision, '
+                    'domain risks, golden scenarios, and the review queue that feeds Annotate, Patterns, Judge, and Report.'
                     '</div>'
                 )
             ui.button(
-                "Set up custom agent", icon="tune",
+                "Open Coach", icon="auto_awesome",
                 on_click=lambda: ui.navigate.to("/coach"),
             ).props("outline size=sm no-caps").style(
                 "color: var(--accent-bright); border-color: var(--accent); flex-shrink: 0"

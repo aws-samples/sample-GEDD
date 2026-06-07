@@ -6,6 +6,7 @@ from nicegui import app, ui
 
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
+    {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
     {"path": "/demos", "label": "Scenarios", "icon": "collections_bookmark", "featured": True},
     {"path": "/coding", "label": "Annotate", "icon": "label", "core": True},
     {"path": "/analysis", "label": "Patterns", "icon": "hub", "core": True},
@@ -183,6 +184,16 @@ body {
 .app-action-row {
   flex-shrink: 0;
 }
+.coach-nav-btn {
+  color: var(--text-primary) !important;
+  background: linear-gradient(135deg, rgba(94,106,210,0.28), rgba(78,167,252,0.16)) !important;
+  border: 1px solid rgba(130,143,255,0.45) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 18px rgba(94,106,210,0.18) !important;
+}
+.coach-nav-btn:hover {
+  background: linear-gradient(135deg, rgba(94,106,210,0.36), rgba(78,167,252,0.22)) !important;
+  border-color: var(--accent-bright) !important;
+}
 .scenario-nav-btn {
   color: var(--accent-bright) !important;
   background: var(--accent-tint) !important;
@@ -299,7 +310,9 @@ def page_layout(title: str = ""):
                     item["label"], icon=item["icon"],
                     on_click=lambda p=item["path"]: ui.navigate.to(p),
                 ).props("flat no-caps size=sm")
-                if item.get("featured"):
+                if item.get("primary"):
+                    button.classes("coach-nav-btn").tooltip("Start with Coach to define the agent, risks, and eval plan")
+                elif item.get("featured"):
                     button.classes("scenario-nav-btn").tooltip("Open the scenario library")
                 elif item.get("core"):
                     button.classes("core-nav-btn")

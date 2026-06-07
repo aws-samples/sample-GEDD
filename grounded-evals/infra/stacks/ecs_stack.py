@@ -114,7 +114,11 @@ class EcsStack(Stack):
         )
         task_role.add_to_policy(iam.PolicyStatement(
             actions=["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"],
-            resources=[f"arn:aws:bedrock:{region}::foundation-model/*"],
+            resources=[
+                f"arn:aws:bedrock:{region}::foundation-model/*",
+                f"arn:aws:bedrock:{region}:{account}:inference-profile/*",
+                "arn:aws:bedrock:*::foundation-model/*",
+            ],
         ))
         task_role.add_to_policy(iam.PolicyStatement(
             actions=["bedrock:InvokeAgent"],
