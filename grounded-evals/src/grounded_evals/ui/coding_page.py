@@ -166,6 +166,29 @@ def coding_page():
     storage.setdefault('annotations', [])
 
     responses = _build_responses(storage)
+
+    if not responses:
+        with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
+            with ui.element("div").style(
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
+            ):
+                ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
+                ui.label("PM Annotation Workbench").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Name product failures in domain language. Run responses first or load a scenario.").style(
+                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
+                )
+                with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
+                    ui.button("Run responses first", icon="science",
+                              on_click=lambda: ui.navigate.to("/eval")).style(
+                        "background: var(--accent); color: white; border-radius: 6px"
+                    )
+                    ui.button("Load a reference scenario", icon="collections_bookmark",
+                              on_click=lambda: ui.navigate.to("/demos")).props("outline").style(
+                        "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
+                    )
+        return
+
     current_idx: dict = {'value': 0}
     selected_codes: dict = {'value': []}
     kb_refs: dict = {'save': None}

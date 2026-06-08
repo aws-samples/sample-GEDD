@@ -17,6 +17,23 @@ def eval_page():
     annotations = s.get("annotations", [])
     prompt_variants = s.get("prompt_variants", [])
 
+    if not session.golden_prompts:
+        with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
+            with ui.element("div").style(
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
+            ):
+                ui.icon("science").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
+                ui.label("Run Responses").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Compare model outputs on your golden queries. Generate queries first in the Coach.").style(
+                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
+                )
+                ui.button("Open Coach to generate golden queries", icon="auto_awesome",
+                          on_click=lambda: ui.navigate.to("/coach")).style(
+                    "margin-top: 1.5rem; background: var(--accent); color: white; border-radius: 6px"
+                )
+        return
+
     with ui.column().classes("w-full").style("max-width: 1200px; margin: 1rem auto; padding: 0 1.5rem"):
         with ui.element("div").style(
             "background:var(--bg-surface-1); border:1px solid var(--border-subtle); "

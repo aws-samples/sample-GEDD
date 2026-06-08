@@ -787,6 +787,7 @@ def home_page():
     ui.add_head_html(f"<style>{HOME_CSS}</style>")
 
     storage = app.storage.user
+    is_returning = _has_session_content(storage)
 
     progress = _get_progress(storage)
     session = storage.get("session_data") or {}
@@ -805,10 +806,6 @@ def home_page():
         if isinstance(session_obj, dict) and session_obj.get("golden_prompts"):
             return "/eval"
         return "/coach"
-
-    def logout():
-        app.storage.user["authenticated"] = False
-        ui.navigate.to("/login")
 
     from grounded_evals.ui.demos_page import _build_domain_registry
     domain_cards = _build_domain_registry()
@@ -939,8 +936,9 @@ def home_page():
                     '</div>'
                 )
 
-        # ── Annotation interface proof ──────────────────────────────────
-        with ui.element("div").classes("annotation-panel animate-in stagger-2"):
+        # ── Annotation interface proof (hidden for returning users) ─────
+        if not is_returning:
+          with ui.element("div").classes("annotation-panel animate-in stagger-2"):
             ui.html('<div class="evidence-kicker">Purpose-built annotation</div>')
             ui.html('<div class="evidence-title">Give experts the context needed to make a product call.</div>')
             ui.html(
@@ -1014,7 +1012,8 @@ def home_page():
             )
 
         with ui.element("div").classes("domain-grid animate-in stagger-3"):
-            for domain in domain_cards:
+            visible_domains = domain_cards[:6] if is_returning else domain_cards
+            for domain in visible_domains:
                 def make_loader(d=domain):
                     def _load():
                         d["loader"](app.storage.user)
@@ -1030,48 +1029,48 @@ def home_page():
                         ui.html(f'<div class="desc">{domain["tagline"]}</div>')
                     ui.html('<span class="arrow material-icons">arrow_forward</span>')
 
-        # ── Methodology fold (deprioritized; for the curious buyer) ──────
-        with ui.expansion(
-            "Optional: how labels become judges and CI gates",
-            icon="psychology",
-        ).classes("w-full animate-in stagger-5").style(
-            "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-            "border-radius: var(--radius-xl); margin-top: 1.5rem; "
-            "color: var(--text-primary)"
-        ):
-            ui.html(
-                '<div style="font-size:0.84rem;color:var(--text-secondary);'
-                'line-height:1.6;margin-bottom:0.85rem">'
-                "GEDD applies <strong>Strauss & Corbin's grounded theory</strong> "
-                "(open coding → axial coding → selective coding) to AI evaluation. "
-                "The annotation workbench is the measurement instrument: observe real "
-                "behavior, name failures in domain language, then build a judge "
-                "calibrated against those human labels."
-                "</div>"
-            )
-            _render_demo()
-            ui.html(
-                '<div style="font-size:0.74rem;color:var(--text-muted);'
-                'margin-top:0.85rem;text-align:center">'
-                "Walk through the full TravelBot example — Define → Observe → "
-                "Tag → Root Cause → Judge."
-                "</div>"
-            )
+        # ── Methodology fold (hidden for returning users) ─────────────────
+        if not is_returning:
+            with ui.expansion(
+                "Optional: how labels become judges and CI gates",
+                icon="psychology",
+            ).classes("w-full animate-in stagger-5").style(
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                "border-radius: var(--radius-xl); margin-top: 1.5rem; "
+                "color: var(--text-primary)"
+            ):
+                ui.html(
+                    '<div style="font-size:0.84rem;color:var(--text-secondary);'
+                    'line-height:1.6;margin-bottom:0.85rem">'
+                    "GEDD applies <strong>Strauss & Corbin's grounded theory</strong> "
+                    "(open coding → axial coding → selective coding) to AI evaluation. "
+                    "The annotation workbench is the measurement instrument: observe real "
+                    "behavior, name failures in domain language, then build a judge "
+                    "calibrated against those human labels."
+                    "</div>"
+                )
+                _render_demo()
+                ui.html(
+                    '<div style="font-size:0.74rem;color:var(--text-muted);'
+                    'margin-top:0.85rem;text-align:center">'
+                    "Walk through the full TravelBot example — Define → Observe → "
+                    "Tag → Root Cause → Judge."
+                    "</div>"
+                )
 
-        # ── Closing positioning line ─────────────────────────────────────
-        with ui.element("div").style(
-            "margin-top: 2rem; padding: 14px 18px; border-radius: var(--radius-xl); "
-            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-            "text-align: center"
-        ):
-            ui.label(
-                "Most eval tools skip straight to rubrics. "
-                "GEDD starts where the signal is: the expert review interface."
-            ).style(
-                "font-size: 0.84rem; color: var(--text-secondary); "
-                "font-weight: 500; letter-spacing: -0.005em"
-            )
+        # ── Closing positioning line (hidden for returning users) ────────
+        if not is_returning:
+            with ui.element("div").style(
+                "margin-top: 2rem; padding: 14px 18px; border-radius: var(--radius-xl); "
+                "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
+                "text-align: center"
+            ):
+                ui.label(
+                    "Most eval tools skip straight to rubrics. "
+                    "GEDD starts where the signal is: the expert review interface."
+                ).style(
+                    "font-size: 0.84rem; color: var(--text-secondary); "
+                    "font-weight: 500; letter-spacing: -0.005em"
+                )
 
-        ui.button("Logout", icon="logout", on_click=logout).props("flat size=sm").style(
-            "color: var(--text-muted); margin-top: 1rem"
-        )
+

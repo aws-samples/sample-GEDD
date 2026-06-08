@@ -74,6 +74,23 @@ def judge_builder_page():
     _init_state()
     page_layout("Judge Builder")
 
+    if not _get("codebook") and not _get("failure_patterns"):
+        with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
+            with ui.element("div").style(
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
+            ):
+                ui.icon("gavel").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
+                ui.label("Judge Builder").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Convert failure patterns into automated release criteria. Map patterns first in the Pattern Map.").style(
+                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
+                )
+                ui.button("Map failure patterns first", icon="hub",
+                          on_click=lambda: ui.navigate.to("/analysis")).style(
+                    "margin-top: 1.5rem; background: var(--accent); color: white; border-radius: 6px"
+                )
+        return
+
     with ui.column().classes("w-full max-w-4xl mx-auto").style("padding: 1.5rem; gap: 1rem"):
 
         # ── Page header ──────────────────────────────────────────────────────

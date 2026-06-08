@@ -8,6 +8,7 @@ NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
     {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
     {"path": "/demos", "label": "Scenarios", "icon": "collections_bookmark", "featured": True},
+    {"path": "/eval", "label": "Eval", "icon": "science", "core": True},
     {"path": "/coding", "label": "Annotate", "icon": "label", "core": True},
     {"path": "/analysis", "label": "Patterns", "icon": "hub", "core": True},
     {"path": "/judge", "label": "Judge", "icon": "gavel", "core": True},
@@ -207,6 +208,28 @@ body {
   color: var(--text-secondary) !important;
 }
 
+/* Active nav indicator */
+.nav-active {
+  border-bottom: 2px solid var(--accent-bright) !important;
+  color: var(--text-primary) !important;
+  border-radius: 6px 6px 0 0 !important;
+}
+
+/* Progress rail */
+.progress-rail {
+  display: flex; align-items: center; gap: 0; padding: 6px 1.5rem;
+  background: var(--bg-surface-1); border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.7rem; overflow-x: auto; scrollbar-width: none;
+}
+.progress-rail::-webkit-scrollbar { display: none; }
+.progress-rail-step {
+  display: flex; align-items: center; gap: 4px; white-space: nowrap;
+  color: var(--text-muted); font-weight: 500;
+}
+.progress-rail-step.done { color: var(--green-bright); }
+.progress-rail-step.current { color: var(--accent-bright); font-weight: 600; }
+.progress-rail-arrow { color: var(--text-muted); margin: 0 6px; font-size: 0.6rem; }
+
 /* Animations */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }
@@ -286,9 +309,40 @@ body {
 """
 
 
-def page_layout(title: str = ""):
-    """Apply shared page layout with navigation header."""
+def _get_progress_state() -> list[dict]:
+    """Compute progress rail steps from session state."""
+    s = app.storage.user
+    session_data = s.get("session_data", {})
+    golden = session_data.get("golden_prompts", [])
+    annotations = s.get("coding_annotations", [])
+    patterns = s.get("failure_patterns", [])
+    judge = s.get("_generated_judge_prompt", "")
+
+    steps = [
+        {"label": "Coach", "path": "/coach", "done": bool(session_data.get("agent_spec", {}).get("name"))},
+        {"label": "Scenarios", "path": "/demos", "done": len(golden) > 0},
+        {"label": "Annotate", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
+        {"label": "Patterns", "path": "/analysis", "done": len(patterns) > 0},
+        {"label": "Judge", "path": "/judge", "done": bool(judge)},
+        {"label": "Report", "path": "/report", "done": False},
+    ]
+    # Mark Annotate done if all queries annotated
+    if golden and len(annotations) >= len(golden):
+        steps[2]["done"] = True
+    return steps
+
+
+def page_layout(title: str = "", current_path: str = ""):
+    """Apply shared page layout with navigation header and progress rail."""
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
+
+    # Detect current path from title mapping if not provided
+    path_map = {item["label"]: item["path"] for item in NAV_ITEMS}
+    if not current_path:
+        for item in NAV_ITEMS:
+            if item["label"].lower() in title.lower():
+                current_path = item["path"]
+                break
 
     with ui.header().classes("app-header items-center justify-between").style(
         "background: rgba(8,9,10,0.85); backdrop-filter: blur(20px); "
@@ -306,11 +360,14 @@ def page_layout(title: str = ""):
 
         with ui.row().classes("app-nav-row items-center gap-none"):
             for item in NAV_ITEMS:
+                is_active = current_path == item["path"]
                 button = ui.button(
                     item["label"], icon=item["icon"],
                     on_click=lambda p=item["path"]: ui.navigate.to(p),
                 ).props("flat no-caps size=sm")
-                if item.get("primary"):
+                if is_active:
+                    button.classes("nav-active")
+                elif item.get("primary"):
                     button.classes("coach-nav-btn").tooltip("Start with Coach to define the agent, risks, and eval plan")
                 elif item.get("featured"):
                     button.classes("scenario-nav-btn").tooltip("Open the scenario library")
@@ -449,3 +506,23 @@ def page_layout(title: str = ""):
             ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
                 "color: var(--text-muted)"
             ).tooltip("Logout")
+
+    # Progress rail on workflow pages (not Home)
+    workflow_paths = {"/coach", "/demos", "/coding", "/analysis", "/judge", "/report"}
+    if current_path in workflow_paths:
+        steps = _get_progress_state()
+        with ui.element("div").classes("progress-rail"):
+            for i, step in enumerate(steps):
+                if i > 0:
+                    ui.html('<span class="progress-rail-arrow">→</span>')
+                cls = "progress-rail-step"
+                if step["done"]:
+                    cls += " done"
+                elif step["path"] == current_path:
+                    cls += " current"
+                label = step["label"]
+                prefix = "✓ " if step["done"] else ""
+                suffix = ""
+                if not step["done"] and step.get("count") and step["path"] == current_path:
+                    suffix = f" ({step['count']})"
+                ui.html(f'<span class="{cls}">{prefix}{label}{suffix}</span>')

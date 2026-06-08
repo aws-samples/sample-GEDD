@@ -239,6 +239,24 @@ def report_page():
     page_layout("Release Report")
     ui.add_head_html(f"<style>{REPORT_CSS}</style>")
     storage = app.storage.user
+
+    if not storage.get("_generated_judge_prompt"):
+        with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
+            with ui.element("div").style(
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
+                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
+            ):
+                ui.icon("assessment").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
+                ui.label("Release Report").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Review release readiness and export evidence. Build a judge first to generate the report.").style(
+                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
+                )
+                ui.button("Build a judge first", icon="gavel",
+                          on_click=lambda: ui.navigate.to("/judge")).style(
+                    "margin-top: 1.5rem; background: var(--accent); color: white; border-radius: 6px"
+                )
+        return
+
     session = storage.get("session_data", {})
     annotations = storage.get("annotations", [])
     codebook = storage.get("codebook", [])

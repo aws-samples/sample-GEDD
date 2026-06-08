@@ -620,7 +620,7 @@ def _render_domain(domain: dict):
                 def _load():
                     d["loader"](app.storage.user)
                     ui.notify(f'{d["name"]} loaded! Explore the workflow.', type="positive")
-                    ui.navigate.to("/coach")
+                    ui.navigate.to("/coding")
                 return _load
 
             ui.button(
