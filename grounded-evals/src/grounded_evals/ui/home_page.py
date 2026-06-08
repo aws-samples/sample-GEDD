@@ -851,6 +851,7 @@ def home_page():
                 )
                 ui.html(
                     '<div class="coach-subhead">'
+                    "AI PM release readiness through offline eval techniques. "
                     "Start with your agent, use case, and release risk. "
                     "Coach turns domain context into golden scenarios, review queues, "
                     "failure codes, judge rules, and a release report engineering can act on."
