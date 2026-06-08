@@ -149,6 +149,14 @@ def health():
 
 app.add_middleware(AuthMiddleware)
 
+# Serve docs directory for demo gif and static assets
+from pathlib import Path as _Path
+_docs_dir = _Path(__file__).parent.parent.parent / "docs"
+if not _docs_dir.exists():
+    _docs_dir = _Path("/app/docs")
+if _docs_dir.exists():
+    app.add_static_files("/docs", str(_docs_dir))
+
 
 @ui.page("/login")
 def login_page():

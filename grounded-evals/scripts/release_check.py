@@ -21,8 +21,7 @@ CONTENT_CHECKS = {
     "/": [
         "AI PM Release Readiness",
         "Find the failures that decide whether your agent is shippable",
-        "Reference scenarios",
-        "Purpose-built annotation",
+        "domains tested",
         "AdTech",
         "What the domain expert discovers",
     ],

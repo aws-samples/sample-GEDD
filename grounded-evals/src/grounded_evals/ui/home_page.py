@@ -832,108 +832,110 @@ def home_page():
                         on_click=lambda: ui.navigate.to(next_annotation_path()),
                     ).props("size=sm color=primary")
 
-        # ── Coach-first entry point ─────────────────────────────────────
-        with ui.element("div").classes("coach-first-hero animate-in stagger-1"):
-            with ui.element("div").classes("coach-main-panel"):
-                ui.html(
-                    '<div class="coach-kicker">'
-                    '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
-                    "AI PM Release Readiness"
-                    "</div>"
+        # ── Hero: headline + single CTA + demo gif ────────────────────────
+        with ui.element("div").classes("animate-in stagger-1").style(
+            "text-align: center; margin-top: 1.5rem"
+        ):
+            ui.html(
+                '<div class="coach-kicker" style="margin: 0 auto; width: fit-content">'
+                '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
+                "AI PM Release Readiness"
+                "</div>"
+            )
+            ui.html(
+                '<h1 class="coach-headline" style="text-align:center; margin: 16px auto 0">'
+                "Find the failures that decide whether your agent is shippable."
+                "</h1>"
+            )
+            ui.html(
+                '<div class="coach-subhead" style="text-align:center; margin: 12px auto 0; max-width: 600px">'
+                "Offline eval techniques for AI PMs. Observe agent behavior, "
+                "name failures in domain language, and leave with a release report "
+                "engineering can act on."
+                "</div>"
+            )
+            with ui.row().classes("justify-center gap-2").style("margin-top: 22px"):
+                ui.button(
+                    "Open GEDD Coach",
+                    icon="auto_awesome",
+                    on_click=lambda: ui.navigate.to("/coach"),
+                ).props("color=primary size=md unelevated").style(
+                    "font-weight: 600; letter-spacing: 0; padding: 8px 22px"
                 )
-                ui.html(
-                    '<h1 class="coach-headline">'
-                    "Find the failures that decide whether your agent is shippable."
-                    "</h1>"
-                )
-                ui.html(
-                    '<div class="coach-subhead">'
-                    "AI PM release readiness through offline eval techniques. "
-                    "Start with your agent, use case, and release risk. "
-                    "Coach turns domain context into golden scenarios, review queues, "
-                    "failure codes, judge rules, and a release report engineering can act on."
-                    "</div>"
-                )
-                with ui.row().classes("coach-action-row"):
-                    ui.button(
-                        "Open GEDD Coach",
-                        icon="auto_awesome",
-                        on_click=lambda: ui.navigate.to("/coach"),
-                    ).props("color=primary size=md unelevated").style(
-                        "font-weight: 600; letter-spacing: 0; padding: 8px 18px"
-                    )
-                    ui.button(
-                        "Browse reference scenarios",
-                        icon="travel_explore",
-                        on_click=lambda: ui.run_javascript(
-                            "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
-                        ),
-                    ).props("flat size=md").style(
-                        "color: var(--text-secondary); font-weight: 500"
-                    )
-                    ui.button(
-                        "Continue workflow",
-                        icon="rate_review",
-                        on_click=lambda: ui.navigate.to(next_annotation_path()),
-                    ).props("flat size=md").style(
-                        "color: var(--text-secondary); font-weight: 500"
-                    )
-
-                with ui.element("div").classes("coach-flow"):
-                    for num, title, copy in [
-                        ("1", "Agent context", "Describe the user, job, system prompt, and product boundary."),
-                        ("2", "Release risk", "Name what would make a wrong answer block launch."),
-                        ("3", "Review queue", "Generate golden scenarios for expert annotation."),
-                        ("4", "Ship gates", "Convert failures into judge rules and release evidence."),
-                    ]:
-                        with ui.element("div").classes("coach-flow-step"):
-                            ui.html(f'<div class="coach-flow-num">{num}</div>')
-                            ui.html(f'<div class="coach-flow-title">{title}</div>')
-                            ui.html(f'<div class="coach-flow-copy">{copy}</div>')
-
-            with ui.element("div").classes("coach-brief-panel"):
-                ui.html('<div class="brief-title">What Coach produces</div>')
-                ui.html(
-                    '<div class="brief-copy">'
-                    "A structured eval workspace that starts from your domain expert's "
-                    "release question instead of a generic scenario catalog."
-                    "</div>"
-                )
-                with ui.element("div").classes("brief-list"):
-                    for icon, title, copy in [
-                        ("fact_check", "Golden scenarios", "Prompts tied to target users, edge cases, and expected behavior."),
-                        ("rate_review", "Review queues", "Expert-ready traces with enough context to make product calls."),
-                        ("label", "Failure codes", "Observed error patterns in the language your team can act on."),
-                        ("rule", "Judge rules", "Evaluation criteria grounded in human labels and examples."),
-                        ("assignment", "Release reports", "Clear evidence for engineering fixes and launch decisions."),
-                    ]:
-                        with ui.element("div").classes("brief-item"):
-                            ui.icon(icon)
-                            with ui.element("div"):
-                                ui.html(f'<div class="brief-item-title">{title}</div>')
-                                ui.html(f'<div class="brief-item-copy">{copy}</div>')
-                ui.html(
-                    '<div class="coach-reference-note">'
-                    "Reference scenarios below show finished examples. Your own use case "
-                    "should start in Coach."
-                    "</div>"
+                ui.button(
+                    "Load a demo",
+                    icon="collections_bookmark",
+                    on_click=lambda: ui.run_javascript(
+                        "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
+                    ),
+                ).props("outline size=md no-caps").style(
+                    "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
 
-        # ── Scenario-first outcome strip ─────────────────────────────────
+        # ── Demo gif ─────────────────────────────────────────────────────
+        with ui.element("div").style(
+            "margin-top: 1.5rem; border-radius: var(--radius-xl); overflow: hidden; "
+            "border: 1px solid var(--border-subtle); background: var(--bg-surface-1)"
+        ):
+            ui.image("/docs/GEDD_optimized.gif").style(
+                "width: 100%; border-radius: var(--radius-xl)"
+            )
+            ui.html(
+                '<div style="padding: 10px 14px; font-size: 0.72rem; color: var(--text-tertiary); text-align: center">'
+                "Query → Responses → Annotate → Codes emerge → Judge"
+                "</div>"
+            )
+
+        # ── Stats strip ──────────────────────────────────────────────────
         with ui.element("div").classes("outcome-strip animate-in stagger-2"):
             with ui.element("div").classes("outcome-cell"):
                 ui.html(f'<div class="num">{len(domain_cards)}</div>')
                 ui.html('<div class="label">launch-risk scenarios</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">Evidence</div>')
-                ui.html('<div class="label">labels, memos, failure patterns</div>')
+                ui.html('<div class="num">8</div>')
+                ui.html('<div class="label">eval dimensions</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">Handoff</div>')
-                ui.html('<div class="label">judge rules and executive report</div>')
+                ui.html('<div class="num">session.json</div>')
+                ui.html('<div class="label">handoff to engineering</div>')
+
+        # ── Before / After contrast card ─────────────────────────────────
+        with ui.element("div").classes("animate-in stagger-2").style(
+            "display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 1.25rem; "
+            "width: 100%"
+        ):
+            # Before
+            with ui.element("div").style(
+                "padding: 18px; border-radius: var(--radius-xl); "
+                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle)"
+            ):
                 ui.html(
-                    '<div style="font-size:0.68rem;color:#6e737b;margin-top:4px;line-height:1.4">'
-                    'The workflow is built around the PM question: what must change before release?'
-                    '</div>'
+                    '<div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; '
+                    'font-weight:700; color: var(--text-muted); margin-bottom:10px">Before</div>'
+                )
+                ui.html(
+                    '<div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.6">'
+                    '<div style="margin-bottom:6px">Label: <span style="color:var(--text-muted)">"hallucination"</span></div>'
+                    '<div style="margin-bottom:6px">Score: <span style="color:var(--text-muted)">Quality 3/5</span></div>'
+                    '<div>Rubric: <span style="color:var(--text-muted)">generic helpfulness</span></div>'
+                    "</div>"
+                )
+            # After
+            with ui.element("div").style(
+                "padding: 18px; border-radius: var(--radius-xl); "
+                "background: var(--bg-surface-1); border: 1px solid rgba(94,106,210,0.3)"
+            ):
+                ui.html(
+                    '<div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; '
+                    'font-weight:700; color: var(--accent-bright); margin-bottom:10px">After GEDD</div>'
+                )
+                ui.html(
+                    '<div style="font-size:0.82rem; color:var(--text-primary); line-height:1.6">'
+                    '<div style="margin-bottom:6px">Code: <code style="background:var(--accent-tint);'
+                    'padding:2px 6px;border-radius:4px;font-size:0.75rem;color:var(--accent-bright)">'
+                    'dosage_unit_confusion</code></div>'
+                    '<div style="margin-bottom:6px">Severity: <span style="color:#ef5350; font-weight:600">Catastrophic</span></div>'
+                    '<div>Memo: <span style="color:var(--text-secondary)">1000× unit error, potentially fatal</span></div>'
+                    "</div>"
                 )
 
         # ── Annotation interface proof (hidden for returning users) ─────
@@ -967,7 +969,7 @@ def home_page():
                         ui.html(f'<div class="principle-title">{title}</div>')
                         ui.html(f'<div class="principle-copy">{copy}</div>')
 
-        # ── Domain expertise proof ──────────────────────────────────────
+        # ── Domain expertise proof (3 examples) ───────────────────────────
         with ui.element("div").classes("evidence-panel animate-in stagger-3"):
             ui.html('<div class="evidence-kicker">What the domain expert discovers</div>')
             ui.html(
@@ -977,13 +979,11 @@ def home_page():
             )
             ui.html(
                 '<div class="evidence-copy">'
-                "Domain experts catch the failures that generic eval labels flatten away. "
-                "The workbench keeps their language intact so engineering receives "
-                "specific failure modes, not vague quality scores."
+                "Domain experts catch the failures that generic eval labels flatten away."
                 "</div>"
             )
             with ui.element("div").classes("evidence-grid"):
-                for item in EXPERT_DISCOVERIES:
+                for item in EXPERT_DISCOVERIES[:3]:
                     with ui.element("div").classes("evidence-card"):
                         with ui.element("div").classes("evidence-card-top"):
                             ui.html(f'<div class="evidence-domain">{item["domain"]}</div>')
@@ -993,15 +993,14 @@ def home_page():
                         ui.html('<div class="evidence-label">Why only an expert catches it</div>')
                         ui.html(f'<div class="evidence-value">{item["expert_signal"]}</div>')
 
-        # ── Domain demo grid (the hero asset) ────────────────────────────
+        # ── Compact domain badge grid ─────────────────────────────────────
         ui.html('<div id="domain-section"></div>')
         with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
             with ui.column().style("gap: 2px"):
-                ui.html('<div class="mkt-section-title">Reference scenarios</div>')
+                ui.html(f'<div class="mkt-section-title">{len(domain_cards)} domains tested</div>')
                 ui.html(
                     '<div class="mkt-section-sub">'
-                    "Use these to see how expert observations become failure codes and judges. "
-                    "Your own use case should start in Coach."
+                    "Load any scenario to see how expert observations become failure codes and judges."
                     "</div>"
                 )
             ui.button(
@@ -1011,9 +1010,11 @@ def home_page():
                 "color: var(--accent-bright); font-size: 0.78rem"
             )
 
-        with ui.element("div").classes("domain-grid animate-in stagger-3"):
-            visible_domains = domain_cards[:6] if is_returning else domain_cards
-            for domain in visible_domains:
+        with ui.element("div").style(
+            "display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); "
+            "gap: 8px; width: 100%"
+        ).classes("animate-in stagger-3"):
+            for domain in domain_cards:
                 def make_loader(d=domain):
                     def _load():
                         d["loader"](app.storage.user)
@@ -1021,56 +1022,42 @@ def home_page():
                         ui.navigate.to("/coding")
                     return _load
 
-                with ui.element("div").classes("domain-card").on("click", make_loader()):
-                    with ui.element("div").classes("icon-wrap"):
-                        ui.icon(domain["icon"]).style("color: var(--accent-bright); font-size: 1.05rem")
-                    with ui.element("div").classes("body"):
-                        ui.html(f'<div class="name">{domain["name"]}</div>')
-                        ui.html(f'<div class="desc">{domain["tagline"]}</div>')
-                    ui.html('<span class="arrow material-icons">arrow_forward</span>')
+                with ui.element("div").style(
+                    "display: flex; align-items: center; gap: 8px; padding: 10px 12px; "
+                    "border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); "
+                    "background: var(--bg-surface-1); cursor: pointer; transition: border-color 0.15s"
+                ).on("click", make_loader()):
+                    ui.icon(domain["icon"]).style("color: var(--accent-bright); font-size: 0.95rem")
+                    ui.label(domain["name"]).style(
+                        "font-size: 0.75rem; font-weight: 600; color: var(--text-primary); "
+                        "white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                    )
 
-        # ── Methodology fold (hidden for returning users) ─────────────────
-        if not is_returning:
-            with ui.expansion(
-                "Optional: how labels become judges and CI gates",
-                icon="psychology",
-            ).classes("w-full animate-in stagger-5").style(
-                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-                "border-radius: var(--radius-xl); margin-top: 1.5rem; "
-                "color: var(--text-primary)"
-            ):
-                ui.html(
-                    '<div style="font-size:0.84rem;color:var(--text-secondary);'
-                    'line-height:1.6;margin-bottom:0.85rem">'
-                    "GEDD applies <strong>Strauss & Corbin's grounded theory</strong> "
-                    "(open coding → axial coding → selective coding) to AI evaluation. "
-                    "The annotation workbench is the measurement instrument: observe real "
-                    "behavior, name failures in domain language, then build a judge "
-                    "calibrated against those human labels."
-                    "</div>"
-                )
-                _render_demo()
-                ui.html(
-                    '<div style="font-size:0.74rem;color:var(--text-muted);'
-                    'margin-top:0.85rem;text-align:center">'
-                    "Walk through the full TravelBot example — Define → Observe → "
-                    "Tag → Root Cause → Judge."
-                    "</div>"
+        # ── Final CTA ────────────────────────────────────────────────────
+        with ui.element("div").style(
+            "margin-top: 1.5rem; text-align: center; padding: 18px; "
+            "border-radius: var(--radius-xl); background: var(--bg-surface-1); "
+            "border: 1px solid var(--border-subtle)"
+        ).classes("animate-in stagger-4"):
+            ui.html(
+                '<div style="font-size:0.88rem; font-weight:600; color:var(--text-primary); margin-bottom:6px">'
+                "Ready to find what your agent gets wrong?"
+                "</div>"
+            )
+            with ui.row().classes("justify-center gap-2").style("margin-top: 10px"):
+                ui.button(
+                    "Open Coach",
+                    icon="auto_awesome",
+                    on_click=lambda: ui.navigate.to("/coach"),
+                ).props("color=primary size=sm unelevated").style("font-weight: 600")
+                ui.button(
+                    "Load a demo",
+                    icon="collections_bookmark",
+                    on_click=lambda: (domain_cards[0]["loader"](app.storage.user), ui.navigate.to("/coding")),
+                ).props("outline size=sm no-caps").style(
+                    "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
 
-        # ── Closing positioning line (hidden for returning users) ────────
-        if not is_returning:
-            with ui.element("div").style(
-                "margin-top: 2rem; padding: 14px 18px; border-radius: var(--radius-xl); "
-                "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-                "text-align: center"
-            ):
-                ui.label(
-                    "Most eval tools skip straight to rubrics. "
-                    "GEDD starts where the signal is: the expert review interface."
-                ).style(
-                    "font-size: 0.84rem; color: var(--text-secondary); "
-                    "font-weight: 500; letter-spacing: -0.005em"
-                )
+        # ── (Methodology and closing removed — see /demos for details) ──
 
 
