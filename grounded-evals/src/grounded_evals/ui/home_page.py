@@ -841,19 +841,19 @@ def home_page():
                 ui.html(
                     '<div class="coach-kicker">'
                     '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
-                    "GEDD Coach"
+                    "AI PM Release Readiness"
                     "</div>"
                 )
                 ui.html(
                     '<h1 class="coach-headline">'
-                    "Start with your agent, use case, and release risk."
+                    "Find the failures that decide whether your agent is shippable."
                     "</h1>"
                 )
                 ui.html(
                     '<div class="coach-subhead">'
-                    "Bring the domain context for the agent you actually need to ship. "
-                    "Coach turns it into golden scenarios, review queues, failure codes, "
-                    "judge rules, and release reports."
+                    "Start with your agent, use case, and release risk. "
+                    "Coach turns domain context into golden scenarios, review queues, "
+                    "failure codes, judge rules, and a release report engineering can act on."
                     "</div>"
                 )
                 with ui.row().classes("coach-action-row"):
