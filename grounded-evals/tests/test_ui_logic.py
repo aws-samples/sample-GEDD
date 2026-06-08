@@ -178,7 +178,7 @@ def test_domain_registry_includes_all_launch_demos():
     domains = _build_domain_registry()
     names = {d["name"] for d in domains}
 
-    assert len(domains) == 17
+    assert len(domains) == 18
     assert {"RxBot", "TaxBot", "MigrateBot", "EnergyBot"}.issubset(names)
 
 

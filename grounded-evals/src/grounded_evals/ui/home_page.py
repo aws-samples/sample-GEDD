@@ -260,6 +260,152 @@ HOME_CSS = """
 }
 .mkt-cta-row { display: flex; gap: 10px; justify-content: center; margin-top: 1.5rem; }
 
+/* ── Coach-first homepage ───────────────────────────────────────────── */
+.coach-first-hero {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  gap: 14px;
+  margin-top: 1.35rem;
+}
+.coach-main-panel,
+.coach-brief-panel {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+}
+.coach-main-panel {
+  padding: 24px;
+  min-height: 360px;
+}
+.coach-brief-panel {
+  padding: 18px;
+}
+.coach-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+  background: var(--accent-tint);
+  border: 1px solid rgba(94,106,210,0.2);
+  border-radius: 99px;
+  padding: 5px 10px;
+}
+.coach-headline {
+  max-width: 680px;
+  margin: 16px 0 0;
+  font-size: 2.2rem;
+  line-height: 1.12;
+  letter-spacing: 0;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.coach-subhead {
+  max-width: 650px;
+  margin-top: 12px;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.coach-action-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+.coach-flow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 22px;
+}
+.coach-flow-step {
+  min-height: 92px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+}
+.coach-flow-num {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+.coach-flow-title {
+  margin-top: 9px;
+  font-size: 0.77rem;
+  color: var(--text-primary);
+  font-weight: 650;
+}
+.coach-flow-copy {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  line-height: 1.42;
+  color: var(--text-tertiary);
+}
+.brief-title {
+  font-size: 0.9rem;
+  font-weight: 680;
+  color: var(--text-primary);
+}
+.brief-copy {
+  margin-top: 6px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.brief-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+.brief-item {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.brief-item .material-icons {
+  color: var(--accent-bright);
+  font-size: 1rem;
+  line-height: 1.2;
+}
+.brief-item-title {
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.brief-item-copy {
+  margin-top: 2px;
+  font-size: 0.69rem;
+  line-height: 1.38;
+  color: var(--text-tertiary);
+}
+.coach-reference-note {
+  margin-top: 14px;
+  padding: 11px 12px;
+  border-radius: var(--radius-lg);
+  background: var(--yellow-tint);
+  border: 1px solid rgba(240,191,0,0.16);
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.45;
+}
+
 /* ── Domain demo grid ──────────────────────────────────────────────── */
 .mkt-section-head {
   display: flex; align-items: baseline; justify-content: space-between;
@@ -488,6 +634,11 @@ HOME_CSS = """
   .mkt-headline { font-size: 1.65rem; line-height: 1.2; }
   .mkt-subhead { font-size: 0.9rem; }
   .mkt-cta-row { flex-direction: column; align-items: stretch; }
+  .coach-first-hero { grid-template-columns: 1fr; }
+  .coach-main-panel { padding: 18px; min-height: auto; }
+  .coach-headline { font-size: 1.55rem; }
+  .coach-action-row { flex-direction: column; align-items: stretch; }
+  .coach-flow { grid-template-columns: 1fr; }
   .outcome-strip { grid-template-columns: 1fr; }
   .annotation-grid { grid-template-columns: 1fr; }
   .principle-row { grid-template-columns: 1fr; }
@@ -661,6 +812,7 @@ def home_page():
 
     from grounded_evals.ui.demos_page import _build_domain_registry
     domain_cards = _build_domain_registry()
+    domain_cards = sorted(domain_cards, key=lambda domain: domain.get("id") != "adtech")
 
     with ui.column().classes("w-full items-center").style(
         "max-width: 820px; margin: 0 auto; padding: 1.25rem 1.5rem 2.5rem"
@@ -683,44 +835,90 @@ def home_page():
                         on_click=lambda: ui.navigate.to(next_annotation_path()),
                     ).props("size=sm color=primary")
 
-        # ── Hero ────────────────────────────────────────────────────────
-        with ui.element("div").classes("mkt-hero animate-in stagger-1"):
-            ui.html('<div class="mkt-eyebrow">AI PM release readiness</div>')
-            ui.html(
-                '<h1 class="mkt-headline">'
-                "Find the failures that decide whether an agent is shippable."
-                "</h1>"
-            )
-            ui.html(
-                '<p class="mkt-subhead">'
-                "GEDD gives AI Product Managers a scenario-first workflow: inspect realistic "
-                "agent behavior, capture expert labels, turn repeat failures into judge rules, "
-                "and leave with a release report engineering can act on."
-                "</p>"
-            )
-            with ui.row().classes("mkt-cta-row"):
-                ui.button(
-                    "Open scenario library",
-                    icon="collections_bookmark",
-                    on_click=lambda: ui.navigate.to("/demos"),
-                ).props("color=primary size=md unelevated").style(
-                    "font-weight: 600; letter-spacing: -0.01em; padding: 8px 18px"
+        # ── Coach-first entry point ─────────────────────────────────────
+        with ui.element("div").classes("coach-first-hero animate-in stagger-1"):
+            with ui.element("div").classes("coach-main-panel"):
+                ui.html(
+                    '<div class="coach-kicker">'
+                    '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
+                    "GEDD Coach"
+                    "</div>"
                 )
-                ui.button(
-                    "Preview scenarios",
-                    icon="travel_explore",
-                    on_click=lambda: ui.run_javascript(
-                        "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
-                    ),
-                ).props("flat size=md").style(
-                    "color: var(--text-secondary); font-weight: 500"
+                ui.html(
+                    '<h1 class="coach-headline">'
+                    "Start with your agent, use case, and release risk."
+                    "</h1>"
                 )
-                ui.button(
-                    "Continue workflow",
-                    icon="rate_review",
-                    on_click=lambda: ui.navigate.to(next_annotation_path()),
-                ).props("flat size=md").style(
-                    "color: var(--text-secondary); font-weight: 500"
+                ui.html(
+                    '<div class="coach-subhead">'
+                    "Bring the domain context for the agent you actually need to ship. "
+                    "Coach turns it into golden scenarios, review queues, failure codes, "
+                    "judge rules, and release reports."
+                    "</div>"
+                )
+                with ui.row().classes("coach-action-row"):
+                    ui.button(
+                        "Open GEDD Coach",
+                        icon="auto_awesome",
+                        on_click=lambda: ui.navigate.to("/coach"),
+                    ).props("color=primary size=md unelevated").style(
+                        "font-weight: 600; letter-spacing: 0; padding: 8px 18px"
+                    )
+                    ui.button(
+                        "Browse reference scenarios",
+                        icon="travel_explore",
+                        on_click=lambda: ui.run_javascript(
+                            "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
+                        ),
+                    ).props("flat size=md").style(
+                        "color: var(--text-secondary); font-weight: 500"
+                    )
+                    ui.button(
+                        "Continue workflow",
+                        icon="rate_review",
+                        on_click=lambda: ui.navigate.to(next_annotation_path()),
+                    ).props("flat size=md").style(
+                        "color: var(--text-secondary); font-weight: 500"
+                    )
+
+                with ui.element("div").classes("coach-flow"):
+                    for num, title, copy in [
+                        ("1", "Agent context", "Describe the user, job, system prompt, and product boundary."),
+                        ("2", "Release risk", "Name what would make a wrong answer block launch."),
+                        ("3", "Review queue", "Generate golden scenarios for expert annotation."),
+                        ("4", "Ship gates", "Convert failures into judge rules and release evidence."),
+                    ]:
+                        with ui.element("div").classes("coach-flow-step"):
+                            ui.html(f'<div class="coach-flow-num">{num}</div>')
+                            ui.html(f'<div class="coach-flow-title">{title}</div>')
+                            ui.html(f'<div class="coach-flow-copy">{copy}</div>')
+
+            with ui.element("div").classes("coach-brief-panel"):
+                ui.html('<div class="brief-title">What Coach produces</div>')
+                ui.html(
+                    '<div class="brief-copy">'
+                    "A structured eval workspace that starts from your domain expert's "
+                    "release question instead of a generic scenario catalog."
+                    "</div>"
+                )
+                with ui.element("div").classes("brief-list"):
+                    for icon, title, copy in [
+                        ("fact_check", "Golden scenarios", "Prompts tied to target users, edge cases, and expected behavior."),
+                        ("rate_review", "Review queues", "Expert-ready traces with enough context to make product calls."),
+                        ("label", "Failure codes", "Observed error patterns in the language your team can act on."),
+                        ("rule", "Judge rules", "Evaluation criteria grounded in human labels and examples."),
+                        ("assignment", "Release reports", "Clear evidence for engineering fixes and launch decisions."),
+                    ]:
+                        with ui.element("div").classes("brief-item"):
+                            ui.icon(icon)
+                            with ui.element("div"):
+                                ui.html(f'<div class="brief-item-title">{title}</div>')
+                                ui.html(f'<div class="brief-item-copy">{copy}</div>')
+                ui.html(
+                    '<div class="coach-reference-note">'
+                    "Reference scenarios below show finished examples. Your own use case "
+                    "should start in Coach."
+                    "</div>"
                 )
 
         # ── Scenario-first outcome strip ─────────────────────────────────
@@ -800,11 +998,11 @@ def home_page():
         ui.html('<div id="domain-section"></div>')
         with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
             with ui.column().style("gap: 2px"):
-                ui.html('<div class="mkt-section-title">Scenario library</div>')
+                ui.html('<div class="mkt-section-title">Reference scenarios</div>')
                 ui.html(
                     '<div class="mkt-section-sub">'
-                    "This is the fastest way into the product. Each scenario shows the PM loop: golden queries, expert annotations, "
-                    "failure codebook, pattern map, judge prompt, and report-ready evidence."
+                    "Use these to see how expert observations become failure codes and judges. "
+                    "Your own use case should start in Coach."
                     "</div>"
                 )
             ui.button(
@@ -830,23 +1028,6 @@ def home_page():
                         ui.html(f'<div class="name">{domain["name"]}</div>')
                         ui.html(f'<div class="desc">{domain["tagline"]}</div>')
                     ui.html('<span class="arrow material-icons">arrow_forward</span>')
-
-        # ── Coach is the primary path for a custom AI PM eval loop ───────
-        with ui.element("div").classes("custom-agent-card animate-in stagger-4"):
-            with ui.column().style("gap: 0; max-width: 560px"):
-                ui.html('<div class="title">Start with Coach</div>')
-                ui.html(
-                    '<div class="copy">'
-                    'Coach turns the AI PM context into an eval plan: target users, release decision, '
-                    'domain risks, golden scenarios, and the review queue that feeds Annotate, Patterns, Judge, and Report.'
-                    '</div>'
-                )
-            ui.button(
-                "Open Coach", icon="auto_awesome",
-                on_click=lambda: ui.navigate.to("/coach"),
-            ).props("outline size=sm no-caps").style(
-                "color: var(--accent-bright); border-color: var(--accent); flex-shrink: 0"
-            )
 
         # ── Methodology fold (deprioritized; for the curious buyer) ──────
         with ui.expansion(

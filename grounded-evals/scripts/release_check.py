@@ -19,8 +19,9 @@ from pathlib import Path
 ROUTES = ["/", "/demos", "/coach", "/eval", "/coding", "/analysis", "/judge", "/report", "/health"]
 CONTENT_CHECKS = {
     "/": [
-        "AI PM release readiness",
-        "Find the failures that decide whether an agent is shippable",
+        "GEDD Coach",
+        "Start with your agent, use case, and release risk",
+        "Reference scenarios",
         "Purpose-built annotation",
         "AdTech",
         "What the domain expert discovers",
@@ -135,7 +136,7 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         browser = await p.chromium.launch()
         page = await browser.new_page(viewport={"width": 1440, "height": 1000})
         for route, selector_text in [
-            ("/", "AI PM release readiness"),
+            ("/", "Start with your agent, use case, and release risk"),
             ("/demos", "Scenario Library"),
             ("/coding", "PM Annotation Workbench"),
             ("/judge", "Judge Builder"),
