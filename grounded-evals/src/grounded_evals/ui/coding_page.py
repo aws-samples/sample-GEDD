@@ -175,12 +175,12 @@ def coding_page():
             ):
                 ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
                 ui.label("PM Annotation Workbench").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Name product failures in domain language. Run responses first or load a scenario.").style(
+                ui.label("Name product failures in domain language. Load a scenario or return to Coach.").style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
-                    ui.button("Run responses first", icon="science",
-                              on_click=lambda: ui.navigate.to("/eval")).style(
+                    ui.button("Open Coach", icon="auto_awesome",
+                              on_click=lambda: ui.navigate.to("/coach")).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )
                     ui.button("Load a reference scenario", icon="collections_bookmark",
@@ -389,8 +389,8 @@ def coding_page():
                     ui.label("🎯 Saturation reached — last 3 annotations revealed no new codes.").style(
                         "font-size: 0.75rem; color: var(--green-bright); font-weight: 500"
                     )
-                    ui.button("Map Root Causes →", icon="hub",
-                              on_click=lambda: ui.navigate.to("/analysis")).props("size=xs").style(
+                    ui.button("Create Judge Prompt →", icon="gavel",
+                              on_click=lambda: ui.navigate.to("/judge")).props("size=xs").style(
                         "background:var(--accent);color:white;border-radius:6px;font-size:0.7rem"
                     )
             elif weighted_pct < 50:
@@ -544,9 +544,9 @@ def coding_page():
 
             if not responses:
                 with ui.column().classes("items-start gap-2"):
-                    ui.label('No responses to code yet. Run an evaluation first.').style("color: var(--text-tertiary)")
-                    ui.button("Go to Eval", icon="arrow_forward",
-                              on_click=lambda: ui.navigate.to("/eval")).props("size=sm color=primary")
+                    ui.label('No responses to code yet. Load a scenario or return to Coach.').style("color: var(--text-tertiary)")
+                    ui.button("Load a scenario", icon="collections_bookmark",
+                              on_click=lambda: ui.navigate.to("/demos")).props("size=sm color=primary")
                 return
 
             if not filtered:

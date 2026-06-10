@@ -109,7 +109,7 @@ def test_get_progress_empty_storage():
 
     progress = _get_progress({})
     assert progress["/coach"] == "todo"
-    assert progress["/eval"] == "todo"
+    assert progress["/coding"] == "todo"
 
 
 def test_get_progress_coach_done():
@@ -123,7 +123,7 @@ def test_get_progress_coach_done():
     }
     progress = _get_progress(storage)
     assert progress["/coach"] == "done"
-    assert progress["/eval"] == "current"
+    assert progress["/coding"] == "current"
 
 
 def test_get_progress_full_pipeline():
@@ -136,13 +136,12 @@ def test_get_progress_full_pipeline():
         },
         "eval_results": [{"query": "q1", "responses": {}, "annotations": {}}],
         "coding_annotations": [{"codes": ["hallucination"]}],
-        "paradigm_model": {"phenomenon": ["hallucination"]},
+        "_generated_judge_prompt": "judge prompt",
     }
     progress = _get_progress(storage)
     assert progress["/coach"] == "done"
-    assert progress["/eval"] == "done"
     assert progress["/coding"] == "done"
-    assert progress["/analysis"] == "done"
+    assert progress["/judge"] == "done"
 
 
 def test_get_progress_no_agent_name():

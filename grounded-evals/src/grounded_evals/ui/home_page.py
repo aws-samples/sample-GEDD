@@ -15,18 +15,16 @@ def _get_progress(storage: dict) -> dict[str, str]:
     has_agent = bool(agent_spec.get("name"))
     has_prompt = bool(agent_spec.get("system_prompt"))
     has_queries = bool(session.get("golden_prompts") if isinstance(session, dict) else False)
-    has_eval = bool(storage.get("eval_results"))
     has_annotations = bool(storage.get("coding_annotations"))
-    has_paradigm = any(v for v in storage.get("paradigm_model", {}).values())
+    has_judge = bool(storage.get("_generated_judge_prompt"))
 
     coach_done = has_agent and has_prompt and has_queries
 
     return {
         "/coach": "done" if coach_done else ("current" if has_agent else "todo"),
-        "/eval": "done" if has_eval else ("current" if coach_done else "todo"),
-        "/coding": "done" if has_annotations else ("current" if has_eval else "todo"),
-        "/analysis": "done" if has_paradigm else ("current" if has_annotations else "todo"),
-        "/report": "current" if has_paradigm else ("todo" if not has_annotations else "current"),
+        "/coding": "done" if has_annotations else ("current" if coach_done else "todo"),
+        "/judge": "done" if has_judge else ("current" if has_annotations else "todo"),
+        "/report": "current" if has_judge else ("todo" if not has_annotations else "current"),
     }
 
 
@@ -50,13 +48,11 @@ def _has_session_content(storage: dict) -> bool:
 
 PROBLEM_STEPS = [
     {"num": 1, "title": "Define the Job", "desc": "What is your agent trying to accomplish? For whom?", "path": "/coach", "icon": "chat"},
-    {"num": 2, "title": "Observe Behavior", "desc": "Run golden queries — see what actually happens", "path": "/eval", "icon": "science"},
-    {"num": 3, "title": "Tag Failures", "desc": "Name failure patterns from real outputs", "path": "/coding", "icon": "label"},
-    {"num": 4, "title": "Map Root Causes", "desc": "Understand WHY failures happen", "path": "/analysis", "icon": "hub"},
+    {"num": 2, "title": "Tag Failures", "desc": "Name failure patterns from real outputs", "path": "/coding", "icon": "label"},
 ]
 
 SOLUTION_STEPS = [
-    {"num": 5, "title": "Build the Eval", "desc": "Generate judges grounded in what you discovered", "path": "/report", "icon": "assessment"},
+    {"num": 3, "title": "Build the Judge", "desc": "Generate judges grounded in what you discovered", "path": "/judge", "icon": "gavel"},
 ]
 
 # --- Demo data ---
@@ -275,6 +271,204 @@ HOME_CSS = """
 .metric-row { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
 .metric-big { font-size: 1.5rem; font-weight: 700; color: var(--green-bright); font-variant-numeric: tabular-nums; }
 .metric-label { font-size: 0.78rem; color: var(--text-tertiary); }
+
+/* ── Simplified judge-rubric homepage ───────────────────────────────── */
+.simple-hero {
+  width: 100%;
+  padding: 3rem 0 1.2rem;
+  text-align: left;
+}
+.simple-hero .coach-kicker {
+  margin-bottom: 14px;
+}
+.simple-headline {
+  max-width: 780px;
+  margin: 0;
+  font-size: 2.25rem;
+  line-height: 1.12;
+  letter-spacing: 0;
+  font-weight: 740;
+  color: var(--text-primary);
+}
+.simple-subhead {
+  max-width: 720px;
+  margin-top: 12px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.simple-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.simple-panel {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-1);
+}
+.simple-panel-title {
+  font-size: 0.98rem;
+  font-weight: 680;
+  color: var(--text-primary);
+}
+.simple-panel-copy {
+  margin-top: 5px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.core-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.core-flow-step {
+  min-height: 205px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.core-flow-num {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+.core-flow-title {
+  margin-top: 12px;
+  font-size: 0.84rem;
+  font-weight: 680;
+  color: var(--text-primary);
+}
+.core-flow-copy {
+  margin-top: 6px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.core-flow-output {
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--green-bright);
+}
+.assistant-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+.assistant-card {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.assistant-label {
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.coach-question {
+  margin-top: 9px;
+  padding: 10px 11px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-1);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.artifact-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.artifact-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-1);
+}
+.artifact-item .material-icons {
+  font-size: 1rem;
+  color: var(--accent-bright);
+}
+.artifact-title {
+  font-size: 0.74rem;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.artifact-copy {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  line-height: 1.38;
+  color: var(--text-tertiary);
+}
+.compact-example-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.compact-example {
+  padding: 13px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.compact-example-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.compact-example-domain {
+  font-size: 0.8rem;
+  font-weight: 680;
+  color: var(--text-primary);
+}
+.compact-code {
+  font-family: 'SF Mono', 'Menlo', monospace;
+  font-size: 0.58rem;
+  color: var(--accent-bright);
+  background: var(--accent-tint);
+  padding: 3px 6px;
+  border-radius: 6px;
+  overflow-wrap: anywhere;
+}
+.compact-example-text {
+  margin-top: 9px;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.starter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
 
 /* ── Marketing hero ─────────────────────────────────────────────────── */
 .mkt-hero { text-align: center; padding: 3.25rem 0 1.5rem; }
@@ -757,6 +951,14 @@ HOME_CSS = """
   .mkt-headline { font-size: 1.65rem; line-height: 1.2; }
   .mkt-subhead { font-size: 0.9rem; }
   .mkt-cta-row { flex-direction: column; align-items: stretch; }
+  .simple-hero { padding-top: 2rem; text-align: left; }
+  .simple-headline { font-size: 1.7rem; }
+  .simple-action-row { flex-direction: column; align-items: stretch; }
+  .core-flow-grid { grid-template-columns: 1fr; }
+  .core-flow-step { min-height: auto; }
+  .assistant-grid { grid-template-columns: 1fr; }
+  .compact-example-row { grid-template-columns: 1fr; }
+  .starter-row { flex-direction: column; align-items: stretch; }
   .coach-first-hero { grid-template-columns: 1fr; }
   .coach-main-panel { padding: 18px; min-height: auto; }
   .coach-headline { font-size: 1.55rem; }
@@ -912,15 +1114,11 @@ def home_page():
     ui.add_head_html(f"<style>{HOME_CSS}</style>")
 
     storage = app.storage.user
-    is_returning = _has_session_content(storage)
-
-    progress = _get_progress(storage)
     session = storage.get("session_data") or {}
     agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
     agent_name_home = agent_spec.get("name", "") if isinstance(agent_spec, dict) else ""
     n_queries = len(session.get("golden_prompts", []) if isinstance(session, dict) else [])
     n_annotations = len(storage.get("coding_annotations", []))
-    done_count = sum(1 for s in progress.values() if s == "done")
 
     def next_annotation_path() -> str:
         if storage.get("coding_annotations") or storage.get("codebook"):
@@ -929,7 +1127,7 @@ def home_page():
             return "/coding"
         session_obj = storage.get("session_data") or {}
         if isinstance(session_obj, dict) and session_obj.get("golden_prompts"):
-            return "/eval"
+            return "/coding"
         return "/coach"
 
     from grounded_evals.ui.demos_page import _build_domain_registry
@@ -950,11 +1148,54 @@ def home_page():
         ui.notify(f'{domain["name"]} loaded into the annotation workbench.', type="positive")
         ui.navigate.to("/coding")
 
-    with ui.column().classes("w-full items-center").style(
-        "max-width: 820px; margin: 0 auto; padding: 1.25rem 1.5rem 2.5rem"
-    ):
+    core_steps = [
+        (
+            "Coach the product",
+            "Capture the AI product, user, task, source of truth, and release risk in PM language.",
+            "Output: product brief + evaluation intent",
+        ),
+        (
+            "Generate golden queries",
+            "Create normal, edge, adversarial, ambiguous, and recovery prompts with the domain expert.",
+            "Output: golden query set",
+        ),
+        (
+            "Error analysis + PM annotations",
+            "Review model responses, mark correctness, add severity, and write memos about user impact.",
+            "Output: annotated failures + evidence",
+        ),
+        (
+            "Create the judge rubric",
+            "Turn repeated error modes into hard-fail rules and a simple LLM-as-a-judge prompt.",
+            "Output: judge rubric + judge prompt",
+        ),
+    ]
 
-        # ── Resume bar (returning users only) ────────────────────────────
+    coach_questions = [
+        "What customer-facing AI product are we gating, and what decision does it influence?",
+        "What facts, policies, tools, or source-of-truth documents must the answer respect?",
+        "Which golden queries prove the product works across normal, edge, and adversarial cases?",
+        "What did the PM or domain expert annotate as incorrect, partial, severe, or release-blocking?",
+        "Which repeated error modes should become hard-fail rules in the judge rubric?",
+    ]
+
+    artifacts = [
+        ("assignment", "Product brief", "Agent purpose, target users, scope, and source of truth."),
+        ("quiz", "Golden queries", "A focused eval set that reflects real product risk."),
+        ("rate_review", "PM annotations", "Correctness labels, severity, confidence, and memos."),
+        ("label", "Error modes", "Expert-named patterns grounded in observed failures."),
+        ("gavel", "Judge rubric", "LLM-as-a-judge criteria and hard-fail rules."),
+    ]
+
+    starter_demos = [
+        ("game_producer", "AAA Game Producer"),
+        ("game_operator", "AAA Game Operator"),
+        ("rx", "RxBot"),
+    ]
+
+    with ui.column().classes("w-full").style(
+        "max-width: 980px; margin: 0 auto; padding: 1.25rem 1.5rem 2.75rem"
+    ):
         if _has_session_content(storage):
             display_name = agent_name_home or "Untitled agent"
             with ui.element("div").classes("continue-card animate-in stagger-1"):
@@ -964,265 +1205,109 @@ def home_page():
                             "font-size: 0.88rem; font-weight: 600; color: var(--text-primary)"
                         )
                         ui.label(
-                            f"{n_queries} queries · {n_annotations} annotations · {done_count}/5 steps done"
+                            f"{n_queries} golden queries · {n_annotations} annotated examples"
                         ).style("font-size: 0.74rem; color: var(--text-tertiary)")
                     ui.button(
                         "Continue", icon="arrow_forward",
                         on_click=lambda: ui.navigate.to(next_annotation_path()),
                     ).props("size=sm color=primary")
 
-        # ── Hero: headline + single CTA + demo gif ────────────────────────
-        with ui.element("div").classes("animate-in stagger-1").style(
-            "text-align: center; margin-top: 1.5rem"
-        ):
+        with ui.element("section").classes("simple-hero animate-in stagger-1"):
             ui.html(
-                '<div class="coach-kicker" style="margin: 0 auto; width: fit-content">'
+                '<div class="coach-kicker">'
                 '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
-                "AI PM Release Readiness"
+                "Grounded Eval-Driven Development"
                 "</div>"
             )
             ui.html(
-                '<h1 class="coach-headline" style="text-align:center; margin: 16px auto 0">'
-                "Find the failures that decide whether your agent is shippable."
+                '<h1 class="simple-headline">'
+                "Create a judge rubric from evidence, not gut feel."
                 "</h1>"
             )
             ui.html(
-                '<div class="coach-subhead" style="text-align:center; margin: 12px auto 0; max-width: 600px">'
-                "Offline eval techniques for AI PMs. Observe agent behavior, "
-                "name failures in domain language, and leave with a release report "
-                "engineering can act on."
+                '<div class="simple-subhead">'
+                "GEDD coaches a PM and domain expert through one loop: define the AI product, "
+                "generate golden queries, annotate model responses, name error modes, and turn "
+                "them into a simple LLM-as-a-judge prompt."
                 "</div>"
             )
-            with ui.row().classes("justify-center gap-2").style("margin-top: 22px"):
+            with ui.element("div").classes("simple-action-row"):
                 ui.button(
-                    "Open GEDD Coach",
+                    "Start with Coach",
                     icon="auto_awesome",
                     on_click=lambda: ui.navigate.to("/coach"),
                 ).props("color=primary size=md unelevated").style(
-                    "font-weight: 600; letter-spacing: 0; padding: 8px 22px"
+                    "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                 )
                 ui.button(
-                    "Load a demo",
+                    "Sample Scenarios",
                     icon="collections_bookmark",
-                    on_click=lambda: ui.run_javascript(
-                        "document.getElementById('domain-section')?.scrollIntoView({behavior:'smooth'})"
-                    ),
+                    on_click=lambda: ui.navigate.to("/demos"),
                 ).props("outline size=md no-caps").style(
                     "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
 
-        # ── Demo gif ─────────────────────────────────────────────────────
-        with ui.element("div").style(
-            "margin-top: 1.5rem; border-radius: var(--radius-xl); overflow: hidden; "
-            "border: 1px solid var(--border-subtle); background: var(--bg-surface-1)"
-        ):
-            ui.image("/docs/GEDD_optimized.gif").style(
-                "width: 100%; border-radius: var(--radius-xl)"
-            )
+        with ui.element("div").classes("simple-panel animate-in stagger-2"):
+            ui.html('<div class="simple-panel-title">The core loop</div>')
             ui.html(
-                '<div style="padding: 10px 14px; font-size: 0.72rem; color: var(--text-tertiary); text-align: center">'
-                "Query → Responses → Annotate → Codes emerge → Judge"
+                '<div class="simple-panel-copy">'
+                "This is the systematic path from product intent to judge rubric. The rubric comes "
+                "from observed failures and PM annotations, not from generic quality guesses."
                 "</div>"
             )
+            with ui.element("div").classes("core-flow-grid"):
+                for index, (title, copy, output) in enumerate(core_steps, start=1):
+                    with ui.element("div").classes("core-flow-step"):
+                        ui.html(f'<div class="core-flow-num">{index}</div>')
+                        ui.html(f'<div class="core-flow-title">{title}</div>')
+                        ui.html(f'<div class="core-flow-copy">{copy}</div>')
+                        ui.html(f'<div class="core-flow-output">{output}</div>')
 
-        # ── Stats strip ──────────────────────────────────────────────────
-        with ui.element("div").classes("outcome-strip animate-in stagger-2"):
-            with ui.element("div").classes("outcome-cell"):
-                ui.html(f'<div class="num">{len(domain_cards)}</div>')
-                ui.html('<div class="label">launch-risk scenarios</div>')
-            with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">8</div>')
-                ui.html('<div class="label">rubric dimensions</div>')
-            with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">Evidence handoff</div>')
-                ui.html('<div class="label">session.json for engineering</div>')
-
-        # ── Before / After contrast card ─────────────────────────────────
-        with ui.element("div").classes("animate-in stagger-2").style(
-            "display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 1.25rem; "
-            "width: 100%"
-        ):
-            # Before
-            with ui.element("div").style(
-                "padding: 18px; border-radius: var(--radius-xl); "
-                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle)"
-            ):
-                ui.html(
-                    '<div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; '
-                    'font-weight:700; color: var(--text-muted); margin-bottom:10px">Before</div>'
-                )
-                ui.html(
-                    '<div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.6">'
-                    '<div style="margin-bottom:6px">Label: <span style="color:var(--text-muted)">"hallucination"</span></div>'
-                    '<div style="margin-bottom:6px">Score: <span style="color:var(--text-muted)">Quality 3/5</span></div>'
-                    '<div>Rubric: <span style="color:var(--text-muted)">generic helpfulness</span></div>'
-                    "</div>"
-                )
-            # After
-            with ui.element("div").style(
-                "padding: 18px; border-radius: var(--radius-xl); "
-                "background: var(--bg-surface-1); border: 1px solid rgba(94,106,210,0.3)"
-            ):
-                ui.html(
-                    '<div style="font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; '
-                    'font-weight:700; color: var(--accent-bright); margin-bottom:10px">After GEDD</div>'
-                )
-                ui.html(
-                    '<div style="font-size:0.82rem; color:var(--text-primary); line-height:1.6">'
-                    '<div style="margin-bottom:6px">Code: <code style="background:var(--accent-tint);'
-                    'padding:2px 6px;border-radius:4px;font-size:0.75rem;color:var(--accent-bright)">'
-                    'dosage_unit_confusion</code></div>'
-                    '<div style="margin-bottom:6px">Severity: <span style="color:#ef5350; font-weight:600">Catastrophic</span></div>'
-                    '<div>Memo: <span style="color:var(--text-secondary)">1000× unit error, potentially fatal</span></div>'
-                    "</div>"
-                )
-
-        # ── Annotation interface proof (hidden for returning users) ─────
-        if not is_returning:
-          with ui.element("div").classes("annotation-panel animate-in stagger-2"):
-            ui.html('<div class="evidence-kicker">Purpose-built annotation</div>')
-            ui.html('<div class="evidence-title">Give experts the context needed to make a product call.</div>')
+        with ui.element("div").classes("simple-panel animate-in stagger-3"):
+            ui.html('<div class="simple-panel-title">The assistant should feel like a PM review partner</div>')
             ui.html(
-                '<div class="evidence-copy">'
-                "AI PMs need labels that explain user impact, not just pass/fail scores. "
-                "The workbench keeps the user request, model response, expected behavior, "
-                "risk, memo, and codebook in one review path."
+                '<div class="simple-panel-copy">'
+                "Coach asks the questions that keep the domain expert in the product problem before a judge prompt is written."
                 "</div>"
             )
-            with ui.element("div").classes("annotation-grid"):
-                for surface in ANNOTATION_SURFACES:
-                    with ui.element("div").classes("annotation-surface"):
-                        with ui.element("div").classes("annotation-surface-top"):
-                            ui.icon(surface["icon"]).style(
-                                "color: var(--accent-bright); font-size: 1rem"
-                            )
-                            ui.html(f'<div class="annotation-surface-title">{surface["title"]}</div>')
-                        ui.html(f'<div class="annotation-surface-copy">{surface["copy"]}</div>')
-            with ui.element("div").classes("principle-row"):
-                for title, copy in [
-                    ("See the user impact", "Review the scenario as the customer experiences it, with expected behavior and risk in the same frame."),
-                    ("Prioritize release blockers", "Use severity, frequency, and confidence to separate must-fix failures from product polish."),
-                    ("Create engineering-ready gates", "Convert expert codes, memos, and examples into judge criteria and hard-fail rules."),
-                ]:
-                    with ui.element("div").classes("principle-card"):
-                        ui.html(f'<div class="principle-title">{title}</div>')
-                        ui.html(f'<div class="principle-copy">{copy}</div>')
+            with ui.element("div").classes("assistant-grid"):
+                with ui.element("div").classes("assistant-card"):
+                    ui.html('<div class="assistant-label">Coach asks</div>')
+                    for question in coach_questions:
+                        ui.html(f'<div class="coach-question">{question}</div>')
+                with ui.element("div").classes("assistant-card"):
+                    ui.html('<div class="assistant-label">What the user leaves with</div>')
+                    with ui.element("div").classes("artifact-list"):
+                        for icon, title, copy in artifacts:
+                            with ui.element("div").classes("artifact-item"):
+                                ui.icon(icon)
+                                with ui.column().style("gap: 0"):
+                                    ui.html(f'<div class="artifact-title">{title}</div>')
+                                    ui.html(f'<div class="artifact-copy">{copy}</div>')
 
-        # ── Domain expertise simulations (featured examples) ──────────────
-        with ui.element("div").classes("evidence-panel featured-evidence animate-in stagger-3"):
-            ui.html('<div class="evidence-kicker">What the domain expert discovers</div>')
+        with ui.element("div").classes("simple-panel animate-in stagger-3"):
+            ui.html('<div class="simple-panel-title">Examples support the method</div>')
             ui.html(
-                '<div class="evidence-title">'
-                "Run the example as a release-quality gate."
+                '<div class="simple-panel-copy">'
+                "Load a scenario only after the loop is clear: golden query, bad response, PM annotation, error mode, judge gate."
                 "</div>"
             )
-            ui.html(
-                '<div class="evidence-copy">'
-                "Each simulation shows the same path a PM uses in GEDD: user prompt, unsafe "
-                "agent answer, expert catch, and the judge rule that blocks release."
-                "</div>"
-            )
-            with ui.element("div").classes("simulation-grid"):
+            with ui.element("div").classes("compact-example-row"):
                 for item in EXPERT_DISCOVERIES[:3]:
-                    demo_id = item["demo_id"]
-                    with ui.element("div").classes("simulation-card"):
-                        with ui.element("div").classes("evidence-card-top"):
-                            with ui.column().style("gap: 4px; min-width: 0"):
-                                ui.html(f'<div class="evidence-domain">{item["domain"]}</div>')
-                                ui.html(f'<div class="evidence-risk">{item["risk"]}</div>')
-                            ui.html(f'<div class="evidence-code">{item["error_code"]}</div>')
-
-                        with ui.element("div").classes("simulation-flow"):
-                            stages = [
-                                ("User prompt", item["prompt"], ""),
-                                ("Unsafe answer", item["unsafe_answer"], "bad"),
-                                ("Expert catch", item["expert_catch"], "good"),
-                                ("Release gate", item["gate"], "gate"),
-                            ]
-                            for label, value, modifier in stages:
-                                step_class = f"simulation-step {modifier}".strip()
-                                with ui.element("div").classes(step_class):
-                                    ui.html(f'<div class="simulation-step-label">{label}</div>')
-                                    ui.label(value).classes("simulation-step-value")
-
-                        with ui.element("div").classes("simulation-actions"):
-                            ui.html(
-                                '<div class="simulation-handoff">'
-                                f'Loads the full {item["demo_name"]} scenario with golden queries, '
-                                "open codes, memos, and judge criteria."
-                                "</div>"
-                            )
-                            ui.button(
-                                f'Run {item["demo_name"]}',
-                                icon="play_circle",
-                                on_click=lambda d=demo_id: load_homepage_demo(d),
-                            ).props("size=sm color=primary unelevated no-caps").style(
-                                "font-weight: 600; flex-shrink: 0"
-                            )
-
-        # ── Compact domain badge grid ─────────────────────────────────────
-        ui.html('<div id="domain-section"></div>')
-        with ui.element("div").classes("mkt-section-head animate-in stagger-3"):
-            with ui.column().style("gap: 2px"):
-                ui.html(f'<div class="mkt-section-title">{len(domain_cards)} domains tested</div>')
-                ui.html(
-                    '<div class="mkt-section-sub">'
-                    "Load any scenario to see how expert observations become failure codes and judges."
-                    "</div>"
-                )
-            ui.button(
-                "View all →", icon="open_in_new",
-                on_click=lambda: ui.navigate.to("/demos"),
-            ).props("flat size=sm no-caps").style(
-                "color: var(--accent-bright); font-size: 0.78rem"
-            )
-
-        with ui.element("div").style(
-            "display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); "
-            "gap: 8px; width: 100%"
-        ).classes("animate-in stagger-3"):
-            for domain in domain_cards:
-                def make_loader(d=domain):
-                    def _load():
-                        d["loader"](app.storage.user)
-                        ui.notify(f'{d["name"]} loaded into the annotation workbench.', type="positive")
-                        ui.navigate.to("/coding")
-                    return _load
-
-                with ui.element("div").style(
-                    "display: flex; align-items: center; gap: 8px; padding: 10px 12px; "
-                    "border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); "
-                    "background: var(--bg-surface-1); cursor: pointer; transition: border-color 0.15s"
-                ).on("click", make_loader()):
-                    ui.icon(domain["icon"]).style("color: var(--accent-bright); font-size: 0.95rem")
-                    ui.label(domain["name"]).style(
-                        "font-size: 0.75rem; font-weight: 600; color: var(--text-primary); "
-                        "white-space: nowrap; overflow: hidden; text-overflow: ellipsis"
+                    with ui.element("div").classes("compact-example"):
+                        with ui.element("div").classes("compact-example-top"):
+                            ui.html(f'<div class="compact-example-domain">{item["domain"]}</div>')
+                            ui.html(f'<div class="compact-code">{item["error_code"]}</div>')
+                        ui.html(
+                            f'<div class="compact-example-text">{item["expert_signal"]}. '
+                            f'Judge gate: {item["gate"]}</div>'
+                        )
+            with ui.element("div").classes("starter-row"):
+                for demo_id, label in starter_demos:
+                    ui.button(
+                        label,
+                        icon="play_circle",
+                        on_click=lambda d=demo_id: load_homepage_demo(d),
+                    ).props("outline size=sm no-caps").style(
+                        "color: var(--accent-bright); border-color: var(--border-subtle)"
                     )
-
-        # ── Final CTA ────────────────────────────────────────────────────
-        with ui.element("div").style(
-            "margin-top: 1.5rem; text-align: center; padding: 18px; "
-            "border-radius: var(--radius-xl); background: var(--bg-surface-1); "
-            "border: 1px solid var(--border-subtle)"
-        ).classes("animate-in stagger-4"):
-            ui.html(
-                '<div style="font-size:0.88rem; font-weight:600; color:var(--text-primary); margin-bottom:6px">'
-                "Ready to find what your agent gets wrong?"
-                "</div>"
-            )
-            with ui.row().classes("justify-center gap-2").style("margin-top: 10px"):
-                ui.button(
-                    "Open Coach",
-                    icon="auto_awesome",
-                    on_click=lambda: ui.navigate.to("/coach"),
-                ).props("color=primary size=sm unelevated").style("font-weight: 600")
-                ui.button(
-                    "Load a demo",
-                    icon="collections_bookmark",
-                    on_click=lambda: (domain_cards[0]["loader"](app.storage.user), ui.navigate.to("/coding")),
-                ).props("outline size=sm no-caps").style(
-                    "color: var(--accent-bright); border-color: var(--border-subtle)"
-                )
-
-        # ── (Methodology and closing removed — see /demos for details) ──

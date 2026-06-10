@@ -69,7 +69,7 @@ Generate queries in batches of 3-5, grouped by category. After each batch, ask P
 - Call save_agent_info when user provides agent details
 - IMPORTANT: When PM approves a system prompt, call save_agent_info with the full system_prompt text AND call save_prompt_variant with name="A" to save it as the first variant
 - If the PM wants to create an alternative system prompt (for A/B testing), save it as variant "B", "C", etc. using save_prompt_variant
-- Tell the PM they can test different prompt variants side by side in the Eval tab
+- Tell the PM they can use the PM annotation workbench to turn observed failures into error modes
 - Call save_golden_query for EACH approved query (one tool call per query)
 - Call run_agent_query to simulate agent responses during error analysis
 - Call save_annotation when PM provides feedback on a response

@@ -2,7 +2,6 @@
 
 import asyncio
 import csv
-import difflib
 import html as _html
 import io
 import json
@@ -42,7 +41,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-06-10-homepage-simulations"
+APP_RELEASE = "2026-06-10-no-patterns"
 
 
 def _cognito_hosted_domain() -> str:
@@ -394,7 +393,8 @@ def main_page() -> None:
                             '2. <strong>Craft a system prompt</strong><br>'
                             '3. <strong>Generate golden test queries</strong><br>'
                             '4. <strong>Review responses</strong> and tag failure patterns<br><br>'
-                            'Then we\'ll head to Eval to run them. <strong>What AI agent are you building?</strong></div>'
+                            'Then we\'ll move into PM annotations to identify error modes. '
+                            '<strong>What AI agent are you building?</strong></div>'
                         )
                     elif step == 2:
                         welcome = (
@@ -497,184 +497,6 @@ def main_page() -> None:
                 ui.button("Queries (JSONL)", icon="download", on_click=_download_queries_jsonl).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Export Session", icon="save", on_click=_export_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Import Session", icon="upload_file", on_click=_import_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
-
-        # Feature 3: Underserved Needs (Importance × Satisfaction)
-        # Rendered after the chat card so first-time users see the conversation first.
-        s.setdefault('user_needs', [])
-        with ui.expansion("📋 User Needs (Importance × Satisfaction)", icon="priority_high").classes("w-full").style(
-            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-            "border-radius: 10px; margin-top: 10px; color: var(--text-primary)"
-        ):
-            ui.label("What does your user NEED this agent to do well? Rate each need so golden queries focus on what matters most.").style(
-                "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
-            )
-            needs_container = ui.column().classes("w-full gap-1")
-
-            def render_needs():
-                needs_container.clear()
-                with needs_container:
-                    for i, need in enumerate(s['user_needs']):
-                        description = need.get('description') or need.get('need') or ""
-                        importance = need.get('importance', 'medium')
-                        satisfaction = need.get('satisfaction', 'ok')
-                        imp_color = {'critical': 'var(--red)', 'high': 'var(--yellow)', 'medium': 'var(--text-secondary)', 'low': 'var(--text-muted)'}
-                        sat_color = {'poor': 'var(--red)', 'ok': 'var(--yellow)', 'good': 'var(--green-bright)'}
-                        with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
-                            ui.label(description).style(f"flex: 1; font-size: 0.8rem; color: var(--text-primary)")
-                            ui.badge(importance, color='grey').props('outline').style(f"color: {imp_color.get(importance, '')}")
-                            ui.badge(satisfaction, color='grey').props('outline').style(f"color: {sat_color.get(satisfaction, '')}")
-
-                            def remove_need(idx=i):
-                                s['user_needs'].pop(idx)
-                                render_needs()
-                            ui.button(icon='close', on_click=remove_need).props('flat round size=xs').style("color: var(--text-muted)")
-
-            render_needs()
-
-            # Add new need
-            with ui.row().classes("w-full items-end gap-2").style("margin-top: 8px"):
-                need_input = ui.input(placeholder="e.g. Get accurate flight prices").classes("flex-grow").props("dense outlined dark")
-                imp_select = ui.select(options=['low', 'medium', 'high', 'critical'], value='high', label='Importance').props("dense outlined dark").style("width: 100px")
-                sat_select = ui.select(options=['poor', 'ok', 'good'], value='poor', label='Satisfaction').props("dense outlined dark").style("width: 90px")
-
-                def add_need():
-                    if not need_input.value.strip():
-                        return
-                    s['user_needs'].append({
-                        'description': need_input.value.strip(),
-                        'importance': imp_select.value,
-                        'satisfaction': sat_select.value,
-                    })
-                    need_input.set_value('')
-                    render_needs()
-
-                ui.button(icon='add', on_click=add_need).props("flat round size=sm").style("color: var(--accent-bright)")
-
-        # Feature 2: Before/After Hypothesis Tracker
-        s.setdefault('hypotheses', [])
-        with ui.expansion("🎯 Hypotheses (What do you think will fail?)", icon="psychology").classes("w-full").style(
-            "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
-            "border-radius: 10px; margin-top: 8px; color: var(--text-primary)"
-        ):
-            ui.label("Write your predictions BEFORE testing. After coding, you'll see what you got right vs. what surprised you.").style(
-                "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
-            )
-            hyp_container = ui.column().classes("w-full gap-1")
-
-            def render_hypotheses():
-                hyp_container.clear()
-                with hyp_container:
-                    for i, h in enumerate(s['hypotheses']):
-                        text = h.get('text') or h.get('hypothesis') or ""
-                        status_icons = {'active': '🔵', 'confirmed': '✅', 'invalidated': '❌', 'revised': '🔄'}
-                        with ui.row().classes("items-center gap-2 w-full").style("padding: 4px 0"):
-                            ui.label(status_icons.get(h.get('status', 'active'), '🔵')).style("font-size: 0.9rem")
-                            ui.label(text).style("flex: 1; font-size: 0.8rem; color: var(--text-primary)")
-
-                            def cycle_status(idx=i):
-                                statuses = ['active', 'confirmed', 'invalidated', 'revised']
-                                cur = s['hypotheses'][idx].get('status', 'active')
-                                nxt = statuses[(statuses.index(cur) + 1) % len(statuses)]
-                                s['hypotheses'][idx]['status'] = nxt
-                                render_hypotheses()
-                            ui.button(icon='swap_horiz', on_click=cycle_status).props('flat round size=xs').style("color: var(--text-muted)")
-
-            render_hypotheses()
-
-            with ui.row().classes("w-full items-center gap-2").style("margin-top: 6px"):
-                hyp_input = ui.input(placeholder="e.g. I think it will hallucinate prices").classes("flex-grow").props("dense outlined dark")
-
-                def add_hypothesis():
-                    if not hyp_input.value.strip():
-                        return
-                    s['hypotheses'].append({'text': hyp_input.value.strip(), 'status': 'active'})
-                    hyp_input.set_value('')
-                    render_hypotheses()
-
-                ui.button(icon='add', on_click=add_hypothesis).props("flat round size=sm").style("color: var(--accent-bright)")
-
-        # A/B prompt variant creator
-        with ui.expansion("Create Prompt Variant (A/B)", icon="science").classes("w-full").style(
-            "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "
-            "border: 1px solid var(--border-subtle); color: var(--text-primary)"
-        ):
-            ui.label("Save a named version of the system prompt to compare against other variants in the Eval tab.").style(
-                "font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px"
-            )
-            with ui.row().classes("w-full gap-2 items-end"):
-                variant_name_input = ui.input(label="Variant name", placeholder='e.g. "B — more concise"').props("dense outlined dark").style("width: 180px")
-                variant_prompt_input = ui.textarea(label="Prompt text (leave blank to copy current)").props("dense outlined dark").classes("flex-grow").style("font-size: 0.78rem")
-
-            def save_variant():
-                name = variant_name_input.value.strip()
-                if not name:
-                    ui.notify("Enter a variant name", type="warning")
-                    return
-                text = variant_prompt_input.value.strip() or _user_session().agent_spec.system_prompt
-                if not text:
-                    ui.notify("No system prompt defined yet", type="warning")
-                    return
-                cur_s = _user_state()
-                variants = cur_s.setdefault("prompt_variants", [])
-                for v in variants:
-                    if v["name"] == name:
-                        v["prompt"] = text
-                        ui.notify(f"Variant '{name}' updated ✓", type="positive")
-                        return
-                variants.append({"name": name, "prompt": text})
-                ui.notify(f"Variant '{name}' saved ✓ — select it in the Eval tab", type="positive")
-                variant_name_input.set_value("")
-                variant_prompt_input.set_value("")
-
-            ui.button("Save Variant", icon="add", on_click=save_variant).props("size=sm").style(
-                "margin-top: 8px; background: var(--accent); color: white; border-radius: 6px"
-            )
-
-        # Variant diff viewer
-        saved_variants = _user_state().get("prompt_variants", [])
-        if len(saved_variants) >= 2:
-            with ui.expansion("Compare Variants", icon="difference").classes("w-full").style(
-                "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "
-                "border: 1px solid var(--border-subtle); color: var(--text-primary)"
-            ):
-                variant_names = [v["name"] for v in saved_variants]
-                diff_container = ui.column().classes("w-full")
-
-                with ui.row().classes("gap-2 items-end").style("margin-bottom: 8px"):
-                    sel_a = ui.select(options=variant_names, value=variant_names[0], label="Variant A").props("dense outlined dark").style("width: 160px")
-                    ui.label("→").style("color: var(--text-muted); padding-bottom: 4px")
-                    sel_b = ui.select(options=variant_names, value=variant_names[1], label="Variant B").props("dense outlined dark").style("width: 160px")
-                    ui.button("Show Diff", icon="compare", on_click=lambda: _render_diff()).props("size=sm outline dark")
-
-                def _render_diff():
-                    a_prompt = next((v["prompt"] for v in saved_variants if v["name"] == sel_a.value), "")
-                    b_prompt = next((v["prompt"] for v in saved_variants if v["name"] == sel_b.value), "")
-                    diff_lines = list(difflib.ndiff(a_prompt.splitlines(), b_prompt.splitlines()))
-                    diff_container.clear()
-                    with diff_container:
-                        if not diff_lines:
-                            ui.label("No differences.").style("color: var(--text-muted); font-size: 0.8rem")
-                            return
-                        html_lines = []
-                        for line in diff_lines:
-                            if line.startswith("+ "):
-                                color, bg = "var(--green-bright)", "var(--green-tint)"
-                            elif line.startswith("- "):
-                                color, bg = "var(--red)", "var(--red-tint)"
-                            elif line.startswith("? "):
-                                continue
-                            else:
-                                color, bg = "var(--text-tertiary)", "transparent"
-                            escaped = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-                            html_lines.append(
-                                f'<div style="font-family:monospace;font-size:0.72rem;line-height:1.6;'
-                                f'padding:1px 8px;color:{color};background:{bg};white-space:pre-wrap">{escaped}</div>'
-                            )
-                        ui.html(
-                            '<div style="border:1px solid var(--border-subtle);border-radius:var(--radius-lg);overflow:hidden">'
-                            + "".join(html_lines)
-                            + "</div>"
-                        )
 
         # Golden query table — view, edit, delete
         if session.golden_prompts:
@@ -805,8 +627,8 @@ def main_page() -> None:
                 "margin-top: 12px; padding: 12px 16px; border-radius: 10px; "
                 "background: var(--green-tint); border: 1px solid rgba(39,166,68,0.2); text-align: center"
             ):
-                ui.label(f"✓ {len(session.golden_prompts)} golden queries generated. Ready to evaluate →").style("font-size: 0.82rem; color: var(--green-bright); font-weight: 500")
-                ui.button("Go to Eval", icon="arrow_forward", on_click=lambda: ui.navigate.to("/eval")).props("size=sm").style(
+                ui.label(f"✓ {len(session.golden_prompts)} golden queries generated. Ready for PM annotation →").style("font-size: 0.82rem; color: var(--green-bright); font-weight: 500")
+                ui.button("Open PM Annotations", icon="arrow_forward", on_click=lambda: ui.navigate.to("/coding")).props("size=sm").style(
                     "margin-top: 6px; background: var(--accent); color: white; border-radius: 6px"
                 )
 

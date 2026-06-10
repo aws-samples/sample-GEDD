@@ -7,12 +7,10 @@ from nicegui import app, ui
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
     {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
-    {"path": "/demos", "label": "Scenarios", "icon": "collections_bookmark", "featured": True},
-    {"path": "/eval", "label": "Eval", "icon": "science", "core": True},
     {"path": "/coding", "label": "Annotate", "icon": "label", "core": True},
-    {"path": "/analysis", "label": "Patterns", "icon": "hub", "core": True},
     {"path": "/judge", "label": "Judge", "icon": "gavel", "core": True},
     {"path": "/report", "label": "Report", "icon": "assessment", "core": True},
+    {"path": "/demos", "label": "Sample Scenarios", "icon": "collections_bookmark", "featured": True},
 ]
 
 BRAND_CSS = """
@@ -315,21 +313,17 @@ def _get_progress_state() -> list[dict]:
     session_data = s.get("session_data", {})
     golden = session_data.get("golden_prompts", [])
     annotations = s.get("coding_annotations", [])
-    patterns = s.get("failure_patterns", [])
     judge = s.get("_generated_judge_prompt", "")
 
     steps = [
         {"label": "Coach", "path": "/coach", "done": bool(session_data.get("agent_spec", {}).get("name"))},
-        {"label": "Scenarios", "path": "/demos", "done": len(golden) > 0},
-        {"label": "Eval", "path": "/eval", "done": bool(s.get("eval_results"))},
         {"label": "Annotate", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
-        {"label": "Patterns", "path": "/analysis", "done": len(patterns) > 0},
         {"label": "Judge", "path": "/judge", "done": bool(judge)},
         {"label": "Report", "path": "/report", "done": False},
     ]
     # Mark Annotate done if all queries annotated
     if golden and len(annotations) >= len(golden):
-        steps[3]["done"] = True
+        steps[1]["done"] = True
     return steps
 
 
@@ -371,7 +365,7 @@ def page_layout(title: str = "", current_path: str = ""):
                 elif item.get("primary"):
                     button.classes("coach-nav-btn").tooltip("Start with Coach to define the agent, risks, and eval plan")
                 elif item.get("featured"):
-                    button.classes("scenario-nav-btn").tooltip("Open the scenario library")
+                    button.classes("scenario-nav-btn").tooltip("Open the sample scenario library")
                 elif item.get("core"):
                     button.classes("core-nav-btn")
                 button.style(
@@ -509,7 +503,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ).tooltip("Logout")
 
     # Progress rail on workflow pages (not Home)
-    workflow_paths = {"/coach", "/demos", "/eval", "/coding", "/analysis", "/judge", "/report"}
+    workflow_paths = {"/coach", "/coding", "/judge", "/report"}
     if current_path in workflow_paths:
         steps = _get_progress_state()
         with ui.element("div").classes("progress-rail"):
