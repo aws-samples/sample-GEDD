@@ -193,6 +193,7 @@ def test_home_expert_discoveries_are_domain_specific():
     from grounded_evals.ui.home_page import EXPERT_DISCOVERIES
 
     codes = {item["error_code"] for item in EXPERT_DISCOVERIES}
+    featured = EXPERT_DISCOVERIES[:3]
 
     assert len(EXPERT_DISCOVERIES) == 5
     assert {
@@ -202,6 +203,8 @@ def test_home_expert_discoveries_are_domain_specific():
         "bar_misapplication",
         "consent_bypass_for_targeting",
     } == codes
+    assert {item["demo_id"] for item in featured} == {"rx", "insure", "tax"}
+    assert all(item["prompt"] and item["unsafe_answer"] and item["gate"] for item in featured)
 
 
 # ── _build_responses (coding_page) ───────────────────────────────────────────
