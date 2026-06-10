@@ -343,7 +343,7 @@ def _apply_agentcore_state(updated_state: dict) -> None:
 
 @ui.page("/coach")
 def main_page() -> None:
-    page_layout("Coach")
+    page_layout("Coach", current_path="/coach")
 
     s = _user_state()
     session = _user_session()

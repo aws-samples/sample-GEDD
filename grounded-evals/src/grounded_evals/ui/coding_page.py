@@ -107,7 +107,7 @@ CODING_CSS = """
 
 @ui.page('/coding')
 def coding_page():
-    page_layout("PM Annotation Workbench")
+    page_layout("PM Annotation Workbench", current_path="/coding")
     ui.add_head_html(f"<style>{CODING_CSS}</style>")
 
     with ui.column().classes("w-full max-w-5xl mx-auto").style("margin-bottom: 0.75rem"):

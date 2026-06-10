@@ -9,7 +9,7 @@ from grounded_evals.ui.layout import page_layout
 
 @ui.page("/eval")
 def eval_page():
-    page_layout("Run Responses")
+    page_layout("Run Responses", current_path="/eval")
 
     s = app.storage.user
     session_data = s.get("session_data", {})

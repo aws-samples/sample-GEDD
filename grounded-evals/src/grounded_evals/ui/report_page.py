@@ -236,7 +236,7 @@ def _build_html_report(
 
 @ui.page("/report")
 def report_page():
-    page_layout("Release Report")
+    page_layout("Release Report", current_path="/report")
     ui.add_head_html(f"<style>{REPORT_CSS}</style>")
     storage = app.storage.user
 

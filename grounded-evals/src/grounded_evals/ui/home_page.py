@@ -893,10 +893,10 @@ def home_page():
                 ui.html('<div class="label">launch-risk scenarios</div>')
             with ui.element("div").classes("outcome-cell"):
                 ui.html('<div class="num">8</div>')
-                ui.html('<div class="label">eval dimensions</div>')
+                ui.html('<div class="label">rubric dimensions</div>')
             with ui.element("div").classes("outcome-cell"):
-                ui.html('<div class="num">session.json</div>')
-                ui.html('<div class="label">handoff to engineering</div>')
+                ui.html('<div class="num">Evidence handoff</div>')
+                ui.html('<div class="label">session.json for engineering</div>')
 
         # ── Before / After contrast card ─────────────────────────────────
         with ui.element("div").classes("animate-in stagger-2").style(
@@ -1059,5 +1059,4 @@ def home_page():
                 )
 
         # ── (Methodology and closing removed — see /demos for details) ──
-
 

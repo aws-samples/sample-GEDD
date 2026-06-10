@@ -235,7 +235,7 @@ def _show_audit_dialog():
 @ui.page('/analysis')
 def analysis_page():
     _ensure_state()
-    page_layout('Pattern Map')
+    page_layout('Pattern Map', current_path="/analysis")
 
     if not app.storage.user.get('codebook') and not app.storage.user.get('coding_annotations'):
         with ui.column().classes('w-full items-center justify-center').style("min-height: 60vh"):

@@ -634,7 +634,7 @@ def _render_domain(domain: dict):
 
 @ui.page("/demos")
 def demos_page():
-    page_layout("Demos")
+    page_layout("Demos", current_path="/demos")
     ui.add_head_html(f'<style>{DEMOS_CSS}</style>')
 
     domains = _build_domain_registry()

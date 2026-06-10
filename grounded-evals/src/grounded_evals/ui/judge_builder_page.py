@@ -72,7 +72,7 @@ def _failure_summary():
 @ui.page("/judge")
 def judge_builder_page():
     _init_state()
-    page_layout("Judge Builder")
+    page_layout("Judge Builder", current_path="/judge")
 
     if not _get("codebook") and not _get("failure_patterns"):
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):

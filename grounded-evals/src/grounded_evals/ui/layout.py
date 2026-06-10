@@ -321,6 +321,7 @@ def _get_progress_state() -> list[dict]:
     steps = [
         {"label": "Coach", "path": "/coach", "done": bool(session_data.get("agent_spec", {}).get("name"))},
         {"label": "Scenarios", "path": "/demos", "done": len(golden) > 0},
+        {"label": "Eval", "path": "/eval", "done": bool(s.get("eval_results"))},
         {"label": "Annotate", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
         {"label": "Patterns", "path": "/analysis", "done": len(patterns) > 0},
         {"label": "Judge", "path": "/judge", "done": bool(judge)},
@@ -328,7 +329,7 @@ def _get_progress_state() -> list[dict]:
     ]
     # Mark Annotate done if all queries annotated
     if golden and len(annotations) >= len(golden):
-        steps[2]["done"] = True
+        steps[3]["done"] = True
     return steps
 
 
@@ -508,7 +509,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ).tooltip("Logout")
 
     # Progress rail on workflow pages (not Home)
-    workflow_paths = {"/coach", "/demos", "/coding", "/analysis", "/judge", "/report"}
+    workflow_paths = {"/coach", "/demos", "/eval", "/coding", "/analysis", "/judge", "/report"}
     if current_path in workflow_paths:
         steps = _get_progress_state()
         with ui.element("div").classes("progress-rail"):
