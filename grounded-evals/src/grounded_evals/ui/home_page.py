@@ -809,7 +809,11 @@ def home_page():
 
     from grounded_evals.ui.demos_page import _build_domain_registry
     domain_cards = _build_domain_registry()
-    domain_cards = sorted(domain_cards, key=lambda domain: domain.get("id") != "adtech")
+    domain_priority = {"game_producer": 0, "game_operator": 1, "adtech": 2}
+    domain_cards = sorted(
+        domain_cards,
+        key=lambda domain: domain_priority.get(domain.get("id", ""), 99),
+    )
 
     with ui.column().classes("w-full items-center").style(
         "max-width: 820px; margin: 0 auto; padding: 1.25rem 1.5rem 2.5rem"
@@ -1059,4 +1063,3 @@ def home_page():
                 )
 
         # ── (Methodology and closing removed — see /demos for details) ──
-

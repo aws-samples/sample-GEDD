@@ -178,8 +178,15 @@ def test_domain_registry_includes_all_launch_demos():
     domains = _build_domain_registry()
     names = {d["name"] for d in domains}
 
-    assert len(domains) == 18
-    assert {"RxBot", "TaxBot", "MigrateBot", "EnergyBot"}.issubset(names)
+    assert len(domains) == 20
+    assert {
+        "AAA Game Producer",
+        "AAA Game Operator",
+        "RxBot",
+        "TaxBot",
+        "MigrateBot",
+        "EnergyBot",
+    }.issubset(names)
 
 
 def test_home_expert_discoveries_are_domain_specific():
