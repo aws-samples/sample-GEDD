@@ -1,72 +1,336 @@
 """Domain Specialists Gallery — /demos page."""
 
+import html as _html
+
 from nicegui import app, ui
 
 from grounded_evals.ui.layout import BRAND_CSS, page_layout
 
 DEMOS_CSS = """
-.ds-tab-bar {
-  display: flex; gap: 4px; padding: 4px; overflow-x: auto;
-  background: var(--bg-surface-2); border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle); margin-bottom: 1.25rem;
-  scrollbar-width: none;
+.ds-page-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
 }
-.ds-tab-bar::-webkit-scrollbar { display: none; }
-.ds-tab-btn {
-  flex-shrink: 0; padding: 8px 14px; border-radius: var(--radius-lg);
-  font-size: 0.78rem; font-weight: 500; cursor: pointer;
-  transition: all 150ms ease; border: none;
-  color: var(--text-tertiary); background: transparent; white-space: nowrap;
+.ds-page-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
 }
-.ds-tab-btn:hover { color: var(--text-secondary); background: var(--bg-hover); }
-.ds-tab-btn.active {
-  background: var(--accent); color: white;
-  box-shadow: 0 2px 10px rgba(94,106,210,0.3);
+.ds-page-subtitle {
+  max-width: 720px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.55;
 }
-.ds-domain-header {
-  padding: 18px 20px; border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle); background: var(--bg-surface-2);
-  margin-bottom: 14px;
+.ds-page-count {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
-.ds-stat {
-  text-align: center; padding: 12px 16px;
-  background: var(--bg-surface-1); border-radius: var(--radius-xl);
-  border: 1px solid var(--border-subtle); flex: 1;
+.ds-shell {
+  display: grid;
+  grid-template-columns: 290px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
-.ds-stat-val { font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.ds-stat-lbl { font-size: 0.65rem; color: var(--text-tertiary); text-transform: uppercase;
-  letter-spacing: 0.04em; margin-top: 2px; }
+.ds-picker-panel {
+  position: sticky;
+  top: 72px;
+  max-height: calc(100vh - 96px);
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+}
+.ds-picker-title {
+  padding: 6px 8px 5px;
+  color: var(--text-tertiary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+.ds-scenario-btn {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+.ds-scenario-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+.ds-scenario-btn.active {
+  background: var(--accent-tint);
+  border-color: rgba(130,143,255,0.45);
+  color: var(--text-primary);
+}
+.ds-picker-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-1);
+  color: var(--accent-bright);
+  font-size: 1.05rem;
+}
+.ds-scenario-btn.active .ds-picker-icon {
+  background: rgba(130,143,255,0.16);
+}
+.ds-picker-name {
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-picker-domain {
+  font-size: 0.68rem;
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ds-risk-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+}
+.ds-risk-critical { background: var(--red); }
+.ds-risk-high { background: var(--yellow); }
+.ds-risk-medium { background: var(--blue); }
+.ds-detail-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+}
+.ds-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.ds-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+.ds-detail-icon {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-lg);
+  background: var(--accent-tint);
+  border: 1px solid rgba(130,143,255,0.35);
+  color: var(--accent-bright);
+  flex-shrink: 0;
+}
+.ds-detail-icon .material-icons { font-size: 1.4rem; }
+.ds-detail-title {
+  font-size: 1.15rem;
+  font-weight: 750;
+  color: var(--text-primary);
+}
+.ds-detail-meta {
+  font-size: 0.76rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.ds-detail-copy {
+  margin-top: 8px;
+  max-width: 760px;
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+.ds-primary-load {
+  background: var(--accent) !important;
+  color: white !important;
+  border-radius: var(--radius-lg) !important;
+  font-weight: 650 !important;
+  min-width: 152px;
+}
+.ds-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+.ds-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 99px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-1);
+  color: var(--text-secondary);
+  font-size: 0.69rem;
+  font-weight: 600;
+}
+.ds-pill-critical { color: var(--red); background: var(--red-tint); border-color: rgba(235,87,87,0.22); }
+.ds-pill-high { color: var(--yellow); background: var(--yellow-tint); border-color: rgba(240,191,0,0.22); }
+.ds-pill-medium { color: var(--blue); background: rgba(78,167,252,0.1); border-color: rgba(78,167,252,0.22); }
+.ds-feature-badge { color: var(--green-bright); background: var(--green-tint); border-color: rgba(74,222,128,0.24); }
+.ds-release-gate {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ds-gate-cell {
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+}
 .ds-section-title {
-  font-size: 0.68rem; font-weight: 600; color: var(--text-tertiary);
-  text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px;
-}
-.ds-code-card {
-  padding: 10px 12px; border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle); background: var(--bg-surface-1);
-  margin-bottom: 6px; transition: border-color 150ms;
-}
-.ds-code-card:hover { border-color: var(--border-strong); }
-.ds-query-card {
-  padding: 10px 12px; border-radius: var(--radius-lg);
-  border: 1px solid var(--border-subtle); background: var(--bg-surface-1);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0;
   margin-bottom: 8px;
 }
-.ds-judge-block {
-  background: var(--bg-surface-1); border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg); padding: 14px;
-  font-family: 'SF Mono', Menlo, monospace; font-size: 0.7rem;
-  color: var(--text-secondary); line-height: 1.7; white-space: pre-wrap;
-  max-height: 260px; overflow-y: auto;
+.ds-gate-text {
+  font-size: 0.84rem;
+  color: var(--text-primary);
+  font-weight: 650;
+  line-height: 1.45;
 }
-.ds-reg-badge {
-  display: inline-block; padding: 2px 9px; border-radius: 99px;
-  font-size: 0.65rem; font-weight: 600; letter-spacing: 0.04em;
-  background: var(--yellow-tint); color: var(--yellow);
-  border: 1px solid rgba(240,191,0,0.2); margin: 2px;
+.ds-gate-copy {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
 }
-.ds-load-btn {
-  background: var(--accent) !important; color: white !important;
-  border-radius: var(--radius-lg) !important; font-weight: 600 !important;
+.ds-evidence-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+  gap: 14px;
+  align-items: start;
+}
+.ds-section {
+  min-width: 0;
+}
+.ds-query-item,
+.ds-mode-item {
+  padding: 11px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  margin-bottom: 8px;
+}
+.ds-query-top {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+.ds-verdict-icon {
+  font-size: 1rem;
+  margin-top: 1px;
+}
+.ds-verdict-correct { color: var(--green-bright); }
+.ds-verdict-incorrect { color: var(--red); }
+.ds-verdict-partial { color: var(--yellow); }
+.ds-query-text {
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  font-weight: 600;
+  line-height: 1.45;
+}
+.ds-query-note {
+  margin-top: 5px;
+  font-size: 0.73rem;
+  color: var(--text-tertiary);
+  line-height: 1.45;
+}
+.ds-mode-name {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+.ds-mode-severity {
+  flex-shrink: 0;
+  color: var(--accent-bright);
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.ds-mode-def {
+  margin-top: 5px;
+  color: var(--text-tertiary);
+  font-size: 0.73rem;
+  line-height: 1.45;
+}
+.ds-judge-preview {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid rgba(130,143,255,0.22);
+  border-radius: var(--radius-lg);
+  background: rgba(94,106,210,0.08);
+}
+.ds-judge-text {
+  color: var(--text-secondary);
+  font-family: 'SF Mono', Menlo, monospace;
+  font-size: 0.71rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+@media (max-width: 980px) {
+  .ds-page-heading,
+  .ds-detail-header {
+    flex-direction: column;
+  }
+  .ds-shell {
+    grid-template-columns: 1fr;
+  }
+  .ds-picker-panel {
+    position: relative;
+    top: auto;
+    max-height: 320px;
+  }
+  .ds-release-gate,
+  .ds-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+  .ds-primary-load {
+    width: 100%;
+  }
 }
 """
 
@@ -560,162 +824,103 @@ def _build_domain_registry():
 # ── Domain tab content renderer ───────────────────────────────────────────────
 
 def _render_domain(domain: dict):
-    risk_colors = {"critical": "var(--red)", "high": "var(--yellow)", "medium": "var(--blue)"}
-    risk_color = risk_colors.get(domain["risk_level"], "var(--text-tertiary)")
-
-    # ── Header ──────────────────────────────────────────────────────────────
-    with ui.element("div").classes("ds-domain-header"):
-        with ui.row().classes("items-start justify-between w-full gap-3"):
-            with ui.row().classes("items-center gap-3 flex-1"):
-                ui.html(
-                    f'<div style="width:42px;height:42px;border-radius:10px;'
-                    f'background:var(--accent-tint);border:1px solid var(--accent);'
-                    f'display:flex;align-items:center;justify-content:center;flex-shrink:0">'
-                    f'<span class="material-icons" style="color:var(--accent-bright);font-size:1.3rem">'
-                    f'{domain["icon"]}</span></div>'
-                )
-                with ui.column().style("gap: 3px"):
-                    ui.html(
-                        f'<div style="font-size:1.05rem;font-weight:700;color:var(--text-primary)">'
-                        f'{domain["name"]}</div>'
-                        f'<div style="font-size:0.75rem;color:var(--text-tertiary)">'
-                        f'{domain["operator"]} · {domain["domain"]}</div>'
-                    )
-            ui.html(
-                f'<span style="padding:3px 10px;border-radius:99px;font-size:0.68rem;font-weight:700;'
-                f'background:{risk_color}20;color:{risk_color};border:1px solid {risk_color}40;'
-                f'white-space:nowrap">{domain["risk_level"].upper()} RISK</span>'
-            )
-
-        ui.label(domain["tagline"]).style(
-            "font-size: 0.82rem; color: var(--text-secondary); margin-top: 8px"
-        )
-
-        with ui.row().classes("flex-wrap gap-1").style("margin-top: 8px"):
-            for reg in domain["regulations"]:
-                ui.html(f'<span class="ds-reg-badge">{reg}</span>')
-
-    # ── Stats row ────────────────────────────────────────────────────────────
     pass_rates = domain.get("pass_rates", [30, 50, 65])
-    trend = "↑" if pass_rates[-1] > pass_rates[0] else "↓"
-    trend_color = "var(--green-bright)" if pass_rates[-1] > pass_rates[0] else "var(--red)"
     fail_rate = 100 - pass_rates[-1]
-    n_annotations = len(domain.get("codebook", []))
+    risk = domain["risk_level"]
+    risk_class = f"ds-pill-{risk}"
+    codebook = domain.get("codebook", [])
+    judge_prompt = domain.get("judge_prompt", "").strip()
+    judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
+    is_featured = domain.get("id") in {"game_producer", "game_operator"}
 
-    with ui.row().classes("gap-2 w-full").style("margin-bottom: 14px"):
-        with ui.element("div").classes("ds-stat"):
-            ui.html(f'<div class="ds-stat-val" style="color:var(--accent-bright)">{domain["n_queries"]}</div>')
-            ui.html('<div class="ds-stat-lbl">Golden Queries</div>')
-        with ui.element("div").classes("ds-stat"):
-            ui.html(f'<div class="ds-stat-val" style="color:var(--red)">{fail_rate}%</div>')
-            ui.html('<div class="ds-stat-lbl">Fail Rate</div>')
-        with ui.element("div").classes("ds-stat"):
-            ui.html(f'<div class="ds-stat-val" style="color:{trend_color}">{pass_rates[-1]}% {trend}</div>')
-            ui.html('<div class="ds-stat-lbl">Pass Rate (latest)</div>')
-        with ui.element("div").classes("ds-stat"):
-            ui.html(f'<div class="ds-stat-val" style="color:var(--yellow)">{domain["n_codes"]}</div>')
-            ui.html('<div class="ds-stat-lbl">Failure Codes</div>')
+    def make_loader(d=domain):
+        def _load():
+            d["loader"](app.storage.user)
+            ui.notify(f'{d["name"]} loaded.', type="positive")
+            ui.navigate.to("/coding")
+        return _load
 
-    # Two-column layout
-    with ui.row().classes("w-full gap-3 items-start"):
-        # ── Left: failure codes + sample queries ─────────────────────────
-        with ui.column().classes("flex-1 gap-0"):
-            ui.html('<div class="ds-section-title">Failure Modes Discovered</div>')
-            codebook = domain.get("codebook", [])
-            for code in codebook[:6]:
-                name = code.get("name") or code.get("label", "")
-                defn = code.get("definition", "")[:100]
-                sev = code.get("severity_label", code.get("type", ""))
-                sev_color = {
-                    "catastrophic": "var(--red)", "critical": "var(--red)",
-                    "functional": "var(--yellow)", "cosmetic": "var(--green-bright)",
-                    "descriptive": "var(--accent-bright)",
-                }.get(sev, "var(--accent-bright)")
-                with ui.element("div").classes("ds-code-card"):
-                    with ui.row().classes("items-center gap-2").style("margin-bottom: 3px"):
-                        ui.html(
-                            f'<span style="font-size:0.8rem;font-weight:600;color:var(--text-primary);flex:1">{name}</span>'
-                            f'<span style="font-size:0.62rem;font-weight:700;color:{sev_color};text-transform:uppercase'
-                            f';padding:1px 7px;border-radius:99px;background:{sev_color}18">{sev}</span>'
-                        )
-                    ui.label(defn + ("…" if len(code.get("definition", "")) > 100 else "")).style(
-                        "font-size: 0.72rem; color: var(--text-tertiary); line-height: 1.4"
+    with ui.element("section").classes("ds-detail-panel"):
+        with ui.element("div").classes("ds-detail-header"):
+            with ui.element("div").classes("ds-title-row"):
+                ui.html(
+                    f'<div class="ds-detail-icon"><span class="material-icons">'
+                    f'{_html.escape(domain["icon"])}</span></div>'
+                )
+                with ui.element("div"):
+                    ui.html(f'<div class="ds-detail-title">{_html.escape(domain["name"])}</div>')
+                    ui.html(
+                        f'<div class="ds-detail-meta">{_html.escape(domain["operator"])} / '
+                        f'{_html.escape(domain["domain"])}</div>'
                     )
-
-            ui.html('<div class="ds-section-title" style="margin-top:14px">Sample Queries & Verdicts</div>')
-            for sq in domain.get("sample_queries", []):
-                v = sq["verdict"]
-                v_color = {"correct": "var(--green-bright)", "incorrect": "var(--red)", "partial": "var(--yellow)"}.get(v, "var(--text-muted)")
-                v_icon = {"correct": "check_circle", "incorrect": "cancel", "partial": "warning"}.get(v, "help")
-                with ui.element("div").classes("ds-query-card"):
-                    with ui.row().classes("items-start gap-2"):
-                        ui.html(f'<span class="material-icons" style="color:{v_color};font-size:1rem;margin-top:1px;flex-shrink:0">{v_icon}</span>')
-                        with ui.column().style("gap: 2px; flex: 1"):
-                            ui.label(sq["q"]).style("font-size: 0.8rem; color: var(--text-primary); font-weight: 500")
-                            ui.label(sq.get("note", "")).style("font-size: 0.72rem; color: var(--text-tertiary); line-height: 1.4")
-
-        # ── Right: paradigm + judge + CTA ────────────────────────────────
-        with ui.column().style("width: 320px; flex-shrink: 0; gap: 0"):
-            # Paradigm summary
-            ui.html('<div class="ds-section-title">Root Cause Pattern</div>')
-            with ui.element("div").style(
-                "padding: 12px 14px; border-radius: var(--radius-xl); "
-                "background: var(--accent-tint); border: 1px solid var(--accent); margin-bottom: 10px"
-            ):
-                ui.html('<div style="font-size:0.6rem;font-weight:700;color:var(--accent-bright);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">PHENOMENON</div>')
-                ui.label(domain["paradigm_phenomenon"]).style(
-                    "font-size: 0.88rem; font-weight: 600; color: var(--text-primary)"
-                )
-            with ui.element("div").style(
-                "padding: 10px 12px; border-radius: var(--radius-lg); "
-                "background: var(--red-tint); border: 1px solid rgba(235,87,87,0.2); margin-bottom: 14px"
-            ):
-                ui.html('<div style="font-size:0.6rem;font-weight:700;color:var(--red);letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px">USER IMPACT</div>')
-                ui.label(domain["paradigm_consequence"]).style(
-                    "font-size: 0.78rem; color: var(--text-secondary); line-height: 1.5"
-                )
-
-            # Pass rate sparkline
-            ui.html('<div class="ds-section-title">Eval Progress Over Time</div>')
-            max_r = max(pass_rates)
-            bars = ''.join(
-                f'<div style="flex:1;height:{max(8, int(r / max_r * 44))}px;border-radius:3px 3px 0 0;'
-                f'background:var(--accent);opacity:{0.4 + i * 0.3:.1f}"></div>'
-                for i, r in enumerate(pass_rates)
-            )
-            labels = ''.join(
-                f'<span style="font-size:0.62rem;color:var(--text-muted);flex:1;text-align:center">'
-                f'Run {i+1}: {r}%</span>'
-                for i, r in enumerate(pass_rates)
-            )
-            ui.html(
-                f'<div style="display:flex;align-items:flex-end;gap:6px;height:48px;'
-                f'margin-bottom:4px;padding:0 4px">{bars}</div>'
-                f'<div style="display:flex;justify-content:space-between">{labels}</div>'
-            )
-
-            # Judge prompt (collapsible)
-            ui.html('<div class="ds-section-title" style="margin-top:14px">Judge Prompt Preview</div>')
-            judge_snippet = domain.get("judge_prompt", "")[:600]
-            with ui.expansion("View judge prompt", icon="gavel").style(
-                "border:1px solid var(--border-subtle);border-radius:var(--radius-xl);"
-                "background:var(--bg-surface-1);margin-bottom:14px"
-            ):
-                ui.html(f'<div class="ds-judge-block">{judge_snippet}{"…" if len(domain.get("judge_prompt",""))>600 else ""}</div>')
-
-            # CTA
-            def make_loader(d=domain):
-                def _load():
-                    d["loader"](app.storage.user)
-                    ui.notify(f'{d["name"]} loaded! Explore the workflow.', type="positive")
-                    ui.navigate.to("/coding")
-                return _load
+                    ui.label(domain["tagline"]).classes("ds-detail-copy")
 
             ui.button(
-                f'Load {domain["name"]} Scenario →',
-                icon="rocket_launch",
+                "Load scenario",
+                icon="input",
                 on_click=make_loader(),
-            ).classes("ds-load-btn w-full").props("size=md")
+            ).classes("ds-primary-load").props("unelevated no-caps")
+
+        with ui.element("div").classes("ds-chip-row"):
+            if is_featured:
+                ui.html('<span class="ds-pill ds-feature-badge">Release quality gate</span>')
+            ui.html(
+                f'<span class="ds-pill {risk_class}">{_html.escape(risk.upper())} risk</span>'
+            )
+            ui.html(f'<span class="ds-pill">{domain["n_queries"]} golden queries</span>')
+            ui.html(f'<span class="ds-pill">{fail_rate}% current fail rate</span>')
+            ui.html(f'<span class="ds-pill">{domain["n_codes"]} failure modes</span>')
+            for regulation in domain.get("regulations", [])[:3]:
+                ui.html(f'<span class="ds-pill">{_html.escape(regulation)}</span>')
+
+        with ui.element("div").classes("ds-release-gate"):
+            with ui.element("div").classes("ds-gate-cell"):
+                ui.html('<div class="ds-section-title">Failure pattern</div>')
+                ui.label(domain["paradigm_phenomenon"]).classes("ds-gate-text")
+            with ui.element("div").classes("ds-gate-cell"):
+                ui.html('<div class="ds-section-title">Release gate protects</div>')
+                ui.label(domain["paradigm_consequence"]).classes("ds-gate-copy")
+
+        with ui.element("div").classes("ds-evidence-grid"):
+            with ui.element("div").classes("ds-section"):
+                ui.html('<div class="ds-section-title">Golden queries with verdicts</div>')
+                for sq in domain.get("sample_queries", [])[:4]:
+                    verdict = sq["verdict"]
+                    verdict_icon = {
+                        "correct": "check_circle",
+                        "incorrect": "cancel",
+                        "partial": "warning",
+                    }.get(verdict, "help")
+                    with ui.element("div").classes("ds-query-item"):
+                        with ui.element("div").classes("ds-query-top"):
+                            ui.html(
+                                f'<span class="material-icons ds-verdict-icon ds-verdict-{_html.escape(verdict)}">'
+                                f'{verdict_icon}</span>'
+                            )
+                            with ui.element("div"):
+                                ui.label(sq["q"]).classes("ds-query-text")
+                                ui.label(sq.get("note", "")).classes("ds-query-note")
+
+            with ui.element("div").classes("ds-section"):
+                ui.html('<div class="ds-section-title">Failure modes found</div>')
+                for code in codebook[:5]:
+                    name = code.get("name") or code.get("label", "")
+                    definition = code.get("definition", "")
+                    severity = code.get("severity_label", code.get("type", ""))
+                    clipped = definition[:126] + ("..." if len(definition) > 126 else "")
+                    with ui.element("div").classes("ds-mode-item"):
+                        ui.html(
+                            '<div class="ds-mode-name">'
+                            f'<span>{_html.escape(name)}</span>'
+                            f'<span class="ds-mode-severity">{_html.escape(severity)}</span>'
+                            '</div>'
+                        )
+                        ui.label(clipped).classes("ds-mode-def")
+
+                if judge_snippet:
+                    with ui.element("div").classes("ds-judge-preview"):
+                        ui.html('<div class="ds-section-title">Judge prompt seed</div>')
+                        ui.label(judge_snippet).classes("ds-judge-text")
 
 
 # ── Page ──────────────────────────────────────────────────────────────────────
@@ -727,35 +932,62 @@ def demos_page():
 
     domains = _build_domain_registry()
     active_tab = {"idx": 0}
+    featured_ids = {"game_producer", "game_operator"}
 
-    with ui.column().classes("w-full max-w-5xl mx-auto").style("padding: 1.5rem; gap: 0"):
+    with ui.column().classes("w-full max-w-6xl mx-auto").style("padding: 1.5rem; gap: 0"):
 
         # Page header
-        with ui.row().classes("items-center gap-3").style("margin-bottom: 1.25rem"):
-            with ui.column().style("gap: 3px"):
+        with ui.element("div").classes("ds-page-heading"):
+            with ui.element("div"):
+                ui.html('<div class="ds-page-title">Sample Scenarios</div>')
                 ui.html(
-                    '<div style="font-size:1.1rem;font-weight:700;color:var(--text-primary)">Scenario Library</div>'
-                    '<div style="font-size:0.82rem;color:var(--text-secondary)">'
-                    'Start here as an AI PM: load a realistic high-stakes agent scenario, inspect the '
-                    'user impact, and see how expert labels become release gates and report evidence.'
+                    '<div class="ds-page-subtitle">'
+                    'Seeded AI-product eval cases with golden queries, PM annotations, failure modes, '
+                    'and judge-prompt seeds.'
                     '</div>'
                 )
+            ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')
 
-        # Tab bar
-        tab_bar = ui.element("div").classes("ds-tab-bar")
-        content_area = ui.column().classes("w-full")
+        with ui.element("div").classes("ds-shell"):
+            picker_area = ui.element("aside").classes("ds-picker-panel")
+            content_area = ui.column().classes("w-full")
+
+        def render_picker_button(i: int, domain: dict):
+            cls = "ds-scenario-btn active" if i == active_tab["idx"] else "ds-scenario-btn"
+            button = ui.element("button").classes(cls).props("type=button")
+            button.on("click", lambda _, si=i: render_domain_tab(si))
+            with button:
+                ui.html(
+                    f'<span class="material-icons ds-picker-icon">'
+                    f'{_html.escape(domain["icon"])}</span>'
+                )
+                with ui.element("div"):
+                    ui.html(
+                        f'<div class="ds-picker-name">{_html.escape(domain["name"])}</div>'
+                        f'<div class="ds-picker-domain">{_html.escape(domain["domain"])}</div>'
+                    )
+                ui.html(
+                    f'<span class="ds-risk-dot ds-risk-{_html.escape(domain["risk_level"])}"></span>'
+                )
 
         def render_domain_tab(idx: int):
             active_tab["idx"] = idx
-            tab_bar.clear()
-            with tab_bar:
-                for i, d in enumerate(domains):
-                    cls = "ds-tab-btn active" if i == idx else "ds-tab-btn"
-                    ui.html(
-                        f'<button class="{cls}">'
-                        f'<span class="material-icons" style="font-size:0.9rem;vertical-align:middle;margin-right:5px">'
-                        f'{d["icon"]}</span>{d["name"]}</button>'
-                    ).on("click", lambda _, si=i: render_domain_tab(si))
+            picker_area.clear()
+            with picker_area:
+                release_gate_indexes = [
+                    i for i, d in enumerate(domains) if d.get("id") in featured_ids
+                ]
+                other_indexes = [
+                    i for i, d in enumerate(domains) if d.get("id") not in featured_ids
+                ]
+                if release_gate_indexes:
+                    ui.html('<div class="ds-picker-title">Release gates</div>')
+                    for i in release_gate_indexes:
+                        render_picker_button(i, domains[i])
+                ui.html('<div class="ds-picker-title">Domain library</div>')
+                for i in other_indexes:
+                    render_picker_button(i, domains[i])
+
             content_area.clear()
             with content_area:
                 _render_domain(domains[idx])
