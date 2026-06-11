@@ -348,14 +348,20 @@ def main_page() -> None:
     session = _user_session()
     messages = s["messages"]
 
-    # Progress: 4 steps
+    # Progress: the PM flow ends with a judge prompt grounded in annotations.
     with ui.column().classes("w-full items-center").style("max-width: 720px; margin: 0.75rem auto 0"):
         progress_container = ui.element("div").classes("w-full")
 
         def refresh_progress():
             progress_container.clear()
-            step = min(_user_state()["current_step"], 4)
-            steps = ["Define Agent", "System Prompt", "Golden Queries", "Error Analysis"]
+            step = min(_user_state()["current_step"], 5)
+            steps = [
+                "Define Agent",
+                "System Prompt",
+                "Golden Queries",
+                "Error Analysis",
+                "Judge Prompt",
+            ]
             with progress_container:
                 ui.html(
                     '<div class="progress-track">'
@@ -388,12 +394,13 @@ def main_page() -> None:
                     if step == 1:
                         welcome = (
                             '<div class="msg-ai"><strong>Hey! 👋 I\'m your eval coach.</strong><br><br>'
-                            'I\'ll guide you through 4 steps:<br>'
+                            'I\'ll guide you through the core PM eval flow:<br>'
                             '1. <strong>Define your agent</strong> — name, capabilities, users<br>'
                             '2. <strong>Craft a system prompt</strong><br>'
                             '3. <strong>Generate golden test queries</strong><br>'
-                            '4. <strong>Review responses</strong> and tag failure patterns<br><br>'
-                            'Then we\'ll move into PM annotations to identify error modes. '
+                            '4. <strong>Analyze errors with PM annotations</strong><br>'
+                            '5. <strong>Create the LLM-as-a-judge prompt</strong><br><br>'
+                            'The judge prompt comes directly from the failure modes you identify. '
                             '<strong>What AI agent are you building?</strong></div>'
                         )
                     elif step == 2:
@@ -402,12 +409,23 @@ def main_page() -> None:
                             f'<strong>{session.agent_spec.name}</strong> is defined.<br><br>'
                             f'Let\'s work on the <strong>system prompt</strong>. What should your agent\'s personality and rules be?</div>'
                         )
-                    else:
+                    elif step == 3:
                         welcome = (
                             f'<div class="msg-ai"><strong>Welcome back!</strong> '
                             f'Agent and system prompt are set for <strong>{session.agent_spec.name}</strong>.<br><br>'
-                            f'Ready to generate <strong>golden test queries</strong> using Open Coding. '
+                            f'Ready to generate <strong>golden test queries</strong> across normal, edge, adversarial, and recovery cases. '
                             f'Say "generate queries" to start!</div>'
+                        )
+                    elif step == 4:
+                        welcome = (
+                            f'<div class="msg-ai"><strong>Golden queries are ready.</strong><br><br>'
+                            f'Next, review model responses with PM annotations: name the failure modes, set severity, '
+                            f'and write the notes that the judge prompt should enforce.</div>'
+                        )
+                    else:
+                        welcome = (
+                            f'<div class="msg-ai"><strong>Error modes are ready for judging.</strong><br><br>'
+                            f'Open Error Analysis to update the simple LLM-as-a-judge prompt directly from the latest PM annotations.</div>'
                         )
                     ui.html(welcome)
 
@@ -468,6 +486,9 @@ def main_page() -> None:
                     "failure_patterns": cur_s.get("failure_patterns", []),
                     "eval_results": cur_s.get("eval_results", []),
                     "eval_selected_models": cur_s.get("eval_selected_models", []),
+                    "_simple_judge_prompt": cur_s.get("_simple_judge_prompt", ""),
+                    "_generated_judge_prompt": cur_s.get("_generated_judge_prompt", ""),
+                    "_jb_generated_at": cur_s.get("_jb_generated_at", ""),
                 }
                 ui.download(json.dumps(payload, indent=2).encode(), "gedd_session.json")
 
@@ -479,7 +500,9 @@ def main_page() -> None:
                         s = _user_state()
                         for key in ["session_data", "current_step", "annotations", "prompt_variants",
                                     "codebook", "coding_annotations", "memos", "paradigm_model",
-                                    "failure_patterns", "eval_results", "eval_selected_models"]:
+                                    "failure_patterns", "eval_results", "eval_selected_models",
+                                    "_simple_judge_prompt", "_generated_judge_prompt",
+                                    "_jb_generated_at"]:
                             if key in data:
                                 s[key] = data[key]
                         ui.notify("Session restored ✓", type="positive")
@@ -627,8 +650,11 @@ def main_page() -> None:
                 "margin-top: 12px; padding: 12px 16px; border-radius: 10px; "
                 "background: var(--green-tint); border: 1px solid rgba(39,166,68,0.2); text-align: center"
             ):
-                ui.label(f"✓ {len(session.golden_prompts)} golden queries generated. Ready for PM annotation →").style("font-size: 0.82rem; color: var(--green-bright); font-weight: 500")
-                ui.button("Open PM Annotations", icon="arrow_forward", on_click=lambda: ui.navigate.to("/coding")).props("size=sm").style(
+                ui.label(
+                    f"✓ {len(session.golden_prompts)} golden queries generated. "
+                    "Ready for error analysis and judge prompt creation →"
+                ).style("font-size: 0.82rem; color: var(--green-bright); font-weight: 500")
+                ui.button("Start Error Analysis", icon="arrow_forward", on_click=lambda: ui.navigate.to("/coding")).props("size=sm").style(
                     "margin-top: 6px; background: var(--accent); color: white; border-radius: 6px"
                 )
 

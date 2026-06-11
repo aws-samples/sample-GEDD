@@ -324,12 +324,12 @@ HOME_CSS = """
 }
 .core-flow-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
 .core-flow-step {
-  min-height: 205px;
+  min-height: 190px;
   padding: 14px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
@@ -1150,9 +1150,14 @@ def home_page():
 
     core_steps = [
         (
-            "Coach the product",
-            "Capture the AI product, user, task, source of truth, and release risk in PM language.",
-            "Output: product brief + evaluation intent",
+            "Define the agent",
+            "Capture the customer-facing AI product, target user, job, source of truth, and release risk.",
+            "Output: product brief",
+        ),
+        (
+            "Shape the system prompt",
+            "Make the product rules, boundaries, escalation policy, and evidence requirements explicit.",
+            "Output: system prompt",
         ),
         (
             "Generate golden queries",
@@ -1160,14 +1165,14 @@ def home_page():
             "Output: golden query set",
         ),
         (
-            "Error analysis + PM annotations",
-            "Review model responses, mark correctness, add severity, and write memos about user impact.",
-            "Output: annotated failures + evidence",
+            "Analyze errors",
+            "Review responses, add PM annotations, set severity, and name repeated failure modes.",
+            "Output: annotated failures",
         ),
         (
-            "Create the judge rubric",
-            "Turn repeated error modes into hard-fail rules and a simple LLM-as-a-judge prompt.",
-            "Output: judge rubric + judge prompt",
+            "Create judge prompt",
+            "Turn the PM's error modes and memos into hard-fail rules for an LLM-as-a-judge.",
+            "Output: judge prompt",
         ),
     ]
 

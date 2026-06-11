@@ -7,9 +7,17 @@ from nicegui import app, ui
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
     {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
-    {"path": "/judge", "label": "Judge", "icon": "gavel", "core": True},
-    {"path": "/report", "label": "Report", "icon": "assessment", "core": True},
-    {"path": "/demos", "label": "Sample Scenarios", "icon": "collections_bookmark", "featured": True},
+    {
+        "path": "/demos",
+        "label": "Sample Scenarios",
+        "icon": "collections_bookmark",
+        "featured": True,
+        "children": [
+            {"path": "/demos", "label": "Sample Scenarios", "icon": "collections_bookmark"},
+            {"path": "/judge", "label": "Judge", "icon": "gavel"},
+            {"path": "/report", "label": "Report", "icon": "assessment"},
+        ],
+    },
 ]
 
 BRAND_CSS = """
@@ -201,6 +209,22 @@ body {
   background: rgba(94,106,210,0.2) !important;
   border-color: var(--accent) !important;
 }
+.scenario-submenu {
+  background: var(--bg-surface-2) !important;
+  border: 1px solid var(--border-default) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
+  min-width: 190px !important;
+}
+.scenario-submenu .q-item {
+  color: var(--text-secondary) !important;
+  min-height: 34px !important;
+  font-size: 0.78rem !important;
+}
+.scenario-submenu .q-item:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-hover) !important;
+}
 .core-nav-btn {
   color: var(--text-secondary) !important;
 }
@@ -354,17 +378,31 @@ def page_layout(title: str = "", current_path: str = ""):
 
         with ui.row().classes("app-nav-row items-center gap-none"):
             for item in NAV_ITEMS:
-                is_active = current_path == item["path"]
-                button = ui.button(
-                    item["label"], icon=item["icon"],
-                    on_click=lambda p=item["path"]: ui.navigate.to(p),
-                ).props("flat no-caps size=sm")
+                child_paths = {child["path"] for child in item.get("children", [])}
+                is_active = current_path == item["path"] or current_path in child_paths
+                has_children = bool(item.get("children"))
+                if has_children:
+                    button = ui.button(item["label"], icon=item["icon"]).props(
+                        "flat no-caps size=sm"
+                    )
+                    with button:
+                        with ui.menu().classes("scenario-submenu").props("auto-close"):
+                            for child in item["children"]:
+                                ui.menu_item(
+                                    child["label"],
+                                    on_click=lambda p=child["path"]: ui.navigate.to(p),
+                                )
+                else:
+                    button = ui.button(
+                        item["label"], icon=item["icon"],
+                        on_click=lambda p=item["path"]: ui.navigate.to(p),
+                    ).props("flat no-caps size=sm")
                 if is_active:
                     button.classes("nav-active")
                 elif item.get("primary"):
                     button.classes("coach-nav-btn").tooltip("Start with Coach to define the agent, risks, and eval plan")
                 elif item.get("featured"):
-                    button.classes("scenario-nav-btn").tooltip("Open the sample scenario library")
+                    button.classes("scenario-nav-btn").tooltip("Open sample scenarios, judge, and report")
                 elif item.get("core"):
                     button.classes("core-nav-btn")
                 button.style(
@@ -400,7 +438,8 @@ def page_layout(title: str = "", current_path: str = ""):
                                 "prompt_variants", "codebook", "coding_annotations", "memos",
                                 "paradigm_model", "failure_patterns", "eval_results",
                                 "eval_selected_models", "_eval_judge_results",
-                                "_generated_judge_prompt", "custom_annotation_labels",
+                                "_simple_judge_prompt", "_generated_judge_prompt",
+                                "_jb_generated_at", "custom_annotation_labels",
                                 "shared_eval_results", "shared_annotator",
                             ]
                             for key in keys_to_clear:

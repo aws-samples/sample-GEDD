@@ -68,6 +68,49 @@ def _build_responses(storage: dict) -> list[dict]:
     return result
 
 
+def _failure_mode_count_for_judge(storage: dict) -> int:
+    """Count unique failure modes available to generate a judge prompt."""
+    names: set[str] = set()
+    for entry in storage.get('codebook', []) or []:
+        if isinstance(entry, dict):
+            name = str(entry.get('name', '')).strip()
+            if name:
+                names.add(name)
+
+    for ann in storage.get('coding_annotations', []) or []:
+        if not isinstance(ann, dict):
+            continue
+        codes = ann.get('codes', [])
+        if isinstance(codes, str):
+            codes = [codes]
+        elif not isinstance(codes, list):
+            codes = []
+        error_code = ann.get('error_code')
+        if error_code:
+            codes.append(error_code)
+        for code in codes:
+            name = str(code).strip()
+            if name:
+                names.add(name)
+    return len(names)
+
+
+def _has_judge_prompt_inputs(storage: dict) -> bool:
+    """Return whether PM annotations contain enough evidence for a prompt draft."""
+    return bool(storage.get('coding_annotations')) and _failure_mode_count_for_judge(storage) > 0
+
+
+def _store_judge_prompt(storage: dict, prompt: str) -> None:
+    """Save the simple judge prompt in the keys used by reports and exports."""
+    storage['_simple_judge_prompt'] = prompt
+    storage['_generated_judge_prompt'] = prompt
+    storage['_jb_generated_at'] = datetime.now().isoformat()
+    try:
+        storage['current_step'] = max(int(storage.get('current_step', 1) or 1), 5)
+    except (TypeError, ValueError):
+        storage['current_step'] = 5
+
+
 def _is_similar(a: str, b: str) -> bool:
     """Jaccard n-gram + word overlap similarity check."""
     def _ngrams(s: str, n: int = 3) -> set[str]:
@@ -765,9 +808,92 @@ def coding_page():
     def render_right():
         right_panel.clear()
         with right_panel:
+            # ── Judge prompt creation ─────────────────────────────────────
+            ann_list = storage.get('coding_annotations', [])
+            mode_count = _failure_mode_count_for_judge(storage)
+            with ui.element("div").style(
+                "border:1px solid rgba(94,106,210,0.28); border-radius:var(--radius-xl); "
+                "background:linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1)); "
+                "padding:12px; margin-bottom:12px"
+            ):
+                with ui.row().classes("items-start justify-between gap-2 flex-wrap"):
+                    with ui.column().style("gap:2px; flex:1; min-width:0"):
+                        ui.label("Next: LLM-as-a-judge prompt").style(
+                            "font-size:0.86rem; font-weight:700; color:var(--text-primary)"
+                        )
+                        ui.label(
+                            "Generated directly from PM annotations and failure modes. No mapping step."
+                        ).style("font-size:0.72rem; color:var(--text-tertiary); line-height:1.45")
+                    ui.badge(f"{len(ann_list)} annotations · {mode_count} modes").props("outline")
+
+                if not _has_judge_prompt_inputs(storage):
+                    ui.label(
+                        "Save at least one PM annotation with a failure code. The prompt draft will "
+                        "use your code names, severity, and memo evidence."
+                    ).style(
+                        "font-size:0.75rem; color:var(--text-muted); line-height:1.45; margin-top:10px"
+                    )
+                else:
+                    from grounded_evals.ui.judge_builder_page import _build_simple_prompt, _failure_modes
+
+                    modes = _failure_modes()
+                    existing_prompt = (
+                        storage.get('_generated_judge_prompt')
+                        or storage.get('_simple_judge_prompt')
+                        or ''
+                    )
+                    prompt_value = existing_prompt or _build_simple_prompt(modes)
+                    prompt_area = ui.textarea(value=prompt_value).props(
+                        "outlined dark rows=9"
+                    ).classes("w-full").style(
+                        "margin-top:10px; font-size:0.7rem; font-family:monospace; "
+                        "background:var(--bg-surface-2); color:var(--text-primary)"
+                    )
+
+                    def generate_judge_prompt() -> None:
+                        modes_now = _failure_modes()
+                        if not modes_now:
+                            ui.notify("Add failure codes before generating a judge prompt", type="warning")
+                            return
+                        prompt = _build_simple_prompt(modes_now)
+                        prompt_area.set_value(prompt)
+                        _store_judge_prompt(storage, prompt)
+                        ui.notify("Judge prompt created from PM annotations", type="positive")
+
+                    def save_judge_prompt() -> None:
+                        prompt = prompt_area.value or ""
+                        if not prompt.strip():
+                            ui.notify("Generate a judge prompt first", type="warning")
+                            return
+                        _store_judge_prompt(storage, prompt)
+                        ui.notify("Judge prompt saved", type="positive")
+
+                    def copy_judge_prompt() -> None:
+                        ui.run_javascript(
+                            f"navigator.clipboard.writeText({json.dumps(prompt_area.value or '')});"
+                        )
+                        ui.notify("Copied to clipboard", type="positive")
+
+                    with ui.row().classes("gap-2 flex-wrap").style("margin-top:8px"):
+                        ui.button(
+                            "Generate judge prompt",
+                            icon="auto_fix_high",
+                            on_click=generate_judge_prompt,
+                        ).props("size=xs").style(
+                            "background:var(--accent); color:white; border-radius:6px; "
+                            "font-size:0.7rem; font-weight:600"
+                        )
+                        ui.button("Save", icon="save", on_click=save_judge_prompt).props(
+                            "size=xs outline dark"
+                        ).style("color:var(--text-secondary); border-color:var(--border-default)")
+                        ui.button("Copy", icon="content_copy", on_click=copy_judge_prompt).props(
+                            "size=xs outline dark"
+                        ).style("color:var(--text-secondary); border-color:var(--border-default)")
+                        ui.button("Report", icon="assessment", on_click=lambda: ui.navigate.to("/report")).props(
+                            "size=xs flat"
+                        ).style("color:var(--accent-bright)")
 
             # ── Priority Matrix ───────────────────────────────────────────
-            ann_list = storage.get('coding_annotations', [])
             codebook_now = storage.get('codebook', [])
             if len(codebook_now) >= 2 and ann_list:
                 code_freq: Counter = Counter()

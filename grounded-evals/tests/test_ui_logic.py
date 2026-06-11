@@ -104,14 +104,21 @@ def test_is_similar_near_duplicate_codes():
 # ── _get_progress (home_page) ─────────────────────────────────────────────────
 
 
-def test_main_nav_hides_annotation_tab():
+def test_main_nav_groups_downstream_pages_under_sample_scenarios():
     from grounded_evals.ui.layout import NAV_ITEMS
 
     labels = [item["label"] for item in NAV_ITEMS]
     paths = [item["path"] for item in NAV_ITEMS]
 
     assert "Annotate" not in labels
+    assert "Judge" not in labels
+    assert "Report" not in labels
     assert "/coding" not in paths
+    assert "/judge" not in paths
+    assert "/report" not in paths
+
+    scenarios = next(item for item in NAV_ITEMS if item["label"] == "Sample Scenarios")
+    assert [child["path"] for child in scenarios["children"]] == ["/demos", "/judge", "/report"]
 
 
 def test_get_progress_empty_storage():
@@ -292,6 +299,36 @@ def test_build_responses_skips_errors():
         ]
     }
     assert _build_responses(storage) == []
+
+
+def test_judge_prompt_inputs_require_annotated_failure_code():
+    from grounded_evals.ui.coding_page import (
+        _failure_mode_count_for_judge,
+        _has_judge_prompt_inputs,
+    )
+
+    empty = {"coding_annotations": [], "codebook": [{"name": "Unused"}]}
+    assert _failure_mode_count_for_judge(empty) == 1
+    assert _has_judge_prompt_inputs(empty) is False
+
+    storage = {
+        "coding_annotations": [{"codes": ["Missed escalation"], "severity": "critical"}],
+        "codebook": [{"name": "Missed escalation"}, {"name": ""}],
+    }
+    assert _failure_mode_count_for_judge(storage) == 1
+    assert _has_judge_prompt_inputs(storage) is True
+
+
+def test_store_judge_prompt_marks_core_flow_complete():
+    from grounded_evals.ui.coding_page import _store_judge_prompt
+
+    storage = {"current_step": 4}
+    _store_judge_prompt(storage, "judge prompt")
+
+    assert storage["_simple_judge_prompt"] == "judge prompt"
+    assert storage["_generated_judge_prompt"] == "judge prompt"
+    assert storage["current_step"] == 5
+    assert storage["_jb_generated_at"]
 
 
 # ── _label_css_color and _get_all_labels (eval_tab) ──────────────────────────
