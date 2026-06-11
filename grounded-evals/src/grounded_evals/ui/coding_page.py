@@ -95,9 +95,30 @@ def _failure_mode_count_for_judge(storage: dict) -> int:
     return len(names)
 
 
+def _annotation_failure_code_names(storage: dict) -> set[str]:
+    """Return failure codes that were actually applied in PM annotations."""
+    names: set[str] = set()
+    for ann in storage.get('coding_annotations', []) or []:
+        if not isinstance(ann, dict):
+            continue
+        codes = ann.get('codes', [])
+        if isinstance(codes, str):
+            codes = [codes]
+        elif not isinstance(codes, list):
+            codes = []
+        error_code = ann.get('error_code')
+        if error_code:
+            codes.append(error_code)
+        for code in codes:
+            name = str(code).strip()
+            if name:
+                names.add(name)
+    return names
+
+
 def _has_judge_prompt_inputs(storage: dict) -> bool:
     """Return whether PM annotations contain enough evidence for a prompt draft."""
-    return bool(storage.get('coding_annotations')) and _failure_mode_count_for_judge(storage) > 0
+    return bool(storage.get('coding_annotations')) and bool(_annotation_failure_code_names(storage))
 
 
 def _store_judge_prompt(storage: dict, prompt: str) -> None:
@@ -109,6 +130,51 @@ def _store_judge_prompt(storage: dict, prompt: str) -> None:
         storage['current_step'] = max(int(storage.get('current_step', 1) or 1), 5)
     except (TypeError, ValueError):
         storage['current_step'] = 5
+
+
+def _agent_export_slug(storage: dict) -> str:
+    """Return a filesystem-friendly agent name for evidence downloads."""
+    session = storage.get('session_data') or {}
+    agent = session.get('agent_spec', {}) if isinstance(session, dict) else {}
+    name = agent.get('name') if isinstance(agent, dict) else ''
+    slug = ''.join(ch.lower() if ch.isalnum() else '_' for ch in str(name or 'gedd'))
+    slug = '_'.join(part for part in slug.split('_') if part)
+    return slug or 'gedd'
+
+
+def _annotation_export_payload(storage: dict, failure_modes: list[dict] | None = None) -> dict:
+    """Build the downloadable error-analysis evidence bundle."""
+    session = storage.get('session_data') or {}
+    agent = session.get('agent_spec', {}) if isinstance(session, dict) else {}
+    if not isinstance(agent, dict):
+        agent = {}
+    annotations = storage.get('coding_annotations', []) or []
+    codebook = storage.get('codebook', []) or []
+    modes = failure_modes if failure_modes is not None else []
+    return {
+        'artifact': 'gedd_error_analysis_annotations',
+        'exported_at': datetime.now().isoformat(),
+        'agent': {
+            'name': agent.get('name', ''),
+            'description': agent.get('description', ''),
+        },
+        'source': {
+            'created_from': 'pm_annotations',
+            'annotation_count': len(annotations),
+            'code_count': len(codebook),
+            'failure_mode_count': len(modes) or _failure_mode_count_for_judge(storage),
+        },
+        'codebook': codebook,
+        'coding_annotations': annotations,
+        'memos': storage.get('memos', []) or [],
+        'failure_modes': modes,
+        'judge_prompt': {
+            'generated_at': storage.get('_jb_generated_at', ''),
+            'text': storage.get('_generated_judge_prompt')
+            or storage.get('_simple_judge_prompt')
+            or '',
+        },
+    }
 
 
 def _is_similar(a: str, b: str) -> bool:
@@ -811,6 +877,15 @@ def coding_page():
             # ── Judge prompt creation ─────────────────────────────────────
             ann_list = storage.get('coding_annotations', [])
             mode_count = _failure_mode_count_for_judge(storage)
+
+            def download_annotations_bundle(failure_modes: list[dict] | None = None) -> None:
+                if not storage.get('coding_annotations'):
+                    ui.notify('No annotations to download yet', type='warning')
+                    return
+                payload = _annotation_export_payload(storage, failure_modes)
+                filename = f"{_agent_export_slug(storage)}_error_analysis_annotations.json"
+                ui.download(json.dumps(payload, indent=2).encode(), filename)
+
             with ui.element("div").style(
                 "border:1px solid rgba(94,106,210,0.28); border-radius:var(--radius-xl); "
                 "background:linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1)); "
@@ -833,6 +908,15 @@ def coding_page():
                     ).style(
                         "font-size:0.75rem; color:var(--text-muted); line-height:1.45; margin-top:10px"
                     )
+                    if ann_list:
+                        ui.button(
+                            "Download annotations",
+                            icon="download",
+                            on_click=download_annotations_bundle,
+                        ).props("size=xs outline dark").style(
+                            "margin-top:8px; color:var(--accent-bright); "
+                            "border-color:var(--border-default); font-size:0.7rem"
+                        )
                 else:
                     from grounded_evals.ui.judge_builder_page import _build_simple_prompt, _failure_modes
 
@@ -874,6 +958,19 @@ def coding_page():
                         )
                         ui.notify("Copied to clipboard", type="positive")
 
+                    def download_judge_prompt() -> None:
+                        prompt = prompt_area.value or ''
+                        if not prompt.strip():
+                            modes_now = _failure_modes()
+                            prompt = _build_simple_prompt(modes_now) if modes_now else ''
+                            prompt_area.set_value(prompt)
+                        if not prompt.strip():
+                            ui.notify("Generate a judge prompt first", type="warning")
+                            return
+                        _store_judge_prompt(storage, prompt)
+                        filename = f"{_agent_export_slug(storage)}_llm_judge_prompt.md"
+                        ui.download(prompt.encode(), filename)
+
                     with ui.row().classes("gap-2 flex-wrap").style("margin-top:8px"):
                         ui.button(
                             "Generate judge prompt",
@@ -889,6 +986,16 @@ def coding_page():
                         ui.button("Copy", icon="content_copy", on_click=copy_judge_prompt).props(
                             "size=xs outline dark"
                         ).style("color:var(--text-secondary); border-color:var(--border-default)")
+                        ui.button(
+                            "Download annotations",
+                            icon="download",
+                            on_click=lambda m=modes: download_annotations_bundle(m),
+                        ).props("size=xs outline dark").style(
+                            "color:var(--accent-bright); border-color:var(--border-default)"
+                        )
+                        ui.button("Download judge prompt", icon="download", on_click=download_judge_prompt).props(
+                            "size=xs outline dark"
+                        ).style("color:var(--accent-bright); border-color:var(--border-default)")
                         ui.button("Report", icon="assessment", on_click=lambda: ui.navigate.to("/report")).props(
                             "size=xs flat"
                         ).style("color:var(--accent-bright)")
@@ -913,13 +1020,17 @@ def coding_page():
                 if any(d['value'][0] > 0 for d in scatter_data):
                     max_freq = max(d['value'][0] for d in scatter_data)
                     mid_x = max(1.0, max_freq / 2)
-                    color_fn = (
-                        f"function(p){{var x=p.data.value[0],y=p.data.value[1],mx={mid_x},my=2.5;"
-                        "if(x>=mx&&y>=my)return'#eb5757';"
-                        "if(x<mx&&y>=my)return'#f2c94c';"
-                        "if(x>=mx&&y<my)return'#5e6ad2';"
-                        "return'#4a4e55';}}"
-                    )
+                    for point in scatter_data:
+                        x, y = point['value']
+                        if x >= mid_x and y >= 2.5:
+                            color = '#eb5757'
+                        elif x < mid_x and y >= 2.5:
+                            color = '#f2c94c'
+                        elif x >= mid_x and y < 2.5:
+                            color = '#5e6ad2'
+                        else:
+                            color = '#4a4e55'
+                        point['itemStyle'] = {'color': color, 'opacity': 0.85}
                     ui.html(
                         '<div style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);'
                         'text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px">Priority Matrix</div>'
@@ -937,8 +1048,7 @@ def coding_page():
                         "series": [{"type": "scatter", "data": scatter_data,
                                     "label": {"show": len(scatter_data) <= 7,
                                               ":formatter": "function(p){return p.data.name.split(' ').slice(0,2).join(' ')}",
-                                              "color": "#999", "fontSize": 8, "position": "top"},
-                                    "itemStyle": {":color": color_fn, "opacity": 0.85}}],
+                                              "color": "#999", "fontSize": 8, "position": "top"}}],
                         "markLine": {"silent": True, "lineStyle": {"color": "rgba(255,255,255,0.08)", "type": "dashed"},
                                      "data": [{"xAxis": mid_x}, {"yAxis": 2.5}]},
                         "grid": {"top": 10, "bottom": 28, "left": 28, "right": 8},
@@ -1175,15 +1285,15 @@ def coding_page():
             )
 
             def export_coding():
-                data = {
-                    'annotator': storage.get('email', 'anonymous'),
-                    'exported_at': datetime.now().isoformat(),
-                    'codebook': storage['codebook'],
-                    'coding_annotations': storage['coding_annotations'],
-                }
-                ui.download(json.dumps(data, indent=2).encode(), 'coding_annotations.json')
+                failure_modes = None
+                if _has_judge_prompt_inputs(storage):
+                    from grounded_evals.ui.judge_builder_page import _failure_modes
+                    failure_modes = _failure_modes()
+                data = _annotation_export_payload(storage, failure_modes)
+                filename = f"{_agent_export_slug(storage)}_error_analysis_annotations.json"
+                ui.download(json.dumps(data, indent=2).encode(), filename)
 
-            ui.button('Export Annotations', icon='download', on_click=export_coding).props(
+            ui.button('Download Annotations', icon='download', on_click=export_coding).props(
                 'size=sm outline dark'
             ).style('color:var(--accent-bright); width:100%; margin-bottom:6px')
 

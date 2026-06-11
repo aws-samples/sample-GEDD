@@ -276,32 +276,87 @@ HOME_CSS = """
 .simple-hero {
   width: 100%;
   padding: 3rem 0 1.2rem;
-  text-align: left;
+  text-align: center;
 }
 .simple-hero .coach-kicker {
   margin-bottom: 14px;
 }
 .simple-headline {
-  max-width: 780px;
-  margin: 0;
-  font-size: 2.25rem;
-  line-height: 1.12;
+  max-width: 980px;
+  margin: 0 auto;
+  font-size: 3.35rem;
+  line-height: 1.08;
   letter-spacing: 0;
   font-weight: 740;
   color: var(--text-primary);
 }
 .simple-subhead {
-  max-width: 720px;
-  margin-top: 12px;
-  font-size: 1rem;
+  max-width: 830px;
+  margin: 16px auto 0;
+  font-size: 1.16rem;
   line-height: 1.6;
   color: var(--text-secondary);
 }
 .simple-action-row {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   gap: 10px;
-  margin-top: 22px;
+  margin-top: 24px;
+}
+.hero-demo-frame {
+  width: min(760px, 100%);
+  margin: 3rem auto 0;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface-1);
+  overflow: hidden;
+}
+.hero-demo-media {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.hero-demo-caption {
+  padding: 13px 16px 15px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.92rem;
+  color: var(--text-tertiary);
+  letter-spacing: 0;
+}
+.readiness-metric-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  width: 100%;
+  margin: 2.2rem 0 1.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--border-subtle);
+  overflow: hidden;
+}
+.readiness-metric {
+  min-height: 120px;
+  background: var(--bg-surface-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 18px;
+}
+.readiness-metric-value {
+  font-size: 2.25rem;
+  line-height: 1;
+  font-weight: 760;
+  color: var(--green-bright);
+  font-variant-numeric: tabular-nums;
+}
+.readiness-metric-label {
+  margin-top: 9px;
+  font-size: 0.88rem;
+  line-height: 1.35;
+  color: var(--text-tertiary);
 }
 .simple-panel {
   width: 100%;
@@ -951,9 +1006,14 @@ HOME_CSS = """
   .mkt-headline { font-size: 1.65rem; line-height: 1.2; }
   .mkt-subhead { font-size: 0.9rem; }
   .mkt-cta-row { flex-direction: column; align-items: stretch; }
-  .simple-hero { padding-top: 2rem; text-align: left; }
-  .simple-headline { font-size: 1.7rem; }
+  .simple-hero { padding-top: 2rem; text-align: center; }
+  .simple-headline { font-size: 2.05rem; line-height: 1.12; }
+  .simple-subhead { font-size: 0.92rem; }
   .simple-action-row { flex-direction: column; align-items: stretch; }
+  .hero-demo-frame { margin-top: 2rem; }
+  .readiness-metric-strip { grid-template-columns: 1fr; }
+  .readiness-metric { min-height: 96px; }
+  .readiness-metric-value { font-size: 1.85rem; }
   .core-flow-grid { grid-template-columns: 1fr; }
   .core-flow-step { min-height: auto; }
   .assistant-grid { grid-template-columns: 1fr; }
@@ -1199,7 +1259,7 @@ def home_page():
     ]
 
     with ui.column().classes("w-full").style(
-        "max-width: 980px; margin: 0 auto; padding: 1.25rem 1.5rem 2.75rem"
+        "max-width: 1180px; margin: 0 auto; padding: 1.25rem 1.5rem 2.75rem"
     ):
         if _has_session_content(storage):
             display_name = agent_name_home or "Untitled agent"
@@ -1221,43 +1281,62 @@ def home_page():
             ui.html(
                 '<div class="coach-kicker">'
                 '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
-                "Grounded Eval-Driven Development"
+                "AI PM Release Readiness"
                 "</div>"
             )
             ui.html(
                 '<h1 class="simple-headline">'
-                "Create a judge rubric from evidence, not gut feel."
+                "Find the failures that decide whether your agent is shippable."
                 "</h1>"
             )
             ui.html(
                 '<div class="simple-subhead">'
-                "GEDD coaches a PM and domain expert through one loop: define the AI product, "
-                "generate golden queries, annotate model responses, name error modes, and turn "
-                "them into a simple LLM-as-a-judge prompt."
+                "Offline eval techniques for AI PMs. Observe agent behavior, name failures in "
+                "domain language, and leave with a judge prompt and release report engineering can act on."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
                 ui.button(
-                    "Start with Coach",
+                    "Open AI PM Coach",
                     icon="auto_awesome",
                     on_click=lambda: ui.navigate.to("/coach"),
                 ).props("color=primary size=md unelevated").style(
                     "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                 )
                 ui.button(
-                    "Sample Scenarios",
+                    "Load an example",
                     icon="collections_bookmark",
                     on_click=lambda: ui.navigate.to("/demos"),
                 ).props("outline size=md no-caps").style(
                     "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
+            with ui.element("div").classes("hero-demo-frame"):
+                ui.html(
+                    '<img class="hero-demo-media" src="/docs/GEDD_optimized.gif" '
+                    'alt="AI PM readiness workflow preview">'
+                )
+                ui.html(
+                    '<div class="hero-demo-caption">'
+                    'Query -> Responses -> Annotate -> Codes emerge -> Judge'
+                    '</div>'
+                )
+
+        with ui.element("div").classes("readiness-metric-strip animate-in stagger-2"):
+            for value, label in [
+                ("20", "example launch-risk scenarios"),
+                ("8", "rubric dimensions"),
+                ("Evidence handoff", "annotations + judge prompt for engineering"),
+            ]:
+                with ui.element("div").classes("readiness-metric"):
+                    ui.html(f'<div class="readiness-metric-value">{value}</div>')
+                    ui.html(f'<div class="readiness-metric-label">{label}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-2"):
-            ui.html('<div class="simple-panel-title">The core loop</div>')
+            ui.html('<div class="simple-panel-title">The AI PM readiness loop</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "This is the systematic path from product intent to judge rubric. The rubric comes "
-                "from observed failures and PM annotations, not from generic quality guesses."
+                "This is the product workflow. The readiness gate comes from observed failures "
+                "and PM annotations, not from generic quality guesses."
                 "</div>"
             )
             with ui.element("div").classes("core-flow-grid"):
@@ -1269,10 +1348,10 @@ def home_page():
                         ui.html(f'<div class="core-flow-output">{output}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">The assistant should feel like a PM review partner</div>')
+            ui.html('<div class="simple-panel-title">The Coach is the PM readiness partner</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "Coach asks the questions that keep the domain expert in the product problem before a judge prompt is written."
+                "It asks the questions that keep the PM and domain expert in the product problem before a judge prompt is written."
                 "</div>"
             )
             with ui.element("div").classes("assistant-grid"):
@@ -1291,10 +1370,11 @@ def home_page():
                                     ui.html(f'<div class="artifact-copy">{copy}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">Examples support the method</div>')
+            ui.html('<div class="simple-panel-title">Sample scenarios are examples</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "Load a scenario only after the loop is clear: golden query, bad response, PM annotation, error mode, judge gate."
+                "Use them for PM inspiration and demo data. They are not the product workflow; "
+                "the Coach is where real AI PM readiness work happens."
                 "</div>"
             )
             with ui.element("div").classes("compact-example-row"):

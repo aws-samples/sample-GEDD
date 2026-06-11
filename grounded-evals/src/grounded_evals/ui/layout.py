@@ -6,16 +6,17 @@ from nicegui import app, ui
 
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
-    {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
+    {"path": "/coach", "label": "AI PM Readiness", "icon": "auto_awesome", "primary": True},
     {
         "path": "/demos",
         "label": "Sample Scenarios",
         "icon": "collections_bookmark",
         "featured": True,
         "children": [
-            {"path": "/demos", "label": "Sample Scenarios", "icon": "collections_bookmark"},
-            {"path": "/judge", "label": "Judge", "icon": "gavel"},
-            {"path": "/report", "label": "Report", "icon": "assessment"},
+            {"path": "/demos", "label": "Load Scenarios", "icon": "collections_bookmark"},
+            {"path": "/coding", "label": "Scenario Annotations", "icon": "rate_review"},
+            {"path": "/judge", "label": "Scenario Judge", "icon": "gavel"},
+            {"path": "/report", "label": "Scenario Report", "icon": "assessment"},
         ],
     },
 ]
@@ -339,10 +340,10 @@ def _get_progress_state() -> list[dict]:
     judge = s.get("_generated_judge_prompt", "")
 
     steps = [
-        {"label": "Coach", "path": "/coach", "done": bool(session_data.get("agent_spec", {}).get("name"))},
-        {"label": "Analyze", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
-        {"label": "Judge", "path": "/judge", "done": bool(judge)},
-        {"label": "Report", "path": "/report", "done": False},
+        {"label": "Scenario", "path": "/demos", "done": bool(session_data.get("agent_spec", {}).get("name"))},
+        {"label": "Annotations", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
+        {"label": "Scenario Judge", "path": "/judge", "done": bool(judge)},
+        {"label": "Scenario Report", "path": "/report", "done": False},
     ]
     # Mark the analysis step done if all queries have PM annotations.
     if golden and len(annotations) >= len(golden):
@@ -372,7 +373,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">AI PM Eval Workbench</span>'
+                '<span class="brand-context">AI PM Readiness Tool</span>'
                 '</span>'
             )
 
@@ -400,9 +401,9 @@ def page_layout(title: str = "", current_path: str = ""):
                 if is_active:
                     button.classes("nav-active")
                 elif item.get("primary"):
-                    button.classes("coach-nav-btn").tooltip("Start with Coach to define the agent, risks, and eval plan")
+                    button.classes("coach-nav-btn").tooltip("Start the AI PM readiness workflow")
                 elif item.get("featured"):
-                    button.classes("scenario-nav-btn").tooltip("Open sample scenarios, judge, and report")
+                    button.classes("scenario-nav-btn").tooltip("Browse examples for PM inspiration")
                 elif item.get("core"):
                     button.classes("core-nav-btn")
                 button.style(
@@ -540,8 +541,8 @@ def page_layout(title: str = "", current_path: str = ""):
                 "color: var(--text-muted)"
             ).tooltip("Logout")
 
-    # Progress rail on workflow pages (not Home)
-    workflow_paths = {"/coach", "/coding", "/judge", "/report"}
+    # Scenario progress rail. Coach stays separate from sample-scenario artifacts.
+    workflow_paths = {"/demos", "/coding", "/judge", "/report"}
     if current_path in workflow_paths:
         steps = _get_progress_state()
         with ui.element("div").classes("progress-rail"):

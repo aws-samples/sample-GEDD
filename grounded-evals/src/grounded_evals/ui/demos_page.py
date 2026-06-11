@@ -942,8 +942,8 @@ def demos_page():
                 ui.html('<div class="ds-page-title">Sample Scenarios</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
-                    'Seeded AI-product eval cases with golden queries, PM annotations, failure modes, '
-                    'and judge-prompt seeds.'
+                    'Example AI PM readiness cases for inspiration. Load one to see seeded golden '
+                    'queries, PM annotations, failure modes, and judge-prompt seeds.'
                     '</div>'
                 )
             ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')

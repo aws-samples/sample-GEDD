@@ -118,7 +118,40 @@ def test_main_nav_groups_downstream_pages_under_sample_scenarios():
     assert "/report" not in paths
 
     scenarios = next(item for item in NAV_ITEMS if item["label"] == "Sample Scenarios")
-    assert [child["path"] for child in scenarios["children"]] == ["/demos", "/judge", "/report"]
+    assert [child["path"] for child in scenarios["children"]] == [
+        "/demos",
+        "/coding",
+        "/judge",
+        "/report",
+    ]
+    assert [child["label"] for child in scenarios["children"]] == [
+        "Load Scenarios",
+        "Scenario Annotations",
+        "Scenario Judge",
+        "Scenario Report",
+    ]
+
+
+def test_scenario_progress_rail_excludes_coach_flow():
+    from grounded_evals.ui import layout
+
+    storage = {
+        "session_data": {
+            "agent_spec": {"name": "ProducerGate"},
+            "golden_prompts": [{"prompt_text": "q1"}],
+        },
+        "coding_annotations": [{"codes": ["Feature Promise Hallucination"]}],
+    }
+    with patch.object(layout, "app", _make_mock_app(storage)):
+        steps = layout._get_progress_state()
+
+    assert [step["path"] for step in steps] == ["/demos", "/coding", "/judge", "/report"]
+    assert [step["label"] for step in steps] == [
+        "Scenario",
+        "Annotations",
+        "Scenario Judge",
+        "Scenario Report",
+    ]
 
 
 def test_get_progress_empty_storage():
@@ -311,6 +344,12 @@ def test_judge_prompt_inputs_require_annotated_failure_code():
     assert _failure_mode_count_for_judge(empty) == 1
     assert _has_judge_prompt_inputs(empty) is False
 
+    annotation_without_code = {
+        "coding_annotations": [{"codes": [], "memo": "Bad answer"}],
+        "codebook": [{"name": "Unused"}],
+    }
+    assert _has_judge_prompt_inputs(annotation_without_code) is False
+
     storage = {
         "coding_annotations": [{"codes": ["Missed escalation"], "severity": "critical"}],
         "codebook": [{"name": "Missed escalation"}, {"name": ""}],
@@ -329,6 +368,44 @@ def test_store_judge_prompt_marks_core_flow_complete():
     assert storage["_generated_judge_prompt"] == "judge prompt"
     assert storage["current_step"] == 5
     assert storage["_jb_generated_at"]
+
+
+def test_annotation_export_payload_includes_judge_input_artifacts():
+    from grounded_evals.ui.coding_page import _agent_export_slug, _annotation_export_payload
+
+    storage = {
+        "session_data": {
+            "agent_spec": {
+                "name": "Producer Gate",
+                "description": "Launch companion",
+            }
+        },
+        "codebook": [{"name": "Feature Promise Hallucination"}],
+        "coding_annotations": [
+            {
+                "query": "Will it ship at 60 FPS?",
+                "response": "Yes",
+                "codes": ["Feature Promise Hallucination"],
+            }
+        ],
+        "memos": [{"text": "Public launch promise without source of truth"}],
+        "_generated_judge_prompt": "judge prompt",
+        "_jb_generated_at": "2026-06-10T12:00:00",
+    }
+
+    payload = _annotation_export_payload(
+        storage,
+        failure_modes=[{"name": "Feature Promise Hallucination"}],
+    )
+
+    assert _agent_export_slug(storage) == "producer_gate"
+    assert payload["artifact"] == "gedd_error_analysis_annotations"
+    assert payload["source"]["created_from"] == "pm_annotations"
+    assert payload["source"]["annotation_count"] == 1
+    assert payload["source"]["failure_mode_count"] == 1
+    assert payload["coding_annotations"][0]["query"] == "Will it ship at 60 FPS?"
+    assert payload["judge_prompt"]["text"] == "judge prompt"
+    assert payload["failure_modes"][0]["name"] == "Feature Promise Hallucination"
 
 
 # ── _label_css_color and _get_all_labels (eval_tab) ──────────────────────────

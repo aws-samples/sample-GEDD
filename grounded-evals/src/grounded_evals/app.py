@@ -180,7 +180,7 @@ def login_page():
 
     with ui.column().classes("absolute-center items-center").style("gap: 1.5rem"):
         ui.html('<div class="brand-title" style="font-size:1.4rem; color:#f7f8f8; font-weight:700">GEDD</div>')
-        ui.html('<div style="font-size:0.8rem; color:#6e737b">Grounded Eval-Driven Development</div>')
+        ui.html('<div style="font-size:0.8rem; color:#6e737b">AI PM Readiness Tool</div>')
         with ui.card().style("width: 320px; padding: 2rem; border-radius: 12px; background: #141516; border: 1px solid rgba(255,255,255,0.09)"):
             ui.label("Sign in").style("font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #f7f8f8")
             email = ui.input("Email").classes("w-full").props("dark outlined dense")
@@ -393,14 +393,14 @@ def main_page() -> None:
                     step = s["current_step"]
                     if step == 1:
                         welcome = (
-                            '<div class="msg-ai"><strong>Hey! 👋 I\'m your eval coach.</strong><br><br>'
-                            'I\'ll guide you through the core PM eval flow:<br>'
+                            '<div class="msg-ai"><strong>Hey! 👋 I\'m your AI PM readiness coach.</strong><br><br>'
+                            'I\'ll guide you through the release-readiness flow for your AI product:<br>'
                             '1. <strong>Define your agent</strong> — name, capabilities, users<br>'
                             '2. <strong>Craft a system prompt</strong><br>'
                             '3. <strong>Generate golden test queries</strong><br>'
                             '4. <strong>Analyze errors with PM annotations</strong><br>'
                             '5. <strong>Create the LLM-as-a-judge prompt</strong><br><br>'
-                            'The judge prompt comes directly from the failure modes you identify. '
+                            'Sample scenarios are examples; this Coach flow is the product. '
                             '<strong>What AI agent are you building?</strong></div>'
                         )
                     elif step == 2:
@@ -471,6 +471,46 @@ def main_page() -> None:
                 ]
                 ui.download("\n".join(lines).encode(), "golden_queries.jsonl")
 
+            def _download_annotations_json():
+                cur_s = _user_state()
+                if not cur_s.get("coding_annotations"):
+                    ui.notify("No annotations yet. Complete error analysis first.", type="warning")
+                    return
+                from grounded_evals.ui.coding_page import (
+                    _agent_export_slug,
+                    _annotation_export_payload,
+                    _has_judge_prompt_inputs,
+                )
+
+                failure_modes = None
+                if _has_judge_prompt_inputs(cur_s):
+                    from grounded_evals.ui.judge_builder_page import _failure_modes
+                    failure_modes = _failure_modes()
+                payload = _annotation_export_payload(cur_s, failure_modes)
+                filename = f"{_agent_export_slug(cur_s)}_error_analysis_annotations.json"
+                ui.download(json.dumps(payload, indent=2).encode(), filename)
+
+            def _download_judge_prompt():
+                cur_s = _user_state()
+                prompt = cur_s.get("_generated_judge_prompt") or cur_s.get("_simple_judge_prompt") or ""
+                if not prompt.strip():
+                    from grounded_evals.ui.coding_page import _has_judge_prompt_inputs, _store_judge_prompt
+
+                    if not _has_judge_prompt_inputs(cur_s):
+                        ui.notify(
+                            "No judge prompt yet. Complete error analysis with failure codes first.",
+                            type="warning",
+                        )
+                        return
+                    from grounded_evals.ui.judge_builder_page import _build_simple_prompt, _failure_modes
+
+                    prompt = _build_simple_prompt(_failure_modes())
+                    _store_judge_prompt(cur_s, prompt)
+
+                from grounded_evals.ui.coding_page import _agent_export_slug
+                filename = f"{_agent_export_slug(cur_s)}_llm_judge_prompt.md"
+                ui.download(prompt.encode(), filename)
+
             def _export_session():
                 """Serialize all user state to a JSON file for persistence."""
                 cur_s = _user_state()
@@ -518,6 +558,8 @@ def main_page() -> None:
                 ui.button("System Prompt", icon="download", on_click=_download_system_prompt).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Queries (CSV)", icon="download", on_click=_download_queries_csv).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Queries (JSONL)", icon="download", on_click=_download_queries_jsonl).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Annotations", icon="download", on_click=_download_annotations_json).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Judge Prompt", icon="download", on_click=_download_judge_prompt).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Export Session", icon="save", on_click=_export_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Import Session", icon="upload_file", on_click=_import_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
 
@@ -787,7 +829,7 @@ def main_page() -> None:
 
 def run() -> None:
     ui.run(
-        title="GEDD — Grounded Eval Driven Development",
+        title="GEDD — AI PM Readiness Tool",
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",
