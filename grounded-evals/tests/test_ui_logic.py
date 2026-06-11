@@ -104,6 +104,16 @@ def test_is_similar_near_duplicate_codes():
 # ── _get_progress (home_page) ─────────────────────────────────────────────────
 
 
+def test_main_nav_hides_annotation_tab():
+    from grounded_evals.ui.layout import NAV_ITEMS
+
+    labels = [item["label"] for item in NAV_ITEMS]
+    paths = [item["path"] for item in NAV_ITEMS]
+
+    assert "Annotate" not in labels
+    assert "/coding" not in paths
+
+
 def test_get_progress_empty_storage():
     from grounded_evals.ui.home_page import _get_progress
 

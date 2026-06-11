@@ -7,7 +7,6 @@ from nicegui import app, ui
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
     {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
-    {"path": "/coding", "label": "Annotate", "icon": "label", "core": True},
     {"path": "/judge", "label": "Judge", "icon": "gavel", "core": True},
     {"path": "/report", "label": "Report", "icon": "assessment", "core": True},
     {"path": "/demos", "label": "Sample Scenarios", "icon": "collections_bookmark", "featured": True},
@@ -317,11 +316,11 @@ def _get_progress_state() -> list[dict]:
 
     steps = [
         {"label": "Coach", "path": "/coach", "done": bool(session_data.get("agent_spec", {}).get("name"))},
-        {"label": "Annotate", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
+        {"label": "Analyze", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
         {"label": "Judge", "path": "/judge", "done": bool(judge)},
         {"label": "Report", "path": "/report", "done": False},
     ]
-    # Mark Annotate done if all queries annotated
+    # Mark the analysis step done if all queries have PM annotations.
     if golden and len(annotations) >= len(golden):
         steps[1]["done"] = True
     return steps
