@@ -7,7 +7,7 @@
 
 You shipped an AI agent. Now you need trustworthy labels from the people who understand the work. That is where most eval workflows break down: reviewers score raw traces, generic tables, or dashboards that were not built for the task they are judging.
 
-**GEDD is a PM annotation workbench for turning observed AI product failures into a defensible LLM-as-a-judge.** A PM loads demos or custom traces, reviews the customer-facing answer in context, names failure modes in the expert's vocabulary, checks saturation, and leaves with a judge prompt plus a validated `session.json` that engineering can turn into an automated release gate.
+**GEDD is a PM annotation workbench for turning observed AI product failures into a defensible LLM-as-a-judge.** A PM starts in the AI PM Coach or loads starter data, reviews customer-facing answers in context, names failure modes in the expert's vocabulary, checks saturation, and leaves with a judge prompt plus a validated `session.json` that engineering can turn into an automated release gate.
 
 <img width="1512" height="776" alt="Screenshot 2026-06-05 at 9 15 46 PM" src="https://github.com/user-attachments/assets/e54440e6-1e7f-4762-80c9-6f371f4df7ae" />
 
@@ -41,8 +41,8 @@ GEDD turns domain review into production evaluation assets:
 
 | PM action | Product surface | Engineering artifact |
 |-----------|-----------------|----------------------|
-| Load or generate review traces | PM Workbench demos with a 50-query inductive example plus domain scenarios | Golden query set and response queue |
-| Inspect the agent behavior in context | Run queue with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
+| Load or generate review traces | AI PM Coach plus starter datasets with a 50-query inductive example and domain scenarios | Golden query set and response queue |
+| Inspect the agent behavior in context | PM Workbench with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
 | Explain what went wrong | PM Annotation Workbench with open codes, severity, confidence, and memos | Domain-specific codebook |
 | Compare failures across examples | Axial coding views with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
 | Check whether the codebook is stable | Saturation curve and final-window new-code count | Evidence that the judge criteria are ready to draft |
@@ -75,7 +75,7 @@ Every downstream artifact is only as good as the labels that produced it. GEDD t
 flowchart TD
     subgraph DE["🧑‍💼 DOMAIN EXPERT — annotation workbench"]
         direction TB
-        SCENARIOS["Scenarios<br/><i>launch-risk examples</i>"]
+        SCENARIOS["Coach / starter data<br/><i>launch-risk examples</i>"]
         ANNOTATE["Annotate<br/><i>failure codes, severity, memos</i>"]
         PATTERNS["Patterns<br/><i>root causes + saturation</i>"]
         JUDGE["Judge<br/><i>rubric + hard-fails</i>"]
@@ -104,14 +104,15 @@ flowchart TD
 
 | Surface | Who | What happens | Output |
 |---------|-----|-------------|--------|
-| Demos | AI PM / Domain Expert | Load a realistic workbench or domain scenario | Queries, annotations, codebook, judge seed |
+| AI PM Coach | AI PM / Domain Expert | Define the agent, prompt, runtime, and golden-query plan | Agent spec, system prompt, golden queries |
+| Starter datasets | AI PM / Domain Expert | Load the 50-query PM workbench or a realistic domain scenario | Queries, annotations, codebook, judge seed |
 | PM Workbench | AI PM / Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
 | Axial coding | AI PM / Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
 | Judge | AI PM + ML Engineer | Convert labels into judge criteria | G-Eval rubric, hard-fail rules, calibration set |
 | Report | AI PM + ML Engineer | Review release readiness and export evidence | Release report, `session.json`, judge prompt |
 | MLflow | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> The web app is now organized around the PM annotation workbench: `PM Workbench` for coding traces, `Demos` for seeded examples, `Judge` for prompt generation, and `Report` for evidence handoff. Custom setup and response-running are contextual actions from Home or empty states, not the main path.
+> The web app is organized around the AI PM flow: `Home`, `AI PM Coach`, `PM Workbench`, `Judge`, and `Report` are the primary tabs. Starter datasets are seed data from Home or the scenario library, not the main navigation path. Use the top-right refresh action to reset a loaded demo or start a new project without signing out.
 
 > **CLI parity:** Steps 1-5 can still run inside `grounded-evals chat`. Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
 
@@ -208,13 +209,13 @@ cd grounded-evals
 pip install -e ".[dev]"
 grounded-evals serve
 ```
-Open `localhost:8080`
-50-query PM workbench + demo scenarios
+Open `http://127.0.0.1:8080`
+AI PM Coach + PM Workbench
 
 </td>
 <td width="33%">
 
-**2. Annotate Behavior**
+**2. Run The PM Flow**
 ```bash
 # In Codex, ask:
 # Use $gedd to evaluate my AI agent
@@ -224,7 +225,9 @@ Open `localhost:8080`
 grounded-evals chat --session session.json
 ```
 
-Demos -> PM Workbench -> Judge -> Report
+AI PM Coach -> PM Workbench -> Judge -> Report
+
+Use starter datasets from Home when you want preloaded examples. Use the top-right refresh icon to reset a loaded demo or start fresh.
 
 </td>
 <td width="33%">
@@ -250,6 +253,8 @@ grounded-evals mlflow \
 
 The website is the default first experience because it is the annotation workbench: a product manager or domain expert can load completed scenarios, inspect behavior in context, tag failures visually, map root causes, build judges, and export a handoff without learning command syntax.
 
+The sample CloudFront deployment is available at `https://d2esgpsbblnxif.cloudfront.net` and is protected by Cognito. The public health endpoint should return `{"status":"ok","release":"2026-06-11-reset-actions"}` for the reset-action build.
+
 ---
 
 ## Web App Workflow
@@ -258,15 +263,18 @@ The website is the default first experience because it is the annotation workben
 
 | Page | Purpose | What you do there |
 |------|---------|-------------------|
-| Home | PM-oriented entry | Load the 50-query PM workbench demo, continue active review work, open demos, or start a custom agent |
+| Home | PM-oriented entry | Load the 50-query PM workbench demo, continue active review work, open starter datasets, or start a custom agent |
+| AI PM Coach | Guided setup | Capture agent spec, system prompt, runtime choice, and golden queries for a custom agent |
 | PM Workbench | Core product surface | Identify product risks, create open codes, apply severity/confidence, write memos, use triage mode, and track saturation |
-| Demos | Scenario library | Load the main inductive PM demo or high-stakes domain scenarios with queries, labels, codebooks, and judges attached |
 | Judge | Release gate builder | Convert PM annotations and failure modes directly into an LLM-as-a-judge prompt |
 | Report | Release readiness | Review executive summary, failure patterns, model performance, calibration health, and export artifacts |
-| Custom setup | Home option | Capture agent spec, system prompt, runtime choice, and golden queries only when evaluating a new custom agent |
+| Starter datasets | Home/scenario library option | Load the main inductive PM demo or high-stakes domain scenarios with queries, labels, codebooks, and judges attached |
 | Run responses | Contextual action | Generate or compare model responses when a custom workflow needs fresh outputs before annotation |
+| Header actions | Session controls | Reset the loaded demo/project, export/import a handoff session, or sign out |
 
-The UI also supports session import/export from the top navigation so a domain expert can hand a completed session to an ML engineer without copying browser state.
+The primary navigation is intentionally short: `Home`, `AI PM Coach`, `PM Workbench`, `Judge`, and `Report`. The scenario library remains available for seeded examples, but demos are treated as starter data rather than the main product path.
+
+The top-right refresh icon opens **Start a New Project?**. Confirming **Start Fresh** clears the current agent definition, golden queries, annotations, codebook, memos, eval results, judge prompts, and demo metadata while preserving the current login session. The same header also supports session import/export so a domain expert can hand a completed session to an ML engineer without copying browser state.
 
 ---
 
@@ -381,7 +389,7 @@ That is the difference between a generic judge and a judge a domain owner can de
 
 ```mermaid
 flowchart TD
-    WEB["Annotation workbench<br/><i>Review + Annotate + Scenarios</i>"]
+    WEB["AI PM web app<br/><i>Coach + Workbench + Judge + Report</i>"]
     ASSIST["Codex skill / CLI<br/><i>guided automation</i>"]
     SJ["session.json<br/><i>validated handoff</i>"]
     CLI["grounded-evals CLI<br/><i>export + judge + mlflow</i>"]
@@ -411,17 +419,17 @@ AWS-native by default. CloudFront provides the public workbench domain, IAM hand
 | Open Coding | `grounded_evals.open_coding` | Fractures domains into categories, compares query coverage, and checks saturation |
 | Axial Coding | `grounded_evals.axial_coding` | Maps observed failure codes into root-cause dimensions and paradigm-model structure |
 | Judge builder | `grounded_evals.judge_builder` | Builds rubrics, G-Eval prompts, few-shot variants, calibration, ensembles, and active-learning hooks |
-| Web UI | `grounded_evals.ui` | Runs the multi-page NiceGUI annotation workbench and preloaded domain scenario gallery |
+| Web UI | `grounded_evals.ui` | Runs the multi-page NiceGUI AI PM flow, annotation workbench, judge builder, report view, reset controls, and preloaded starter datasets |
 | CLI | `grounded_evals.cli` | Provides chat, eval, annotate, judge, handoff, export, and MLflow automation |
 
 ---
 
-## Demo Scenarios
+## Starter Datasets
 
-No LLM calls needed. The main demo loads a 50-query PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The scenario library also includes high-stakes domain demos with golden queries, annotations, error codes, and generated judges.
+No LLM calls needed. The main starter dataset loads a 50-query PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The scenario library also includes high-stakes domain demos with golden queries, annotations, error codes, and generated judges. These datasets are for exploration and workshops; the main product flow remains AI PM Coach -> PM Workbench -> Judge -> Report.
 
 <details>
-<summary><b>View demo library</b></summary>
+<summary><b>View starter dataset library</b></summary>
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
@@ -491,6 +499,14 @@ grounded-evals serve --host 127.0.0.1 --port 8080
 for p in / /coding /demos /coach /judge /report /health; do
   curl -sS -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:8080$p"
 done
+```
+
+For the Cognito-protected CloudFront deployment, use the release check in auth-aware mode:
+
+```bash
+python3 scripts/release_check.py \
+  --base-url https://d2esgpsbblnxif.cloudfront.net \
+  --expect-auth
 ```
 
 Codex skill and plugin validation uses Codex's local `$skill-creator` and `$plugin-creator` validator scripts. Those system paths are installation-specific, so keep their output in release notes or PR checks rather than baking absolute `.codex` paths into copied shell commands.
