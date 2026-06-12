@@ -253,7 +253,7 @@ grounded-evals mlflow \
 
 The website is the default first experience because it is the annotation workbench: a product manager or domain expert can load completed scenarios, inspect behavior in context, tag failures visually, map root causes, build judges, and export a handoff without learning command syntax.
 
-The sample CloudFront deployment is available at `https://d2esgpsbblnxif.cloudfront.net` and is protected by Cognito. The public health endpoint should return `{"status":"ok","release":"2026-06-11-reset-actions"}` for the reset-action build.
+The sample CloudFront deployment is available at `https://d2esgpsbblnxif.cloudfront.net` and is protected by Cognito. The public health endpoint should return `{"status":"ok","release":"2026-06-12-localization-50"}` for the localization 50-query build.
 
 ---
 
