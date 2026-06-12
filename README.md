@@ -278,21 +278,20 @@ The top-right refresh icon opens **Start a New Project?**. Confirming **Start Fr
 
 ---
 
-## Codex Skill And Plugin
+## Codex Plugin And Skill
 
 This repo includes Codex-native assistance for the same GEDD workflow:
 
 | Asset | Path | Use |
 |-------|------|-----|
-| Repo skill | `grounded-evals/.claude/commands/gedd.md` | Auto-discovered when Codex runs inside this repository; invoke with `$gedd` or let Codex select it from matching requests |
-| Plugin package | `plugins/gedd/` | Installable Codex plugin that bundles the GEDD skill for reuse beyond this repo |
+| Codex plugin package | `plugins/gedd/` | Installable Codex plugin for the GEDD workflow |
+| Bundled Codex skill | `plugins/gedd/skills/gedd/SKILL.md` | Skill instructions bundled by the plugin; after the plugin is available, invoke with `$gedd` or let Codex select it from matching requests |
 | Repo marketplace | `.agents/plugins/marketplace.json` | Local plugin catalog entry pointing Codex at `./plugins/gedd` |
+| Claude Code commands | `grounded-evals/.claude/commands/` | Claude Code slash-command files kept for Claude users; these are not Codex skills |
 
-Codex skills are the authoring format for reusable workflows; plugins are the installable distribution unit for those skills. The repo skill is best when you are working inside this repository. The plugin is best when you want the same GEDD guidance available from other projects or shared with teammates through a marketplace.
+Codex plugins are the installable distribution unit, and they can bundle skills under `skills/<name>/SKILL.md`. In this repo, the Codex skill lives inside the `gedd` plugin package. The `.claude/commands` files are separate Claude Code commands and should not be described as Codex skills.
 
-The skill is **stateful**: on startup it reads `session.json` and resumes from where you left off, greeting you with your current step and query count. A fresh session is created automatically if no file exists.
-
-Use the skill when you want Codex to guide or automate the workflow while still making the annotation workbench the first-touch experience:
+Use the bundled Codex skill when you want Codex to guide or automate the workflow while still making the annotation workbench the first-touch experience:
 
 ```text
 Use $gedd to evaluate my AI agent with the annotation-first workflow.
