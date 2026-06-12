@@ -110,11 +110,55 @@ REPORT_CSS = """
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+.rr-handoff-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.rr-handoff-stat {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  padding: 11px 12px;
+}
+.rr-handoff-value {
+  font-size: 0.95rem;
+  font-weight: 750;
+  color: var(--text-primary);
+}
+.rr-handoff-label {
+  font-size: 0.62rem;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+}
+.rr-priority-row {
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--red);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  padding: 12px 14px;
+  margin-top: 8px;
+}
+.rr-runbook {
+  background: var(--bg-base);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 11px 12px;
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
 @media (max-width: 760px) {
   .rr-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rr-handoff-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 520px) {
   .rr-metric-grid { grid-template-columns: 1fr; }
+  .rr-handoff-grid { grid-template-columns: 1fr; }
 }
 """
 
@@ -140,6 +184,190 @@ def _build_failure_patterns(codebook: list[dict], coding_annotations: list[dict]
     return sorted(patterns, key=lambda p: p["frequency"], reverse=True)
 
 
+_SEVERITY_RANK = {"cosmetic": 1, "functional": 2, "critical": 3, "catastrophic": 4}
+_SEVERITY_WEIGHT = {"cosmetic": 1, "functional": 2, "critical": 4, "catastrophic": 8}
+
+
+def _truncate(text: str, limit: int = 140) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: max(0, limit - 1)].rstrip() + "..."
+
+
+def _build_fix_queue(
+    codebook: list[dict],
+    coding_annotations: list[dict],
+    limit: int = 7,
+) -> list[dict]:
+    """Build the ML engineer's prioritized implementation queue from PM codes."""
+    definitions = {
+        c.get("name", ""): c.get("definition", "")
+        for c in codebook
+        if c.get("name")
+    }
+    stats: dict[str, dict] = {}
+    for ann in coding_annotations:
+        severity = ann.get("severity") or "functional"
+        severity = severity if severity in _SEVERITY_RANK else "functional"
+        for code_name in ann.get("codes", []):
+            if not code_name:
+                continue
+            item = stats.setdefault(
+                code_name,
+                {
+                    "code": code_name,
+                    "count": 0,
+                    "max_severity": severity,
+                    "severity_rank": _SEVERITY_RANK[severity],
+                    "definition": definitions.get(code_name, ""),
+                    "examples": [],
+                },
+            )
+            item["count"] += 1
+            if _SEVERITY_RANK[severity] > item["severity_rank"]:
+                item["max_severity"] = severity
+                item["severity_rank"] = _SEVERITY_RANK[severity]
+            if len(item["examples"]) < 2:
+                item["examples"].append({
+                    "query": _truncate(ann.get("query", ""), 160),
+                    "response": _truncate(ann.get("response", ""), 160),
+                    "memo": _truncate(ann.get("memo", ""), 180),
+                })
+
+    queue = []
+    for item in stats.values():
+        severity = item["max_severity"]
+        priority = item["count"] * _SEVERITY_WEIGHT.get(severity, 2)
+        queue.append({
+            "priority": "P0" if severity in {"critical", "catastrophic"} else "P1",
+            "code": item["code"],
+            "count": item["count"],
+            "max_severity": severity,
+            "priority_score": priority,
+            "definition": item["definition"],
+            "engineering_change": (
+                f"Patch prompt, retrieval, tool policy, or runtime guardrails so "
+                f"{item['code']} is no longer produced on the tagged examples."
+            ),
+            "definition_of_done": (
+                "Add tagged examples to the regression suite, verify the old response fails, "
+                "verify the fixed response passes, and rerun judge calibration."
+            ),
+            "examples": item["examples"],
+        })
+    return sorted(queue, key=lambda q: (-q["priority_score"], q["code"]))[:limit]
+
+
+def _build_engineering_handoff(
+    *,
+    agent_name: str,
+    total: int,
+    correct: int,
+    partial: int,
+    incorrect: int,
+    pass_rate_pct: float,
+    golden_count: int,
+    n_blockers: int,
+    codebook: list[dict],
+    coding_annotations: list[dict],
+    judge_prompt: str,
+    health_total: int,
+    health_gaps: list[str],
+    kappa: float | None,
+) -> dict:
+    """Create an actionable handoff contract for the ML engineer."""
+    fix_queue = _build_fix_queue(codebook, coding_annotations)
+    p0_count = sum(1 for item in fix_queue if item["priority"] == "P0")
+    if not judge_prompt:
+        status = "missing_judge"
+        status_label = "Missing judge prompt"
+    elif n_blockers or p0_count:
+        status = "blocked_by_p0"
+        status_label = "Blocked by P0 failures"
+    elif health_total < 75 or pass_rate_pct < 80:
+        status = "needs_calibration"
+        status_label = "Needs calibration"
+    else:
+        status = "ci_pilot_ready"
+        status_label = "Ready for CI pilot"
+
+    artifact_status = [
+        {"artifact": "session.json handoff", "status": "ready" if golden_count else "missing", "detail": f"{golden_count} golden queries"},
+        {"artifact": "golden_dataset.jsonl", "status": "ready" if golden_count or total else "missing", "detail": f"{golden_count} queries, {total} labels"},
+        {"artifact": "codebook.json", "status": "ready" if codebook else "missing", "detail": f"{len(codebook)} failure codes"},
+        {"artifact": "judge_prompt.txt", "status": "ready" if judge_prompt else "missing", "detail": "generated" if judge_prompt else "generate judge first"},
+        {"artifact": "calibration", "status": "ready" if kappa is not None else "needed", "detail": f"kappa {kappa:.2f}" if kappa is not None else "target kappa >= 0.80"},
+    ]
+    ci_gates = [
+        {"gate": "P0 failures", "target": "0 critical/catastrophic failures", "current": f"{n_blockers} observed"},
+        {"gate": "Regression pass rate", "target": ">= 95% on fixed P0 and happy-path cases", "current": f"{pass_rate_pct:.0f}% observed"},
+        {"gate": "Human coverage", "target": "All release-critical queries labeled", "current": f"{total} labels for {golden_count} golden queries"},
+        {"gate": "Judge-human agreement", "target": "kappa >= 0.80 before blocking merges", "current": f"{kappa:.2f}" if kappa is not None else "not measured"},
+    ]
+    commands = [
+        "grounded-evals validate-session --session session.json",
+        "grounded-evals export --session session.json --format jsonl --output golden_dataset.jsonl",
+        "grounded-evals judge --session session.json --output judge_prompt.md",
+        "grounded-evals mlflow --session session.json --tracking-uri $MLFLOW_TRACKING_URI --run-eval",
+    ]
+    next_steps = [
+        "Export the session handoff and ML handoff JSON from this page.",
+        "Create one failing regression test for each P0 queue item before changing the agent.",
+        "Patch prompt, retrieval, tool policy, or runtime behavior against those tagged examples.",
+        "Rerun the judge, review disagreements, and only promote the gate after calibration passes.",
+    ]
+    if not fix_queue:
+        next_steps[1] = "Add coded failure annotations before treating this as a release gate."
+
+    return {
+        "agent": agent_name,
+        "status": status,
+        "status_label": status_label,
+        "metrics": {
+            "total_annotations": total,
+            "correct": correct,
+            "partial": partial,
+            "incorrect": incorrect,
+            "pass_rate_pct": round(pass_rate_pct, 1),
+            "golden_queries": golden_count,
+            "release_blockers": n_blockers,
+            "readiness_score": health_total,
+            "kappa": kappa,
+        },
+        "artifact_status": artifact_status,
+        "ci_gates": ci_gates,
+        "implementation_queue": fix_queue,
+        "health_gaps": health_gaps,
+        "commands": commands,
+        "next_steps": next_steps,
+    }
+
+
+def _build_engineering_clipboard_text(handoff: dict) -> str:
+    lines = [
+        f"ML Engineering Handoff: {handoff.get('agent', 'agent')}",
+        f"Status: {handoff.get('status_label', 'unknown')}",
+        "",
+        "CI gates:",
+    ]
+    for gate in handoff.get("ci_gates", []):
+        lines.append(f"- {gate['gate']}: target {gate['target']} (current: {gate['current']})")
+    lines.extend(["", "Implementation queue:"])
+    queue = handoff.get("implementation_queue", [])
+    if queue:
+        for item in queue[:5]:
+            lines.append(
+                f"- {item['priority']} {item['code']} "
+                f"({item['max_severity']}, {item['count']} examples): "
+                f"{item['engineering_change']}"
+            )
+    else:
+        lines.append("- No coded failures yet.")
+    lines.extend(["", "Commands:"])
+    lines.extend(handoff.get("commands", []))
+    return "\n".join(lines)
+
+
 def _build_html_report(
     agent_name: str,
     date_str: str,
@@ -153,6 +381,7 @@ def _build_html_report(
     judge_prompt: str,
     exec_summary: str,
     annotations: list[dict],
+    engineering_handoff: dict | None = None,
 ) -> str:
     """Build a self-contained HTML report suitable for stakeholder sharing."""
     pass_rate = f"{correct / total * 100:.0f}%" if total else "0%"
@@ -179,6 +408,28 @@ def _build_html_report(
         f"<p class='summary'>{exec_summary}</p>" if exec_summary
         else f"<p>{pass_rate} pass rate ({correct}/{total} correct).</p>"
     )
+    handoff_html = ""
+    if engineering_handoff:
+        queue_rows = "".join(
+            f"<tr><td>{item['priority']}</td><td>{item['code']}</td>"
+            f"<td>{item['max_severity']}</td><td>{item['count']}</td>"
+            f"<td>{item['definition_of_done']}</td></tr>"
+            for item in engineering_handoff.get("implementation_queue", [])[:7]
+        )
+        gates_rows = "".join(
+            f"<tr><td>{gate['gate']}</td><td>{gate['target']}</td><td>{gate['current']}</td></tr>"
+            for gate in engineering_handoff.get("ci_gates", [])
+        )
+        commands = "\n".join(engineering_handoff.get("commands", []))
+        handoff_html = f"""
+<h2>ML Engineer Handoff</h2>
+<p><strong>Status:</strong> {engineering_handoff.get('status_label', 'Unknown')}</p>
+{"<table><thead><tr><th>Gate</th><th>Target</th><th>Current</th></tr></thead><tbody>" + gates_rows + "</tbody></table>" if gates_rows else ""}
+<h2>Implementation Queue</h2>
+{"<table><thead><tr><th>Priority</th><th>Failure</th><th>Severity</th><th>Examples</th><th>Definition of Done</th></tr></thead><tbody>" + queue_rows + "</tbody></table>" if queue_rows else "<p>No coded failure queue yet.</p>"}
+<h2>Runbook</h2>
+<pre>{commands}</pre>
+"""
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -219,6 +470,7 @@ def _build_html_report(
 </div>
 <h2>Executive Summary</h2>
 {summary_html}
+{handoff_html}
 <h2>Release-Blocking Failure Patterns</h2>
 {"<table><thead><tr><th>Pattern</th><th>Severity</th><th>Freq</th><th>Definition</th></tr></thead><tbody>" + patterns_rows + "</tbody></table>" if patterns else "<p>No failure patterns recorded yet.</p>"}
 <h2>Error Codebook</h2>
@@ -292,7 +544,6 @@ def report_page():
     ]
     n_blockers = len(blocking_annotations)
     n_codes = len(codebook)
-    n_patterns = len(patterns)
     top_pattern = patterns[0]["name"] if patterns else "No dominant pattern yet"
     _health = compute_eval_health(dict(app.storage.user))
     _total_color = (
@@ -319,6 +570,36 @@ def report_page():
         decision_color = "var(--green-bright)"
         next_action = "Proceed with gated rollout and keep these judge criteria in CI."
 
+    engineering_handoff = _build_engineering_handoff(
+        agent_name=agent_name,
+        total=total,
+        correct=correct,
+        partial=partial,
+        incorrect=incorrect,
+        pass_rate_pct=pass_rate_pct,
+        golden_count=len(golden_prompts),
+        n_blockers=n_blockers,
+        codebook=codebook,
+        coding_annotations=coding_annotations,
+        judge_prompt=storage.get("_generated_judge_prompt", ""),
+        health_total=_health.total,
+        health_gaps=_health.gaps,
+        kappa=_health.kappa,
+    )
+    engineering_clipboard = _build_engineering_clipboard_text(engineering_handoff)
+
+    def download_engineering_handoff():
+        ui.download(
+            json.dumps(engineering_handoff, indent=2).encode(),
+            "ml_engineering_handoff.json",
+        )
+
+    def copy_engineering_plan():
+        ui.run_javascript(
+            f"navigator.clipboard.writeText({json.dumps(engineering_clipboard)})"
+        )
+        ui.notify("ML engineering plan copied", type="positive")
+
     def download_html_report():
         html = _build_html_report(
             agent_name=agent_name,
@@ -333,6 +614,7 @@ def report_page():
             judge_prompt=storage.get("_generated_judge_prompt", ""),
             exec_summary=storage.get("_exec_summary", ""),
             annotations=annotations,
+            engineering_handoff=engineering_handoff,
         )
         safe_name = agent_name.replace(" ", "_").replace("/", "-")
         ui.download(html.encode(), f"release_readiness_report_{safe_name}.html")
@@ -349,7 +631,7 @@ def report_page():
                         '<div class="rr-subtitle">'
                         'This page is the release evidence artifact: what the expert reviewed, '
                         'which failures block launch, what the judge should enforce, and what '
-                        'engineering needs to fix next.'
+                        'the ML engineer needs to implement next.'
                         '</div>'
                     )
                 with ui.element("div").classes("rr-decision").style(
@@ -378,7 +660,7 @@ def report_page():
             with ui.element("div").classes("rr-action-card").style("margin-top: 14px"):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:0; flex:1; min-width:260px"):
-                        ui.html('<div class="rr-action-title">Next PM action</div>')
+                        ui.html('<div class="rr-action-title">Next release action</div>')
                         ui.html(
                             f'<div class="rr-action-copy">{next_action} '
                             f'Top observed pattern: <strong>{top_pattern}</strong>.</div>'
@@ -388,8 +670,141 @@ def report_page():
                             "Export report", icon="download", on_click=download_html_report
                         ).props("size=sm color=primary no-caps")
                         ui.button(
+                            "ML handoff", icon="integration_instructions",
+                            on_click=download_engineering_handoff,
+                        ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
+                        ui.button(
                             "Open judge", icon="gavel", on_click=lambda: ui.navigate.to("/judge")
                         ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
+
+        # ── ML engineer handoff ───────────────────────────────────────────
+        with ui.element("div").classes("page-card"):
+            with ui.row().classes("items-start justify-between gap-3 flex-wrap").style("margin-bottom: 10px"):
+                with ui.column().style("gap: 2px; flex: 1; min-width: 260px"):
+                    ui.label("ML Engineer Handoff").classes("rr-section-title")
+                    ui.label(
+                        "Implementation queue, release gates, artifacts, and commands for turning PM evidence into CI."
+                    ).style("font-size: 0.78rem; color: var(--text-muted); line-height: 1.5")
+                with ui.row().classes("gap-2 flex-wrap"):
+                    ui.button(
+                        "Copy plan", icon="content_copy", on_click=copy_engineering_plan
+                    ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
+                    ui.button(
+                        "Download JSON", icon="download", on_click=download_engineering_handoff
+                    ).props("size=sm color=primary no-caps")
+
+            handoff_status_color = (
+                "var(--red)" if engineering_handoff["status"] in {"blocked_by_p0", "missing_judge"}
+                else ("var(--yellow)" if engineering_handoff["status"] == "needs_calibration" else "var(--green-bright)")
+            )
+            with ui.element("div").classes("rr-handoff-grid"):
+                for value, label, color in [
+                    (engineering_handoff["status_label"], "Engineering status", handoff_status_color),
+                    (f"{len(golden_prompts)}", "Golden queries", "var(--accent-bright)"),
+                    (f"{n_blockers}", "P0 blockers", "var(--red)" if n_blockers else "var(--green-bright)"),
+                    (f"{_health.kappa:.2f}" if _health.kappa is not None else "Not measured", "Judge agreement", "var(--yellow)" if _health.kappa is None else "var(--green-bright)"),
+                ]:
+                    with ui.element("div").classes("rr-handoff-stat"):
+                        ui.html(f'<div class="rr-handoff-value" style="color:{color}">{value}</div>')
+                        ui.html(f'<div class="rr-handoff-label">{label}</div>')
+
+            ui.label("CI gates").style(
+                "font-size: 0.68rem; font-weight: 700; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.05em; margin-top: 14px"
+            )
+            for gate in engineering_handoff["ci_gates"]:
+                with ui.row().classes("items-baseline gap-2 flex-wrap").style(
+                    "padding: 6px 0; border-bottom: 1px solid var(--border-subtle)"
+                ):
+                    ui.label(gate["gate"]).style(
+                        "font-size: 0.78rem; font-weight: 650; color: var(--text-primary); min-width: 150px"
+                    )
+                    ui.label(f"Target: {gate['target']}").style(
+                        "font-size: 0.74rem; color: var(--text-secondary); flex: 1; min-width: 220px"
+                    )
+                    ui.label(f"Current: {gate['current']}").style(
+                        "font-size: 0.72rem; color: var(--text-tertiary)"
+                    )
+
+            ui.label("Artifacts").style(
+                "font-size: 0.68rem; font-weight: 700; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.05em; margin-top: 16px"
+            )
+            with ui.row().classes("gap-2 flex-wrap").style("margin-top: 6px"):
+                for artifact in engineering_handoff["artifact_status"]:
+                    status = artifact["status"]
+                    status_color = (
+                        "var(--green-bright)" if status == "ready"
+                        else ("var(--yellow)" if status == "needed" else "var(--red)")
+                    )
+                    with ui.element("div").style(
+                        "border:1px solid var(--border-subtle); border-radius:6px; "
+                        "padding:7px 9px; background:var(--bg-surface-1); min-width:170px"
+                    ):
+                        ui.label(artifact["artifact"]).style(
+                            "font-size:0.7rem; color:var(--text-primary); font-weight:650"
+                        )
+                        ui.label(f'{status.upper()} · {artifact["detail"]}').style(
+                            f"font-size:0.62rem; color:{status_color}; margin-top:2px"
+                        )
+
+            ui.label("Implementation queue").style(
+                "font-size: 0.68rem; font-weight: 700; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.05em; margin-top: 16px"
+            )
+            if engineering_handoff["implementation_queue"]:
+                for item in engineering_handoff["implementation_queue"][:5]:
+                    row_color = "var(--red)" if item["priority"] == "P0" else "var(--yellow)"
+                    with ui.element("div").classes("rr-priority-row").style(f"border-left-color:{row_color}"):
+                        with ui.row().classes("items-start justify-between gap-2 flex-wrap"):
+                            with ui.column().style("gap: 3px; flex: 1; min-width: 260px"):
+                                with ui.row().classes("items-center gap-2 flex-wrap"):
+                                    ui.html(
+                                        f'<span style="font-size:0.62rem;font-weight:800;'
+                                        f'color:{row_color};background:rgba(0,0,0,0.18);'
+                                        f'border:1px solid {row_color};border-radius:4px;padding:2px 7px">'
+                                        f'{item["priority"]}</span>'
+                                    )
+                                    ui.label(item["code"]).style(
+                                        "font-size: 0.86rem; font-weight: 700; color: var(--text-primary)"
+                                    )
+                                    ui.label(
+                                        f'{item["max_severity"]} · {item["count"]} tagged'
+                                    ).style("font-size: 0.68rem; color: var(--text-tertiary)")
+                                if item["definition"]:
+                                    ui.label(item["definition"]).style(
+                                        "font-size: 0.72rem; color: var(--text-muted); line-height: 1.45"
+                                    )
+                                ui.label(item["engineering_change"]).style(
+                                    "font-size: 0.76rem; color: var(--text-secondary); line-height: 1.5"
+                                )
+                                ui.label(f'Done: {item["definition_of_done"]}').style(
+                                    "font-size: 0.72rem; color: var(--accent-bright); line-height: 1.45"
+                                )
+                            if item["examples"]:
+                                with ui.column().style("gap: 4px; flex: 1; min-width: 260px"):
+                                    ui.label("Tagged evidence").style(
+                                        "font-size: 0.62rem; font-weight: 700; color: var(--text-tertiary); "
+                                        "text-transform: uppercase; letter-spacing: 0.05em"
+                                    )
+                                    for example in item["examples"][:2]:
+                                        ui.label(example.get("query", "")).style(
+                                            "font-size: 0.7rem; color: var(--text-secondary); line-height: 1.35"
+                                        )
+            else:
+                ui.label(
+                    "No coded failures yet. Add severity-coded annotations before asking engineering to build a release gate."
+                ).style("font-size: 0.78rem; color: var(--text-muted); margin-top: 8px")
+
+            ui.label("Runbook").style(
+                "font-size: 0.68rem; font-weight: 700; color: var(--text-tertiary); "
+                "text-transform: uppercase; letter-spacing: 0.05em; margin-top: 16px"
+            )
+            ui.html(
+                '<pre class="rr-runbook">'
+                + "\n".join(engineering_handoff["commands"])
+                + "</pre>"
+            )
 
         # ── Evidence quality score ─────────────────────────────────────────
         with ui.element("div").classes("page-card").style("border-left:4px solid " + _total_color):
@@ -2265,6 +2680,7 @@ Respond in JSON only:
                         "annotations": annotations,
                         "paradigm_model": paradigm,
                         "judge_prompt": storage.get("_generated_judge_prompt", ""),
+                        "ml_engineering_handoff": engineering_handoff,
                     }
                     ui.download(json.dumps(report, indent=2).encode(), "full_report.json")
 
@@ -2272,6 +2688,7 @@ Respond in JSON only:
                 ui.button("Golden Dataset (JSONL)", on_click=download_golden_jsonl, icon="download").props("outline size=sm dark")
                 ui.button("Codebook (JSON)", on_click=download_codebook, icon="download").props("outline size=sm dark")
                 ui.button("Judge Prompt (TXT)", on_click=download_judge, icon="download").props("outline size=sm dark")
+                ui.button("ML Handoff (JSON)", on_click=download_engineering_handoff, icon="integration_instructions").props("outline size=sm dark")
                 ui.button("Full Report (JSON)", on_click=download_full_report, icon="download").props("outline size=sm dark")
 
                 def download_html_report():
@@ -2288,6 +2705,7 @@ Respond in JSON only:
                         judge_prompt=storage.get("_generated_judge_prompt", ""),
                         exec_summary=storage.get("_exec_summary", ""),
                         annotations=annotations,
+                        engineering_handoff=engineering_handoff,
                     )
                     safe_name = agent_name.replace(" ", "_").replace("/", "-")
                     ui.download(html.encode(), f"release_readiness_report_{safe_name}.html")

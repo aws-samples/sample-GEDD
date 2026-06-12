@@ -65,6 +65,83 @@ def test_build_failure_patterns_sorted_desc():
     assert freqs == sorted(freqs, reverse=True)
 
 
+def test_build_fix_queue_prioritizes_release_blockers():
+    from grounded_evals.ui.report_page import _build_fix_queue
+
+    codebook = [
+        {"name": "Placeholder Corruption", "definition": "damaged runtime token"},
+        {"name": "Tone Drift", "definition": "wrong tone"},
+    ]
+    annotations = [
+        {
+            "codes": ["Tone Drift"],
+            "severity": "functional",
+            "query": "q1",
+            "response": "r1",
+            "memo": "m1",
+        },
+        {
+            "codes": ["Placeholder Corruption"],
+            "severity": "critical",
+            "query": "q2",
+            "response": "r2",
+            "memo": "m2",
+        },
+        {
+            "codes": ["Placeholder Corruption"],
+            "severity": "catastrophic",
+            "query": "q3",
+            "response": "r3",
+            "memo": "m3",
+        },
+    ]
+
+    queue = _build_fix_queue(codebook, annotations)
+
+    assert queue[0]["code"] == "Placeholder Corruption"
+    assert queue[0]["priority"] == "P0"
+    assert queue[0]["max_severity"] == "catastrophic"
+    assert queue[0]["count"] == 2
+    assert "regression suite" in queue[0]["definition_of_done"]
+    assert len(queue[0]["examples"]) == 2
+
+
+def test_build_engineering_handoff_includes_ci_runbook():
+    from grounded_evals.ui.report_page import _build_engineering_handoff
+
+    handoff = _build_engineering_handoff(
+        agent_name="LocaleGate",
+        total=50,
+        correct=35,
+        partial=5,
+        incorrect=10,
+        pass_rate_pct=70.0,
+        golden_count=50,
+        n_blockers=2,
+        codebook=[
+            {"name": "Gameplay Meaning Reversal", "definition": "wrong player action"}
+        ],
+        coding_annotations=[
+            {
+                "codes": ["Gameplay Meaning Reversal"],
+                "severity": "critical",
+                "query": "Japanese revive prompt says finish ally.",
+                "response": "Players will infer from icon.",
+            }
+        ],
+        judge_prompt="judge",
+        health_total=82,
+        health_gaps=[],
+        kappa=None,
+    )
+
+    assert handoff["status"] == "blocked_by_p0"
+    assert handoff["metrics"]["golden_queries"] == 50
+    assert handoff["implementation_queue"][0]["priority"] == "P0"
+    assert any("mlflow" in command for command in handoff["commands"])
+    assert handoff["artifact_status"][3]["artifact"] == "judge_prompt.txt"
+
+
 # ── _is_similar (coding_page) ─────────────────────────────────────────────────
 
 
