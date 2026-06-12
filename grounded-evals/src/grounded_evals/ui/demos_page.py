@@ -356,16 +356,16 @@ def _build_domain_registry():
 
     domains = [
         {
-            "id": "inductive_pm_workbench", "name": "PM Annotation Workbench", "icon": "rate_review",
-            "operator": "AI PM Readiness Team",
-            "tagline": "50 synthetic traces -> open coding -> axial coding -> saturation -> LLM-as-a-judge prompt",
-            "domain": "AI PM Release Readiness", "risk_level": "critical",
-            "regulations": ["Open Coding", "Axial Coding", "Theoretical Saturation"],
+            "id": "inductive_pm_workbench", "name": "AAA Game Localization Workbench", "icon": "translate",
+            "operator": "Orion Forge Localization",
+            "tagline": "50 synthetic LQA traces -> open coding -> axial coding -> saturation -> localization judge prompt",
+            "domain": "AAA Game Localization / PM Workbench", "risk_level": "critical",
+            "regulations": ["LQA", "Runtime tokens", "Regional compliance"],
             "loader": load_inductive_pm_demo,
             "codebook": INDUCTIVE_PM_CODEBOOK,
             "sample_queries": INDUCTIVE_PM_SAMPLE_QUERIES,
-            "paradigm_phenomenon": "Release gate criteria generated from saturated PM annotations",
-            "paradigm_consequence": "A defensible judge prompt grounded in 50 PM-labeled customer-facing failures",
+            "paradigm_phenomenon": "Fluent Translation That Breaks Runtime, Meaning, Or Compliance",
+            "paradigm_consequence": "Broken UI strings, wrong player actions, rating/store compliance exposure, regional backlash",
             "judge_prompt": INDUCTIVE_PM_JUDGE_PROMPT,
             "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in INDUCTIVE_PM_EVAL_HISTORY],
             "n_queries": 50, "n_codes": len(INDUCTIVE_PM_CODEBOOK),
@@ -755,12 +755,16 @@ def _build_domain_registry():
     # ── AAA game release gates ────────────────────────────────────────────────
     try:
         from grounded_evals.ui.game_release_demos import (
+            GAME_LOCALIZATION_CODEBOOK,
+            GAME_LOCALIZATION_EVAL_HISTORY,
+            GAME_LOCALIZATION_JUDGE_PROMPT,
             GAME_OPERATOR_CODEBOOK,
             GAME_OPERATOR_EVAL_HISTORY,
             GAME_OPERATOR_JUDGE_PROMPT,
             GAME_PRODUCER_CODEBOOK,
             GAME_PRODUCER_EVAL_HISTORY,
             GAME_PRODUCER_JUDGE_PROMPT,
+            load_game_localization_demo,
             load_game_operator_demo,
             load_game_producer_demo,
         )
@@ -800,6 +804,46 @@ def _build_domain_registry():
                 "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in GAME_PRODUCER_EVAL_HISTORY],
                 "n_queries": 8,
                 "n_codes": 6,
+            },
+            {
+                "id": "game_localization",
+                "name": "AAA Game Localization",
+                "icon": "translate",
+                "operator": "Orion Forge Localization",
+                "tagline": "Localization QA assistant - placeholders, RTL input prompts, ratings copy, store disclosures, culturalization",
+                "domain": "AAA Game Localization / Global Release",
+                "risk_level": "critical",
+                "regulations": ["USK/PEGI/ESRB", "Platform storefront policy", "Loot-box disclosure", "Regional publishing review"],
+                "loader": load_game_localization_demo,
+                "codebook": GAME_LOCALIZATION_CODEBOOK,
+                "sample_queries": [
+                    {
+                        "q": "French subtitle dropped {player_name} and the <color=red> warning tag. Can we ship it?",
+                        "verdict": "incorrect",
+                        "note": "Agent treated runtime placeholder and warning markup loss as cosmetic.",
+                    },
+                    {
+                        "q": "Japanese revive prompt says 'finish the downed ally'. Is that just flavor?",
+                        "verdict": "incorrect",
+                        "note": "Agent approved a translation that reverses the player action.",
+                    },
+                    {
+                        "q": "Can localization soften German USK 18 store copy to suitable for teens?",
+                        "verdict": "incorrect",
+                        "note": "Agent let marketing tone override regional ratings compliance.",
+                    },
+                    {
+                        "q": "Arabic RTL build maps left/right dodge prompts to the wrong shoulder buttons.",
+                        "verdict": "incorrect",
+                        "note": "Agent dismissed a gameplay-blocking input glyph defect.",
+                    },
+                ],
+                "paradigm_phenomenon": "Fluent Translation That Breaks Runtime, Meaning, Or Compliance",
+                "paradigm_consequence": "Broken UI strings, wrong combat actions, rating/store compliance exposure, regional backlash",
+                "judge_prompt": GAME_LOCALIZATION_JUDGE_PROMPT,
+                "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in GAME_LOCALIZATION_EVAL_HISTORY],
+                "n_queries": 8,
+                "n_codes": 7,
             },
             {
                 "id": "game_operator",
@@ -853,8 +897,13 @@ def _render_domain(domain: dict):
     codebook = domain.get("codebook", [])
     judge_prompt = domain.get("judge_prompt", "").strip()
     judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
-    is_featured = domain.get("id") in {"inductive_pm_workbench", "game_producer", "game_operator"}
-    load_label = "Load 50-query workbench" if domain.get("id") == "inductive_pm_workbench" else "Load scenario"
+    is_featured = domain.get("id") in {
+        "inductive_pm_workbench",
+        "game_producer",
+        "game_localization",
+        "game_operator",
+    }
+    load_label = "Load 50-query localization demo" if domain.get("id") == "inductive_pm_workbench" else "Load scenario"
 
     def make_loader(d=domain):
         def _load():
@@ -886,7 +935,7 @@ def _render_domain(domain: dict):
 
         with ui.element("div").classes("ds-chip-row"):
             if domain.get("id") == "inductive_pm_workbench":
-                ui.html('<span class="ds-pill ds-feature-badge">Main PM workflow</span>')
+                ui.html('<span class="ds-pill ds-feature-badge">Main 50-query demo</span>')
             elif is_featured:
                 ui.html('<span class="ds-pill ds-feature-badge">Release quality gate</span>')
             ui.html(
@@ -958,7 +1007,7 @@ def demos_page():
     domains = _build_domain_registry()
     active_tab = {"idx": 0}
     workbench_ids = {"inductive_pm_workbench"}
-    featured_ids = {"game_producer", "game_operator"}
+    featured_ids = {"game_producer", "game_localization", "game_operator"}
 
     with ui.column().classes("w-full max-w-6xl mx-auto").style("padding: 1.5rem; gap: 0"):
 
@@ -968,7 +1017,7 @@ def demos_page():
                 ui.html('<div class="ds-page-title">Demos and PM Workbench</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
-                    'Load the main 50-query PM annotation demo or a domain scenario. Each demo seeds '
+                    'Load the main 50-query localization annotation demo or a domain scenario. Each demo seeds '
                     'golden queries, PM annotations, failure modes, and judge-prompt evidence.'
                     '</div>'
                 )
@@ -1026,4 +1075,8 @@ def demos_page():
             with content_area:
                 _render_domain(domains[idx])
 
-        render_domain_tab(0)
+        initial_idx = next(
+            (i for i, domain in enumerate(domains) if domain.get("id") in workbench_ids),
+            0,
+        )
+        render_domain_tab(initial_idx)

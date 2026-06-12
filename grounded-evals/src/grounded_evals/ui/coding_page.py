@@ -541,7 +541,7 @@ def coding_page():
             from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
 
             load_inductive_pm_demo(app.storage.user)
-            ui.notify("50-query PM workbench demo loaded.", type="positive")
+            ui.notify("50-query localization demo loaded.", type="positive")
             ui.navigate.to("/coding")
 
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
@@ -550,12 +550,12 @@ def coding_page():
                 "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
             ):
                 ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("PM Annotation Workbench").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Load the 50-query inductive PM demo or start from your own generated traces.").style(
+                ui.label("AAA Game Localization Workbench").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Load the 50-query localization PM demo or start from your own generated traces.").style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
-                    ui.button("Load 50-query PM demo", icon="play_circle",
+                    ui.button("Load 50-query localization demo", icon="play_circle",
                               on_click=load_pm_workbench_demo).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )

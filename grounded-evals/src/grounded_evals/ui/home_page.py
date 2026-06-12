@@ -1155,7 +1155,13 @@ def home_page():
 
     from grounded_evals.ui.demos_page import _build_domain_registry
     domain_cards = _build_domain_registry()
-    domain_priority = {"inductive_pm_workbench": 0, "game_producer": 1, "game_operator": 2, "adtech": 3}
+    domain_priority = {
+        "inductive_pm_workbench": 0,
+        "game_producer": 1,
+        "game_localization": 2,
+        "game_operator": 3,
+        "adtech": 4,
+    }
     domain_cards = sorted(
         domain_cards,
         key=lambda domain: domain_priority.get(domain.get("id", ""), 99),
@@ -1174,7 +1180,7 @@ def home_page():
     core_steps = [
         (
             "Load 50 traces",
-            "Start with a synthetic customer-facing game assistant dataset spanning launch, live ops, store, and moderation risk.",
+            "Start with a synthetic game localization QA dataset spanning runtime strings, RTL UI, store copy, subtitles, and regional risk.",
             "Output: golden query set",
         ),
         (
@@ -1216,8 +1222,9 @@ def home_page():
     ]
 
     starter_demos = [
-        ("inductive_pm_workbench", "50-query PM Workbench"),
+        ("inductive_pm_workbench", "50-query Localization"),
         ("game_producer", "AAA Game Producer"),
+        ("game_localization", "AAA Game Localization"),
         ("game_operator", "AAA Game Operator"),
     ]
 
@@ -1260,7 +1267,7 @@ def home_page():
             )
             with ui.element("div").classes("simple-action-row"):
                 ui.button(
-                    "Load 50-query PM demo",
+                    "Load 50-query localization demo",
                     icon="play_circle",
                     on_click=lambda: load_homepage_demo("inductive_pm_workbench"),
                 ).props("color=primary size=md unelevated").style(

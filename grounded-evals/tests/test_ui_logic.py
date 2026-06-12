@@ -240,8 +240,9 @@ def test_domain_registry_includes_all_launch_demos():
 
     assert len(domains) >= 21
     assert {
-        "PM Annotation Workbench",
+        "AAA Game Localization Workbench",
         "AAA Game Producer",
+        "AAA Game Localization",
         "AAA Game Operator",
         "RxBot",
         "TaxBot",
@@ -268,7 +269,7 @@ def test_home_expert_discoveries_are_domain_specific():
     assert all(item["prompt"] and item["unsafe_answer"] and item["gate"] for item in featured)
 
 
-def test_inductive_pm_demo_loads_50_query_workbench():
+def test_inductive_pm_demo_loads_50_query_localization_workbench():
     from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
 
     storage = {"authenticated": True, "email": "pm@example.com"}
@@ -277,7 +278,7 @@ def test_inductive_pm_demo_loads_50_query_workbench():
     session = storage["session_data"]
     methodology = storage["demo_methodology"]
 
-    assert session["agent_spec"]["name"] == "PlayerReady PM Workbench"
+    assert session["agent_spec"]["name"] == "LocaleGate PM Workbench"
     assert len(session["golden_prompts"]) == 50
     assert len(storage["annotations"]) == 50
     assert len(storage["coding_annotations"]) == 50
@@ -286,7 +287,31 @@ def test_inductive_pm_demo_loads_50_query_workbench():
     assert methodology["open_code_count"] == 10
     assert methodology["saturation_window"] == 8
     assert methodology["new_codes_in_final_window"] == 0
+    assert "Placeholder And Markup Corruption" in {
+        code["name"] for code in storage["codebook"]
+    }
+    assert "localization" in storage["_generated_judge_prompt"].lower()
     assert "open coding" in storage["_generated_judge_prompt"].lower()
+
+
+def test_game_localization_demo_loads_lqa_release_gate():
+    from grounded_evals.ui.game_release_demos import load_game_localization_demo
+
+    storage = {"authenticated": True, "email": "lqa@example.com"}
+    load_game_localization_demo(storage)
+
+    session = storage["session_data"]
+
+    assert session["agent_spec"]["name"] == "LocaleGate"
+    assert len(session["golden_prompts"]) == 8
+    assert len(storage["annotations"]) == 6
+    assert len(storage["coding_annotations"]) == 7
+    assert len(storage["codebook"]) == 7
+    assert storage["paradigm_model"]["phenomenon"]
+    assert "localization qa assistant" in storage["_generated_judge_prompt"].lower()
+    assert "Placeholder And Markup Corruption" in {
+        code["name"] for code in storage["codebook"]
+    }
 
 
 # ── _build_responses (coding_page) ───────────────────────────────────────────

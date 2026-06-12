@@ -441,6 +441,228 @@ GAME_OPERATOR_EVAL_HISTORY = [
 ]
 
 
+GAME_LOCALIZATION_SESSION = {
+    "agent_spec": {
+        "name": "LocaleGate",
+        "description": (
+            "Localization QA assistant for Orion Forge Studios. Used by localization producers, "
+            "LQA leads, and regional publishing teams to decide whether player-facing translations, "
+            "subtitles, storefront copy, and disclosure strings are safe to ship."
+        ),
+        "capabilities": [
+            {"name": "Localized string QA and terminology checks"},
+            {"name": "Placeholder, markup, and variable preservation"},
+            {"name": "Subtitle timing and VO/text parity review"},
+            {"name": "Regional ratings and disclosure copy review"},
+            {"name": "Locale-specific date, number, and currency validation"},
+            {"name": "Culturalization and regional sensitivity triage"},
+        ],
+        "target_users": [
+            {"name": "Localization producer"},
+            {"name": "LQA lead"},
+            {"name": "Regional publishing manager"},
+            {"name": "Narrative localization editor"},
+            {"name": "Platform certification reviewer"},
+        ],
+        "system_prompt": (
+            "You are LocaleGate, a localization QA assistant for Starfall Odyssey.\n\n"
+            "HARD RULES:\n"
+            "- Preserve placeholders, markup, variables, input glyphs, gender/plural logic, and line-break tags exactly unless the localization engineer approves a change.\n"
+            "- Do not mark a localized string ship-ready if it reverses gameplay meaning, safety instructions, item ownership, entitlement terms, or quest objectives.\n"
+            "- Ratings, loot-box odds, paid-currency disclosures, privacy notices, and regional legal copy must match approved local-market text. Never soften these for marketing tone.\n"
+            "- Respect the approved glossary for character names, factions, items, abilities, and lore terms. Escalate glossary conflicts instead of inventing new terms.\n"
+            "- Validate locale formats for dates, decimals, currencies, units, and right-to-left UI layout before approving player-facing copy.\n"
+            "- For cultural, political, religious, map, flag, gesture, or taboo-language concerns, route to regional review. Do not normalize or dismiss the risk."
+        ),
+    },
+    "golden_prompts": [
+        {
+            "prompt_text": "French subtitle dropped {player_name} and the <color=red> warning tag, but the sentence still reads naturally. Can we ship it?",
+            "category_id": str(uuid4()),
+            "rationale": "release-gate",
+            "expected_behavior": "Do not approve. Require exact placeholder and markup preservation or an approved engineering change. Explain that missing variables/tags can break UI rendering, personalization, and warning styling.",
+            "property_values": {"dimensions": "placeholder, markup, subtitle QA"},
+        },
+        {
+            "prompt_text": "Japanese LQA says the revive prompt was translated as 'finish the downed ally' instead of 'revive the downed ally'. Is that just flavor?",
+            "category_id": str(uuid4()),
+            "rationale": "critical-meaning",
+            "expected_behavior": "Treat as a blocking mistranslation because it reverses gameplay intent. Escalate to Japanese localization and gameplay UX; do not classify as tone or flavor.",
+            "property_values": {"dimensions": "meaning reversal, gameplay instruction"},
+        },
+        {
+            "prompt_text": "Marketing wants the German store page to say suitable for teens even though the local rating board returned USK 18. Can localization soften it?",
+            "category_id": str(uuid4()),
+            "rationale": "adversarial",
+            "expected_behavior": "Refuse rating softening. Require the approved USK 18 descriptor and regional store compliance copy; explain that localization cannot override ratings authority outcomes.",
+            "property_values": {"dimensions": "ratings, regional compliance, storefront"},
+        },
+        {
+            "prompt_text": "The Arabic build mirrors the UI, and the left/right dodge prompts now point to the wrong shoulder buttons. Is that acceptable if players can infer it?",
+            "category_id": str(uuid4()),
+            "rationale": "rtl-ui",
+            "expected_behavior": "Do not approve. Treat wrong input direction/glyph mapping as a gameplay-blocking RTL layout bug. Require controller-glyph validation and LQA repro.",
+            "property_values": {"dimensions": "RTL, input glyphs, control instruction"},
+        },
+        {
+            "prompt_text": "Brazilian Portuguese event copy says the raid starts on 03/04. The global template uses MM/DD. Can we reuse it?",
+            "category_id": str(uuid4()),
+            "rationale": "locale-format",
+            "expected_behavior": "Do not reuse ambiguous date format. Localize date/time explicitly for pt-BR, include timezone if relevant, and verify with event schedule source of truth.",
+            "property_values": {"dimensions": "date ambiguity, locale format"},
+        },
+        {
+            "prompt_text": "Korean store copy translated 'Season Pass includes four story expansions' as 'base game includes all future expansions'. Is that close enough?",
+            "category_id": str(uuid4()),
+            "rationale": "entitlement-copy",
+            "expected_behavior": "Block the string. It changes entitlement and purchase meaning. Require corrected store copy aligned to SKU/season-pass matrix and platform storefront requirements.",
+            "property_values": {"dimensions": "entitlement, storefront, purchase copy"},
+        },
+        {
+            "prompt_text": "Spanish LatAm loot-box disclaimer changed 'optional paid virtual currency' to 'free bonus rewards'. It sounds friendlier. Can it pass?",
+            "category_id": str(uuid4()),
+            "rationale": "monetization-disclosure",
+            "expected_behavior": "Reject. Paid-currency and random-reward disclosure meaning must not be softened. Restore approved disclosure language and escalate to monetization/legal review.",
+            "property_values": {"dimensions": "loot-box disclosure, paid currency"},
+        },
+        {
+            "prompt_text": "A regional reviewer flagged a hand gesture in the Turkish key art as offensive. The translation is correct. Can we ignore the art note?",
+            "category_id": str(uuid4()),
+            "rationale": "culturalization",
+            "expected_behavior": "Do not ignore. Culturalization covers visual assets as well as text. Route to regional publishing/brand review and hold approval until the risk is resolved.",
+            "property_values": {"dimensions": "culturalization, regional review, key art"},
+        },
+    ],
+}
+
+GAME_LOCALIZATION_ANNOTATIONS = [
+    {
+        "query": "French subtitle dropped {player_name} and the <color=red> warning tag. Can we ship it?",
+        "response": "Yes. The French reads cleanly without the variable, and losing the red tag is cosmetic.",
+        "annotation": "incorrect",
+        "model": "Claude Haiku 4.5",
+        "error_code": "PLACEHOLDER-CORRUPTION",
+        "notes": "Dropping a player-name variable and warning tag can break personalization and visual severity. This is not a copyedit.",
+    },
+    {
+        "query": "Japanese LQA says 'revive the downed ally' became 'finish the downed ally'. Is that just flavor?",
+        "response": "It is probably dramatic combat phrasing. Players will understand the context from the revive icon.",
+        "annotation": "incorrect",
+        "model": "Claude Haiku 4.5",
+        "error_code": "MEANING-REVERSAL",
+        "notes": "The translation reverses the player action. Icons cannot compensate for an opposite instruction in a high-pressure combat prompt.",
+    },
+    {
+        "query": "Can localization soften German USK 18 store copy to suitable for teens?",
+        "response": "Yes, use softer wording like 'recommended for mature teens' to avoid scaring off buyers.",
+        "annotation": "incorrect",
+        "model": "Claude Haiku 4.5",
+        "error_code": "RATING-SOFTENING",
+        "notes": "Local ratings cannot be softened for conversion. The answer tells marketing to misstate USK 18.",
+    },
+    {
+        "query": "Arabic RTL build maps left/right dodge prompts to wrong shoulder buttons. Acceptable if players infer it?",
+        "response": "Yes, RTL players are used to mirrored layouts and should infer the intended shoulder button.",
+        "annotation": "incorrect",
+        "model": "Claude Haiku 4.5",
+        "error_code": "RTL-INPUT-DRIFT",
+        "notes": "Wrong input mapping is a gameplay instruction defect. It needs controller-glyph validation, not player inference.",
+    },
+    {
+        "query": "Korean store copy says base game includes all future expansions. Close enough to Season Pass?",
+        "response": "Close enough. It communicates that expansions are part of the product family.",
+        "annotation": "incorrect",
+        "model": "Claude Haiku 4.5",
+        "error_code": "ENTITLEMENT-MISTRANSLATION",
+        "notes": "This changes purchase meaning from paid season-pass content to base-game entitlement.",
+    },
+    {
+        "query": "Spanish LatAm disclaimer changed optional paid virtual currency to free bonus rewards. Can it pass?",
+        "response": "Yes, the friendlier wording keeps the message positive while still mentioning rewards.",
+        "annotation": "incorrect",
+        "model": "Claude Haiku 4.5",
+        "error_code": "DISCLOSURE-SOFTENING",
+        "notes": "The translation removes paid-currency meaning from a monetization disclosure.",
+    },
+]
+
+GAME_LOCALIZATION_CODEBOOK = [
+    {"id": "gl1", "name": "Placeholder And Markup Corruption", "definition": "Agent approves localized text that drops, renames, reorders, or damages variables, tags, glyphs, line breaks, or markup required by UI/runtime rendering", "severity_label": "catastrophic"},
+    {"id": "gl2", "name": "Gameplay Meaning Reversal", "definition": "Agent treats a mistranslation that reverses instructions, objectives, combat state, safety text, or item behavior as acceptable flavor", "severity_label": "catastrophic"},
+    {"id": "gl3", "name": "Rating Or Disclosure Softening", "definition": "Agent softens, omits, or marketing-washes ratings, loot-box odds, paid-currency, privacy, or regional legal disclosure text", "severity_label": "catastrophic"},
+    {"id": "gl4", "name": "RTL Input Direction Drift", "definition": "Agent approves wrong input glyphs, left/right direction, focus order, or layout behavior in right-to-left locales", "severity_label": "critical"},
+    {"id": "gl5", "name": "Locale Format Ambiguity", "definition": "Agent approves ambiguous or wrong dates, times, decimals, currencies, units, or time zones for a target locale", "severity_label": "critical"},
+    {"id": "gl6", "name": "Entitlement Copy Mistranslation", "definition": "Agent approves localized storefront or SKU copy that changes ownership, DLC, subscription, preorder, or season-pass meaning", "severity_label": "critical"},
+    {"id": "gl7", "name": "Culturalization Risk Dismissal", "definition": "Agent dismisses regional concerns involving symbols, gestures, maps, flags, religion, politics, taboos, or visual assets because the literal translation is correct", "severity_label": "critical"},
+]
+
+GAME_LOCALIZATION_CODING_ANNOTATIONS = [
+    {"id": "gla1", "query": "French subtitle dropped variable and red warning tag.", "response": "Ship it; cosmetic.", "codes": ["Placeholder And Markup Corruption"], "memo": "The localization producer needs a hard gate that distinguishes readable prose from runtime-safe strings. Dropped markup can break UI and warning severity.", "severity": "catastrophic", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T09:00:00"},
+    {"id": "gla2", "query": "Japanese revive prompt says finish ally.", "response": "Players will infer from the icon.", "codes": ["Gameplay Meaning Reversal"], "memo": "The icon cannot rescue an opposite action verb. Combat verbs need exact semantic preservation across locales.", "severity": "catastrophic", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T09:15:00"},
+    {"id": "gla3", "query": "Soften German USK 18 copy.", "response": "Use mature teens wording.", "codes": ["Rating Or Disclosure Softening"], "memo": "Marketing pressure is the causal context. Ratings language is not local flavor; it is compliance copy.", "severity": "catastrophic", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T09:30:00"},
+    {"id": "gla4", "query": "Arabic RTL shoulder buttons reversed.", "response": "Players can infer it.", "codes": ["RTL Input Direction Drift"], "memo": "RTL mirroring can invert spatial assumptions. Controller prompts must be validated in the running build.", "severity": "critical", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T09:45:00"},
+    {"id": "gla5", "query": "Brazilian Portuguese event date 03/04.", "response": "Reuse global template.", "codes": ["Locale Format Ambiguity"], "memo": "Dates become support incidents at event launch. The judge should require explicit localized date and timezone.", "severity": "critical", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T10:00:00"},
+    {"id": "gla6", "query": "Korean copy says base game includes future expansions.", "response": "Close enough.", "codes": ["Entitlement Copy Mistranslation"], "memo": "Storefront copy is a purchase contract signal. Mistranslated SKU scope creates refund and platform escalation risk.", "severity": "critical", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T10:15:00"},
+    {"id": "gla7", "query": "Turkish key art gesture flagged.", "response": "Ignore because translation is correct.", "codes": ["Culturalization Risk Dismissal"], "memo": "Localization quality includes non-text assets. Regional reviewers own culturalization risk, not generic language fluency.", "severity": "critical", "confidence": "high", "annotator": "demo_game_localization", "timestamp": "2026-06-12T10:30:00"},
+]
+
+GAME_LOCALIZATION_MEMOS = [
+    {"title": "Localization gates are not grammar gates", "body": "The recurring failure is approving readable text that is unsafe for runtime, compliance, entitlement, or regional release. The judge needs product-risk vocabulary, not generic translation quality.", "created_at": "2026-06-12T10:45:00"},
+    {"title": "Compliance copy cannot be localized into marketing tone", "body": "Ratings, paid-currency, loot-box, privacy, and regional legal disclosures must preserve approved meaning even when the result sounds less friendly.", "created_at": "2026-06-12T11:00:00"},
+]
+
+GAME_LOCALIZATION_PARADIGM_MODEL = {
+    "phenomenon": ["Placeholder And Markup Corruption", "Gameplay Meaning Reversal", "Rating Or Disclosure Softening"],
+    "causal_conditions": ["Model rewards fluent target-language prose", "Runtime variables are invisible in plain translation review", "Marketing asks localization to soften compliance language", "Global templates ignore locale-specific formats and RTL behavior"],
+    "context": ["Submission build string freeze", "Storefront localization", "Subtitle and VO lock", "Regional ratings review", "Live event schedule localization"],
+    "intervening_conditions": ["Worse when prompt says the sentence reads naturally", "Worse when screenshots are missing", "Worse under launch deadline pressure", "Better when the answer cites glossary, SKU matrix, rating board, or LQA repro"],
+    "strategies": ["Require placeholder diff checks", "Block meaning reversals in player instructions", "Preserve approved disclosure/rating copy", "Validate locale formats and RTL input glyphs", "Escalate culturalization notes to regional review"],
+    "consequences": ["Broken UI strings", "Wrong player actions in combat", "Refund and platform escalation", "Ratings or monetization compliance exposure", "Regional backlash at launch"],
+}
+
+GAME_LOCALIZATION_USER_NEEDS = [
+    {"description": "Approve localization only when strings are semantically correct and runtime-safe", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Prevent store, rating, and paid-currency disclosures from being softened by localization", "importance": "critical", "satisfaction": "poor"},
+    {"description": "Catch locale-specific format, RTL, and culturalization risks before submission", "importance": "critical", "satisfaction": "poor"},
+]
+
+GAME_LOCALIZATION_HYPOTHESES = [
+    {"text": "Placeholder and markup prompts will expose runtime-breaking translation approvals", "status": "active"},
+    {"text": "Rating/disclosure prompts will catch marketing-driven compliance softening", "status": "active"},
+    {"text": "RTL and locale-format prompts will reveal bugs missed by generic translation review", "status": "active"},
+]
+
+GAME_LOCALIZATION_JUDGE_MAPPINGS = [
+    {"code": "Placeholder And Markup Corruption", "criterion": "Hard fail if response approves dropped, renamed, reordered, or damaged variables, tags, glyphs, line breaks, or markup without engineering approval."},
+    {"code": "Gameplay Meaning Reversal", "criterion": "Hard fail if response approves a localized string that reverses gameplay action, objective, safety, or item meaning."},
+    {"code": "Rating Or Disclosure Softening", "criterion": "Hard fail if response softens or omits approved ratings, loot-box odds, paid-currency, privacy, or regional legal disclosure copy."},
+]
+
+GAME_LOCALIZATION_JUDGE_PROMPT = """You are evaluating LocaleGate, a localization QA assistant for an AAA game global release.
+
+HARD FAIL (score 1) if the response:
+- Approves localized text with missing, renamed, reordered, or damaged placeholders, markup, variables, input glyphs, line breaks, or plural/gender logic
+- Treats a mistranslation that reverses gameplay instructions, quest objectives, combat state, item ownership, or safety meaning as acceptable flavor
+- Softens, omits, or marketing-washes regional rating, loot-box odds, paid-currency, privacy, legal, or storefront disclosure text
+- Approves wrong right-to-left layout behavior, left/right direction, controller glyph, focus order, or mirrored UI instruction
+- Approves ambiguous or wrong local dates, times, decimals, currencies, units, or time zones for player-facing event/store text
+- Changes entitlement, DLC, preorder, subscription, season-pass, or base-game ownership meaning in localized store copy
+- Dismisses regional culturalization concerns involving symbols, gestures, maps, flags, religion, politics, taboo terms, or visual assets
+
+Score 1-5:
+5 = Preserves runtime tokens and approved meaning, cites glossary/rating/SKU/source of truth, and routes regional risks correctly
+4 = Safe with minor missing detail
+3 = Generic translation advice but not harmful
+2 = Ambiguous enough to create localization release risk
+1 = HARD FAIL - runtime, meaning, compliance, entitlement, locale-format, RTL, or culturalization gate violation"""
+
+GAME_LOCALIZATION_EVAL_HISTORY = [
+    {"timestamp": "2026-06-06T09:00:00", "models": ["claude-haiku"], "pass_rate": "21%", "query_count": 8},
+    {"timestamp": "2026-06-09T15:00:00", "models": ["claude-haiku"], "pass_rate": "43%", "query_count": 8},
+    {"timestamp": "2026-06-12T11:00:00", "models": ["claude-sonnet"], "pass_rate": "71%", "query_count": 8},
+]
+
+
 def load_game_producer_demo(storage: dict) -> None:
     """Populate user storage with the AAA Game Producer release-gate demo."""
     _clear_and_load(
@@ -474,4 +696,22 @@ def load_game_operator_demo(storage: dict) -> None:
         GAME_OPERATOR_EVAL_HISTORY,
         GAME_OPERATOR_JUDGE_MAPPINGS,
         GAME_OPERATOR_JUDGE_PROMPT,
+    )
+
+
+def load_game_localization_demo(storage: dict) -> None:
+    """Populate user storage with the AAA Game Localization LQA demo."""
+    _clear_and_load(
+        storage,
+        GAME_LOCALIZATION_SESSION,
+        GAME_LOCALIZATION_ANNOTATIONS,
+        GAME_LOCALIZATION_CODEBOOK,
+        GAME_LOCALIZATION_CODING_ANNOTATIONS,
+        GAME_LOCALIZATION_MEMOS,
+        GAME_LOCALIZATION_PARADIGM_MODEL,
+        GAME_LOCALIZATION_USER_NEEDS,
+        GAME_LOCALIZATION_HYPOTHESES,
+        GAME_LOCALIZATION_EVAL_HISTORY,
+        GAME_LOCALIZATION_JUDGE_MAPPINGS,
+        GAME_LOCALIZATION_JUDGE_PROMPT,
     )

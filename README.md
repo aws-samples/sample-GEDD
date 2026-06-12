@@ -41,7 +41,7 @@ GEDD turns domain review into production evaluation assets:
 
 | PM action | Product surface | Engineering artifact |
 |-----------|-----------------|----------------------|
-| Load or generate review traces | AI PM Coach plus starter datasets with a 50-query inductive example and domain scenarios | Golden query set and response queue |
+| Load or generate review traces | AI PM Coach plus starter datasets with a 50-query localization example and domain scenarios | Golden query set and response queue |
 | Inspect the agent behavior in context | PM Workbench with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
 | Explain what went wrong | PM Annotation Workbench with open codes, severity, confidence, and memos | Domain-specific codebook |
 | Compare failures across examples | Axial coding views with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
@@ -105,7 +105,7 @@ flowchart TD
 | Surface | Who | What happens | Output |
 |---------|-----|-------------|--------|
 | AI PM Coach | AI PM / Domain Expert | Define the agent, prompt, runtime, and golden-query plan | Agent spec, system prompt, golden queries |
-| Starter datasets | AI PM / Domain Expert | Load the 50-query PM workbench or a realistic domain scenario | Queries, annotations, codebook, judge seed |
+| Starter datasets | AI PM / Domain Expert | Load the 50-query localization workbench or a realistic domain scenario | Queries, annotations, codebook, judge seed |
 | PM Workbench | AI PM / Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
 | Axial coding | AI PM / Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
 | Judge | AI PM + ML Engineer | Convert labels into judge criteria | G-Eval rubric, hard-fail rules, calibration set |
@@ -263,7 +263,7 @@ The sample CloudFront deployment is available at `https://d2esgpsbblnxif.cloudfr
 
 | Page | Purpose | What you do there |
 |------|---------|-------------------|
-| Home | PM-oriented entry | Load the 50-query PM workbench demo, continue active review work, open starter datasets, or start a custom agent |
+| Home | PM-oriented entry | Load the 50-query localization workbench demo, continue active review work, open starter datasets, or start a custom agent |
 | AI PM Coach | Guided setup | Capture agent spec, system prompt, runtime choice, and golden queries for a custom agent |
 | PM Workbench | Core product surface | Identify product risks, create open codes, apply severity/confidence, write memos, use triage mode, and track saturation |
 | Judge | Release gate builder | Convert PM annotations and failure modes directly into an LLM-as-a-judge prompt |
@@ -426,15 +426,16 @@ AWS-native by default. CloudFront provides the public workbench domain, IAM hand
 
 ## Starter Datasets
 
-No LLM calls needed. The main starter dataset loads a 50-query PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The scenario library also includes high-stakes domain demos with golden queries, annotations, error codes, and generated judges. These datasets are for exploration and workshops; the main product flow remains AI PM Coach -> PM Workbench -> Judge -> Report.
+No LLM calls needed. The main starter dataset loads a 50-query game localization PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The scenario library also includes high-stakes domain demos with golden queries, annotations, error codes, and generated judges. These datasets are for exploration and workshops; the main product flow remains AI PM Coach -> PM Workbench -> Judge -> Report.
 
 <details>
 <summary><b>View starter dataset library</b></summary>
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
-| **PM Annotation Workbench** | AI PM release readiness | 50 synthetic traces, 10 open codes, axial coding, saturation, generated judge prompt |
+| **AAA Game Localization Workbench** | AAA game localization | 50 synthetic LQA traces, 10 open codes, axial coding, saturation, generated localization judge prompt |
 | **AAA Game Producer** | AAA game production | Launch promise drift, entitlement matrix errors, accessibility gate failures |
+| **AAA Game Localization** | AAA game localization | Placeholder corruption, gameplay mistranslation, rating/disclosure softening |
 | **AAA Game Operator** | AAA live service | Incident ETA fabrication, compensation promise drift, exploit amplification |
 | **AdTechBot** | Advertising / MarTech | Consent bypass, sensitive targeting, dark patterns, attribution overclaim |
 | **TravelBot** | Flight booking | Hallucinated entities, fabricated booking data |
