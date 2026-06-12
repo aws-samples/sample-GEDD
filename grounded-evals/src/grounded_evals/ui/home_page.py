@@ -324,40 +324,6 @@ HOME_CSS = """
   color: var(--text-tertiary);
   letter-spacing: 0;
 }
-.readiness-metric-strip {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1px;
-  width: 100%;
-  margin: 2.2rem 0 1.5rem;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--border-subtle);
-  overflow: hidden;
-}
-.readiness-metric {
-  min-height: 120px;
-  background: var(--bg-surface-1);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 18px;
-}
-.readiness-metric-value {
-  font-size: 2.25rem;
-  line-height: 1;
-  font-weight: 760;
-  color: var(--green-bright);
-  font-variant-numeric: tabular-nums;
-}
-.readiness-metric-label {
-  margin-top: 9px;
-  font-size: 0.88rem;
-  line-height: 1.35;
-  color: var(--text-tertiary);
-}
 .simple-panel {
   width: 100%;
   margin-top: 1rem;
@@ -1011,9 +977,6 @@ HOME_CSS = """
   .simple-subhead { font-size: 0.92rem; }
   .simple-action-row { flex-direction: column; align-items: stretch; }
   .hero-demo-frame { margin-top: 2rem; }
-  .readiness-metric-strip { grid-template-columns: 1fr; }
-  .readiness-metric { min-height: 96px; }
-  .readiness-metric-value { font-size: 1.85rem; }
   .core-flow-grid { grid-template-columns: 1fr; }
   .core-flow-step { min-height: auto; }
   .assistant-grid { grid-template-columns: 1fr; }
@@ -1320,16 +1283,6 @@ def home_page():
                     'Query -> Responses -> Annotate -> Codes emerge -> Judge'
                     '</div>'
                 )
-
-        with ui.element("div").classes("readiness-metric-strip animate-in stagger-2"):
-            for value, label in [
-                ("50", "synthetic PM review traces"),
-                ("10", "open codes from observed failures"),
-                ("0", "new codes in final saturation window"),
-            ]:
-                with ui.element("div").classes("readiness-metric"):
-                    ui.html(f'<div class="readiness-metric-value">{value}</div>')
-                    ui.html(f'<div class="readiness-metric-label">{label}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-2"):
             ui.html('<div class="simple-panel-title">The PM annotation workbench loop</div>')

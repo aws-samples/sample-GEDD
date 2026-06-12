@@ -33,6 +33,94 @@ SEVERITY_COLOR = {
     "low": "var(--green-bright)",
 }
 
+JUDGE_CSS = """
+.judge-chain-panel {
+  border: 1px solid rgba(94,106,210,0.28);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1));
+  padding: 16px;
+  margin: 14px 0;
+}
+.judge-chain-title {
+  font-size: 0.98rem;
+  font-weight: 740;
+  color: var(--text-primary);
+}
+.judge-chain-copy {
+  max-width: 780px;
+  margin-top: 5px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.judge-chain-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 13px;
+}
+.judge-chain-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(170px, 0.55fr) minmax(0, 1.1fr);
+  gap: 10px;
+  align-items: stretch;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+}
+.judge-chain-label {
+  font-size: 0.58rem;
+  font-weight: 750;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.judge-chain-text {
+  margin-top: 5px;
+  font-size: 0.72rem;
+  line-height: 1.42;
+  color: var(--text-secondary);
+}
+.judge-code-chip {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.68rem;
+  line-height: 1.25;
+  font-weight: 700;
+}
+.judge-severity-pill {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  padding: 3px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 99px;
+  background: rgba(255,255,255,0.03);
+  font-size: 0.58rem;
+  font-weight: 760;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.judge-rule-text {
+  margin-top: 5px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-primary);
+  font-weight: 560;
+}
+@media (max-width: 900px) {
+  .judge-chain-row {
+    grid-template-columns: 1fr;
+  }
+}
+"""
+
 
 def _get(key: str, default: Any = None) -> Any:
     return app.storage.user.get(key, default)
@@ -104,6 +192,8 @@ def _failure_modes() -> list[dict]:
         name = str(entry.get("name", "")).strip()
         if not name:
             continue
+        if freq.get(name, 0) <= 0:
+            continue
         severity = _normalized_severity(entry.get("severity_label"))
         observed = severities.get(name, [])
         modes[name] = {
@@ -111,6 +201,8 @@ def _failure_modes() -> list[dict]:
             "definition": entry.get("definition", ""),
             "frequency": freq.get(name, 0),
             "severity": _highest_severity(observed + [severity]),
+            "release_gate": entry.get("release_gate", ""),
+            "axial_category": entry.get("axial_category", ""),
             "sample": samples.get(name, {}),
         }
 
@@ -121,6 +213,8 @@ def _failure_modes() -> list[dict]:
                 "definition": "",
                 "frequency": count,
                 "severity": _highest_severity(severities.get(code, [])),
+                "release_gate": "",
+                "axial_category": "",
                 "sample": samples.get(code, {}),
             }
 
@@ -135,6 +229,8 @@ def _failure_modes() -> list[dict]:
                 "definition": pattern.get("description", ""),
                 "frequency": int(pattern.get("count", 0) or 0),
                 "severity": _normalized_severity(pattern.get("severity")),
+                "release_gate": "",
+                "axial_category": "",
                 "sample": {},
             }
 
@@ -180,6 +276,20 @@ def _mode_evidence(mode: dict) -> str:
     return ""
 
 
+def _judge_rule_for_mode(mode: dict) -> str:
+    release_gate = str(mode.get("release_gate") or "").strip()
+    if release_gate:
+        return release_gate
+
+    name = str(mode.get("name") or "this failure mode")
+    definition = str(mode.get("definition") or "").strip()
+    severity = _normalized_severity(mode.get("severity"))
+    prefix = "Hard fail" if SEVERITY_RANK.get(severity, 2) >= 3 else "Fail"
+    if definition:
+        return f"{prefix} when the response exhibits {name}: {definition}"
+    return f"{prefix} when the response matches PM annotations labeled {name}."
+
+
 def _build_simple_prompt(modes: list[dict]) -> str:
     agent = _agent_spec()
     agent_name = agent.get("name") or "the AI product"
@@ -191,7 +301,9 @@ def _build_simple_prompt(modes: list[dict]) -> str:
         definition = mode.get("definition") or "Use the PM/domain-expert annotation memo as the definition."
         severity = mode.get("severity", "functional")
         evidence = _mode_evidence(mode)
+        rule = _judge_rule_for_mode(mode)
         line = f"{index}. {mode['name']} ({severity}; seen {mode.get('frequency', 0)}x): {definition}"
+        line += f" Judge rule: {rule}"
         if evidence:
             line += f" Evidence: {evidence}"
         failure_lines.append(line)
@@ -237,9 +349,48 @@ Return only JSON:
 """
 
 
+def _render_inductive_chain(modes: list[dict]) -> None:
+    with ui.element("section").classes("judge-chain-panel"):
+        ui.html('<div class="judge-chain-title">Inductive path from PM annotations to judge rules</div>')
+        ui.html(
+            '<div class="judge-chain-copy">'
+            "The judge is not a generic helpfulness rubric. It is built from PM open-coded annotations, "
+            "then grouped by axial/root-cause context, and converted into release-gate rules."
+            "</div>"
+        )
+        with ui.element("div").classes("judge-chain-list"):
+            for mode in modes:
+                severity = mode.get("severity", "functional")
+                color = SEVERITY_COLOR.get(severity, "var(--yellow)")
+                evidence = _mode_evidence(mode) or "PM annotation evidence for this code."
+                evidence_short = evidence[:220] + ("..." if len(evidence) > 220 else "")
+                rule = _judge_rule_for_mode(mode)
+                rule_short = rule[:240] + ("..." if len(rule) > 240 else "")
+                axial = str(mode.get("axial_category") or "PM-derived failure mode")
+                with ui.element("div").classes("judge-chain-row"):
+                    with ui.element("div"):
+                        ui.html('<div class="judge-chain-label">PM annotation evidence</div>')
+                        ui.html(f'<div class="judge-chain-text">{escape(evidence_short)}</div>')
+                    with ui.element("div"):
+                        ui.html('<div class="judge-chain-label">Error code</div>')
+                        ui.html(f'<div class="judge-code-chip">{escape(str(mode["name"]))}</div>')
+                        ui.html(
+                            f'<div class="judge-chain-text">{escape(axial)}<br>'
+                            f'{int(mode.get("frequency", 0) or 0)} observed annotations</div>'
+                        )
+                        ui.html(
+                            f'<div class="judge-severity-pill" style="color:{color}">'
+                            f'{escape(str(severity))}</div>'
+                        )
+                    with ui.element("div"):
+                        ui.html('<div class="judge-chain-label">Judge rule created</div>')
+                        ui.html(f'<div class="judge-rule-text">{escape(rule_short)}</div>')
+
+
 @ui.page("/judge")
 def judge_builder_page() -> None:
     page_layout("Judge", current_path="/judge")
+    ui.add_head_html(f"<style>{JUDGE_CSS}</style>")
 
     modes = _failure_modes()
     annotations = _get("coding_annotations", []) or []
@@ -301,6 +452,7 @@ def judge_builder_page() -> None:
             ),
         ]
         _stat_row(stats)
+        _render_inductive_chain(modes)
 
         with ui.element("div").style(
             "display:grid; grid-template-columns:minmax(300px,0.9fr) minmax(0,1.1fr); "

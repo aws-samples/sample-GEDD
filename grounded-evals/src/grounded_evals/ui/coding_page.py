@@ -1,6 +1,7 @@
 """Tag Failures (Open Coding) Annotation Workbench page."""
 
 import asyncio
+import html as _html
 import json
 import random
 import string as _string
@@ -192,6 +193,54 @@ def _is_similar(a: str, b: str) -> bool:
 
 
 CODING_CSS = """
+.coding-shell {
+  width: min(1320px, calc(100vw - 48px));
+  margin-left: auto;
+  margin-right: auto;
+}
+.coding-hero {
+  margin-bottom: 12px;
+  padding: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+}
+.coding-hero-title {
+  font-size: 1.18rem;
+  font-weight: 760;
+  color: var(--text-primary);
+  letter-spacing: 0;
+}
+.coding-hero-copy {
+  max-width: 780px;
+  margin-top: 5px;
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.coding-flow-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 13px;
+}
+.coding-flow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+  color: var(--text-tertiary);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+.coding-flow-pill .material-icons {
+  color: var(--accent-bright);
+  font-size: 0.92rem;
+}
 .coding-nav { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
 .coding-query-card {
   background: var(--bg-surface-2); border: 1px solid var(--border-subtle);
@@ -211,6 +260,235 @@ CODING_CSS = """
   background: var(--bg-surface-2); border: 1px solid var(--border-subtle);
   border-radius: var(--radius-xl); padding: 12px; flex: 1; min-width: 0;
 }
+.coding-stat-rail {
+  display: none !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.coding-stat-rail .stat-card {
+  min-height: 72px;
+  padding: 11px 12px !important;
+}
+.coding-stat-rail .stat-value {
+  font-size: 1.2rem;
+}
+.coding-stat-rail .stat-label {
+  font-size: 0.6rem;
+}
+.coding-filter-bar {
+  margin-bottom: 10px;
+  padding: 0 2px;
+}
+.coding-curve-panel {
+  display: none;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+}
+.coding-workbench-grid {
+  width: min(1320px, calc(100vw - 48px));
+  margin: 0 auto 40px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 14px;
+  align-items: start;
+}
+.coding-workbench-panel {
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+  padding: 14px;
+}
+.coding-workbench-right {
+  position: sticky;
+  top: 68px;
+  max-height: calc(100vh - 88px);
+  overflow: auto;
+}
+.pm-evidence-panel {
+  margin-bottom: 12px;
+}
+.pm-evidence-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(94,106,210,0.28);
+  border-radius: var(--radius-xl);
+  background: linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1));
+}
+.pm-evidence-headline {
+  font-size: 0.98rem;
+  line-height: 1.35;
+  font-weight: 740;
+  color: var(--text-primary);
+}
+.pm-evidence-summary {
+  margin-top: 4px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.pm-evidence-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.pm-method-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.pm-method-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  background: var(--bg-surface-2);
+  font-size: 0.62rem;
+  font-weight: 650;
+}
+.pm-evidence-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
+  gap: 12px;
+  align-items: start;
+}
+.pm-evidence-card {
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xl);
+  background: var(--bg-surface-1);
+  padding: 14px;
+}
+.pm-evidence-title {
+  font-size: 0.92rem;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.pm-evidence-copy {
+  margin-top: 3px;
+  font-size: 0.73rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.pm-evidence-scroll {
+  display: grid;
+  gap: 8px;
+  max-height: 390px;
+  overflow: auto;
+  margin-top: 12px;
+  padding-right: 3px;
+}
+.pm-annotation-row,
+.pm-mode-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  gap: 9px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-2);
+}
+.pm-row-index {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.64rem;
+  font-weight: 750;
+}
+.pm-row-title {
+  font-size: 0.76rem;
+  line-height: 1.35;
+  font-weight: 650;
+  color: var(--text-primary);
+}
+.pm-row-note {
+  margin-top: 4px;
+  font-size: 0.69rem;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+.pm-code-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin-top: 6px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.62rem;
+  font-weight: 650;
+}
+.pm-severity-pill {
+  padding: 3px 7px;
+  border-radius: 99px;
+  border: 1px solid var(--border-subtle);
+  background: rgba(255,255,255,0.03);
+  font-size: 0.58rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pm-mode-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.pm-mode-count {
+  color: var(--green-bright);
+  font-size: 0.72rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+.pm-empty-list {
+  padding: 18px;
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  text-align: center;
+}
+@media (max-width: 980px) {
+  .coding-shell,
+  .coding-workbench-grid {
+    width: min(100%, calc(100vw - 24px));
+  }
+  .coding-stat-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .coding-workbench-grid {
+    grid-template-columns: 1fr;
+  }
+  .pm-evidence-grid {
+    grid-template-columns: 1fr;
+  }
+  .pm-evidence-header {
+    flex-direction: column;
+  }
+  .pm-evidence-actions {
+    justify-content: flex-start;
+  }
+  .coding-workbench-right {
+    position: static;
+    max-height: none;
+  }
+}
 """
 
 
@@ -219,54 +497,36 @@ def coding_page():
     page_layout("PM Annotation Workbench", current_path="/coding")
     ui.add_head_html(f"<style>{CODING_CSS}</style>")
 
-    with ui.column().classes("w-full max-w-5xl mx-auto").style("margin-bottom: 0.75rem"):
-        with ui.element("div").style(
-            "background:var(--bg-surface-1); border:1px solid var(--border-subtle); "
-            "border-radius:var(--radius-xl); padding:16px"
-        ):
-            with ui.row().classes("items-start justify-between gap-3 flex-wrap"):
-                with ui.column().style("gap:4px; max-width:680px"):
-                    ui.label("PM Annotation Workbench").style(
-                        "font-size:1.05rem; font-weight:700; color:var(--text-primary); "
-                        "letter-spacing:-0.01em"
+    with ui.element("section").classes("coding-shell coding-hero"):
+        with ui.row().classes("items-start justify-between gap-4 flex-wrap"):
+            with ui.column().style("gap:0; min-width:280px; flex:1"):
+                ui.html('<div class="coding-hero-title">PM Annotation Workbench</div>')
+                ui.html(
+                    '<div class="coding-hero-copy">'
+                    "Review the customer-facing answer, tag the product failure in PM/domain language, "
+                    "set severity, and turn repeated failure modes into the LLM-as-a-judge prompt."
+                    '</div>'
+                )
+            with ui.row().classes("items-center gap-2 flex-wrap"):
+                for label, icon in [
+                    ("S save", "save"),
+                    ("1/2/3 quick code", "keyboard"),
+                    ("triage", "bolt"),
+                    ("judge prompt", "gavel"),
+                ]:
+                    ui.html(
+                        f'<span class="coding-flow-pill"><span class="material-icons">{icon}</span>{label}</span>'
                     )
-                    ui.label(
-                        "This is the core product surface. Read the response the user would see, "
-                        "name the product failure in domain language, set release severity and confidence, "
-                        "and write the memo your judge and engineers will learn from."
-                    ).style("font-size:0.82rem; color:var(--text-secondary); line-height:1.5")
-                with ui.row().classes("items-center gap-2 flex-wrap"):
-                    for label, icon in [
-                        ("S saves", "save"),
-                        ("1/2/3 codes", "keyboard"),
-                        ("triage mode", "bolt"),
-                        ("saturation", "show_chart"),
-                    ]:
-                        with ui.element("div").style(
-                            "display:flex; align-items:center; gap:6px; padding:6px 9px; "
-                            "border-radius:6px; background:var(--bg-surface-2); "
-                            "border:1px solid var(--border-subtle)"
-                        ):
-                            ui.icon(icon).style("font-size:0.95rem; color:var(--accent-bright)")
-                            ui.label(label).style(
-                                "font-size:0.7rem; color:var(--text-tertiary); white-space:nowrap"
-                            )
-
-        with ui.expansion("How to produce high-quality labels", icon="help_outline").classes("w-full").style(
-            "background: var(--yellow-tint); border: 1px solid rgba(240,191,0,0.15); "
-            "border-radius: var(--radius-xl); margin-top: 0.5rem; color: var(--text-primary)"
-        ):
-            ui.html(
-                '<div style="font-size:0.82rem;font-weight:500;color:var(--text-primary);margin-bottom:4px">'
-                "You're discovering what blocks release, not just whether the answer looks wrong."
-                '</div>'
-                '<div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.6">'
-                "Look at each response. Ask: <em>what product risk does this create for the user?</em> Name it in 2–3 words "
-                "(e.g. 'Missed escalation', 'Wrong medication dose'). Don't use a predefined list — let codes "
-                "emerge from what YOU observe. Keep going until the last 3 annotations reveal no new code types. "
-                "<strong>Each code you create becomes an evaluation criterion in your automated judge.</strong>"
-                '</div>'
-            )
+        with ui.element("div").classes("coding-flow-strip"):
+            for label, icon in [
+                ("Open coding", "label"),
+                ("Axial coding", "account_tree"),
+                ("Saturation check", "show_chart"),
+                ("Judge from evidence", "gavel"),
+            ]:
+                ui.html(
+                    f'<span class="coding-flow-pill"><span class="material-icons">{icon}</span>{label}</span>'
+                )
 
     storage = app.storage.user
     storage.setdefault('codebook', [])
@@ -312,54 +572,6 @@ def coding_page():
     view_mode: dict = {'value': 'detailed'}
 
     methodology = storage.get('demo_methodology') or {}
-    if methodology:
-        with ui.element("div").classes("w-full max-w-5xl mx-auto").style(
-            "margin: 0 0 12px; padding: 14px; border: 1px solid rgba(94,106,210,0.25); "
-            "border-radius: var(--radius-xl); background: var(--bg-surface-1)"
-        ):
-            with ui.row().classes("items-start justify-between gap-3 flex-wrap"):
-                with ui.column().style("gap:2px; max-width:640px"):
-                    ui.label("Inductive PM workbench demo").style(
-                        "font-size:0.92rem; font-weight:700; color:var(--text-primary)"
-                    )
-                    ui.label(
-                        "Open coding names failures from traces, axial coding groups root causes, "
-                        "and theoretical saturation tells the PM when the judge prompt is stable enough to draft."
-                    ).style("font-size:0.76rem; color:var(--text-tertiary); line-height:1.5")
-                with ui.row().classes("gap-2 flex-wrap"):
-                    for value, label in [
-                        (str(methodology.get('synthetic_query_count', len(responses))), "synthetic queries"),
-                        (str(methodology.get('open_code_count', len(storage.get('codebook', [])))), "open codes"),
-                        (str(methodology.get('new_codes_in_final_window', 0)), "new codes in final window"),
-                    ]:
-                        with ui.element("div").style(
-                            "min-width:112px; padding:9px 10px; border-radius:8px; "
-                            "background:var(--bg-surface-2); border:1px solid var(--border-subtle); text-align:center"
-                        ):
-                            ui.label(value).style(
-                                "font-size:1.05rem; font-weight:750; color:var(--green-bright); "
-                                "font-variant-numeric:tabular-nums"
-                            )
-                            ui.label(label).style(
-                                "font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0"
-                            )
-            with ui.row().classes("gap-2 flex-wrap").style("margin-top:10px"):
-                for label, copy in [
-                    ("Open Coding", "PM labels what appears in the trace."),
-                    ("Axial Coding", "Codes cluster into causes, context, and consequences."),
-                    ("Saturation", "Final examples repeat existing codes."),
-                    ("Judge", "Prompt is generated from the saturated codebook."),
-                ]:
-                    with ui.element("div").style(
-                        "flex:1; min-width:170px; padding:9px 10px; border-radius:8px; "
-                        "background:rgba(94,106,210,0.08); border:1px solid rgba(94,106,210,0.18)"
-                    ):
-                        ui.label(label).style(
-                            "font-size:0.72rem; font-weight:700; color:var(--accent-bright)"
-                        )
-                        ui.label(copy).style(
-                            "font-size:0.68rem; color:var(--text-secondary); line-height:1.4; margin-top:3px"
-                        )
 
     # ── Filtering helpers ─────────────────────────────────────────────────
 
@@ -389,6 +601,165 @@ def coding_page():
                 return a
         return None
 
+    def _annotation_codes(ann: dict) -> list[str]:
+        codes = ann.get('codes', [])
+        if isinstance(codes, str):
+            codes = [codes]
+        elif not isinstance(codes, list):
+            codes = []
+        error_code = ann.get('error_code')
+        if error_code and error_code not in codes:
+            codes.append(error_code)
+        return [str(code).strip() for code in codes if str(code).strip()]
+
+    def _severity_color(severity: str) -> str:
+        normalized = (severity or 'functional').lower()
+        if normalized in ('catastrophic', 'critical'):
+            return 'var(--red)'
+        if normalized in ('functional', 'medium'):
+            return 'var(--yellow)'
+        return 'var(--green-bright)'
+
+    def _highest_annotation_severity(severities: list[str]) -> str:
+        if not severities:
+            return 'functional'
+        return max(severities, key=lambda value: SEVERITY_WEIGHTS.get(value, 2))
+
+    def render_evidence_summary():
+        evidence_summary_container.clear()
+        annotations_list = storage.get('coding_annotations', []) or []
+        code_defs = {
+            str(code.get('name', '')).strip(): str(code.get('definition', '') or '')
+            for code in storage.get('codebook', []) or []
+            if isinstance(code, dict) and str(code.get('name', '')).strip()
+        }
+        code_severity = {
+            str(code.get('name', '')).strip(): str(code.get('severity_label', '') or '')
+            for code in storage.get('codebook', []) or []
+            if isinstance(code, dict) and str(code.get('name', '')).strip()
+        }
+        code_release_gates = {
+            str(code.get('name', '')).strip(): str(code.get('release_gate', '') or '')
+            for code in storage.get('codebook', []) or []
+            if isinstance(code, dict) and str(code.get('name', '')).strip()
+        }
+        code_freq: Counter[str] = Counter()
+        code_examples: dict[str, str] = {}
+        code_annotation_severity: dict[str, list[str]] = {}
+        for ann in annotations_list:
+            for code in _annotation_codes(ann):
+                code_freq[code] += 1
+                if code not in code_examples:
+                    code_examples[code] = str(ann.get('memo') or ann.get('notes') or ann.get('query') or '')
+                code_annotation_severity.setdefault(code, []).append(str(ann.get('severity') or 'functional'))
+
+        coverage_pct = min(100, int((len(annotations_list) / max(1, len(responses))) * 100))
+
+        def download_annotations_from_summary() -> None:
+            if not annotations_list:
+                ui.notify('No annotations to download yet', type='warning')
+                return
+            failure_modes = None
+            if _has_judge_prompt_inputs(storage):
+                from grounded_evals.ui.judge_builder_page import _failure_modes
+                failure_modes = _failure_modes()
+            payload = _annotation_export_payload(storage, failure_modes)
+            filename = f"{_agent_export_slug(storage)}_error_analysis_annotations.json"
+            ui.download(json.dumps(payload, indent=2).encode(), filename)
+
+        with evidence_summary_container:
+            with ui.element('div').classes('pm-evidence-header'):
+                with ui.element('div').style('flex:1; min-width:0'):
+                    ui.html('<div class="pm-evidence-headline">Evidence gathered by the PM</div>')
+                    ui.html(
+                        f'<div class="pm-evidence-summary">{len(annotations_list)} annotations reviewed '
+                        f'-> {len(code_freq)} error modes identified -> judge rules generated from the codes. '
+                        f'{coverage_pct}% of traces are labeled.</div>'
+                    )
+                    with ui.row().classes('pm-method-row'):
+                        for label in ['Open coding', 'Axial coding', 'Saturation evidence', 'Judge rubric']:
+                            ui.label(label).classes('pm-method-chip')
+                with ui.element('div').classes('pm-evidence-actions'):
+                    ui.button(
+                        "Download annotations",
+                        icon="download",
+                        on_click=download_annotations_from_summary,
+                    ).props("size=xs outline dark").style(
+                        "color:var(--accent-bright); border-color:var(--border-default)"
+                    )
+                    ui.button(
+                        "Open Judge",
+                        icon="gavel",
+                        on_click=lambda: ui.navigate.to("/judge"),
+                    ).props("size=xs").style(
+                        "background:var(--accent); color:white; border-radius:6px; font-weight:600"
+                    )
+            with ui.element('div').classes('pm-evidence-grid'):
+                with ui.element('div').classes('pm-evidence-card'):
+                    ui.html('<div class="pm-evidence-title">PM annotations</div>')
+                    ui.html(
+                        f'<div class="pm-evidence-copy">{len(annotations_list)} labeled responses. '
+                        'Each row is the PM evidence used to induce the judge rubric.</div>'
+                    )
+                    with ui.element('div').classes('pm-evidence-scroll'):
+                        if not annotations_list:
+                            ui.html('<div class="pm-empty-list">No PM annotations yet.</div>')
+                        for index, ann in enumerate(annotations_list, start=1):
+                            codes = _annotation_codes(ann)
+                            primary_code = codes[0] if codes else 'No code'
+                            severity = str(ann.get('severity') or ann.get('annotation') or 'functional')
+                            query = str(ann.get('query') or ann.get('prompt') or '')
+                            memo = str(ann.get('memo') or ann.get('notes') or '')
+                            query_short = query[:150] + ('...' if len(query) > 150 else '')
+                            memo_short = memo[:180] + ('...' if len(memo) > 180 else '')
+                            color = _severity_color(severity)
+                            with ui.element('div').classes('pm-annotation-row'):
+                                ui.html(f'<div class="pm-row-index">{index}</div>')
+                                with ui.element('div'):
+                                    ui.html(f'<div class="pm-row-title">{_html.escape(query_short)}</div>')
+                                    if memo_short:
+                                        ui.html(f'<div class="pm-row-note">{_html.escape(memo_short)}</div>')
+                                    ui.html(f'<span class="pm-code-chip">{_html.escape(primary_code)}</span>')
+                                ui.html(
+                                    f'<span class="pm-severity-pill" style="color:{color}">'
+                                    f'{_html.escape(severity)}</span>'
+                                )
+
+                with ui.element('div').classes('pm-evidence-card'):
+                    ui.html('<div class="pm-evidence-title">Error modes identified</div>')
+                    ui.html(
+                        f'<div class="pm-evidence-copy">{len(code_freq)} PM-derived error modes. '
+                        'These are the release-gate criteria that feed the judge prompt.</div>'
+                    )
+                    with ui.element('div').classes('pm-evidence-scroll'):
+                        if not code_freq:
+                            ui.html('<div class="pm-empty-list">No error modes identified yet.</div>')
+                        for code, count in sorted(code_freq.items(), key=lambda item: (-item[1], item[0])):
+                            severity = (
+                                code_severity.get(code)
+                                or _highest_annotation_severity(code_annotation_severity.get(code, []))
+                            )
+                            definition = (
+                                code_release_gates.get(code)
+                                or code_defs.get(code)
+                                or code_examples.get(code)
+                                or 'Defined by PM annotation evidence.'
+                            )
+                            definition_short = definition[:170] + ('...' if len(definition) > 170 else '')
+                            color = _severity_color(severity)
+                            with ui.element('div').classes('pm-mode-row'):
+                                with ui.element('div'):
+                                    ui.html(f'<div class="pm-row-title">{_html.escape(code)}</div>')
+                                    ui.html(f'<div class="pm-row-note">{_html.escape(definition_short)}</div>')
+                                    ui.html(
+                                        f'<span class="pm-severity-pill" style="color:{color};margin-top:6px;display:inline-flex">'
+                                        f'{_html.escape(severity)}</span>'
+                                    )
+                                ui.html(f'<div class="pm-mode-count">{count}x</div>')
+
+    with ui.element('section').classes('coding-shell pm-evidence-panel') as evidence_summary_container:
+        pass
+
     # ── Stats bar ─────────────────────────────────────────────────────────
 
     def render_stats():
@@ -408,14 +779,12 @@ def coding_page():
                 ui.linear_progress(value=saturation_pct / 100, show_value=False).props('color=green size=6px')
                 ui.label(f'{saturation_pct}% Coverage').classes('stat-label').style("margin-top: 6px")
 
-    with ui.row().classes('w-full justify-around q-mb-md max-w-5xl mx-auto') as stats_container:
+    with ui.row().classes('coding-shell coding-stat-rail') as stats_container:
         pass
 
     # ── Filter bar ────────────────────────────────────────────────────────
 
-    filter_bar_el = ui.row().classes('w-full max-w-5xl mx-auto items-center flex-wrap gap-2').style(
-        "margin-bottom: 8px; padding: 0 2px"
-    )
+    filter_bar_el = ui.row().classes('coding-shell coding-filter-bar items-center flex-wrap gap-2')
 
     def render_filter_bar():
         filter_bar_el.clear()
@@ -445,7 +814,7 @@ def coding_page():
 
             _filter_btn('All', 'all', len(responses))
             _filter_btn('Uncoded', 'uncoded', n_uncoded, 'var(--yellow)')
-            _filter_btn('🔴 Danger', 'danger', n_danger, 'var(--red)')
+            _filter_btn('Danger', 'danger', n_danger, 'var(--red)')
 
             models = sorted({r.get('model', '') for r in responses if r.get('model')})
             if len(models) > 1:
@@ -479,7 +848,7 @@ def coding_page():
             style = "background:var(--accent);color:white" if is_triage \
                 else "border:1px solid var(--accent);color:var(--accent-bright);background:transparent"
             ui.button(
-                "⚡ Triage Mode" if not is_triage else "✎ Detailed Mode",
+                "Triage Mode" if not is_triage else "Detailed Mode",
                 on_click=toggle_view,
             ).props("size=xs").style(f"border-radius:6px;font-size:0.7rem;{style}")
 
@@ -595,7 +964,7 @@ def coding_page():
                         except (ValueError, ZeroDivisionError, OverflowError):
                             pass
 
-    with ui.column().classes('w-full max-w-5xl mx-auto q-mb-md') as curve_container:
+    with ui.column().classes('coding-shell coding-curve-panel') as curve_container:
         pass
 
     # ── Triage mode ───────────────────────────────────────────────────────
@@ -694,6 +1063,7 @@ def coding_page():
                                 storage['coding_annotations'].append(ann)
                                 ui.notify('Saved ✓', type='positive')
                                 render_stats()
+                                render_evidence_summary()
                                 render_saturation_curve()
                                 render_filter_bar()
                                 render_right()
@@ -750,7 +1120,7 @@ def coding_page():
                     label_text = f'By {annotator}' if annotator and annotator != 'anonymous' else 'Annotated'
                     ui.badge(label_text, color='green').props('outline').tooltip(ts)
                 if filter_state['mode'] != 'all':
-                    mode_labels = {'uncoded': 'Uncoded', 'danger': '🔴 Danger',
+                    mode_labels = {'uncoded': 'Uncoded', 'danger': 'Danger',
                                    'model': (filter_state.get('model') or '')[:14]}
                     tag = mode_labels.get(filter_state['mode'], '')
                     if tag:
@@ -850,6 +1220,7 @@ def coding_page():
                     })
                 ui.notify('Annotation saved', type='positive')
                 render_stats()
+                render_evidence_summary()
                 render_saturation_curve()
                 render_filter_bar()
                 render_right()
@@ -926,6 +1297,7 @@ def coding_page():
                     if applied:
                         ui.notify(f'Applied to {applied} similar response(s)', type='positive')
                         render_stats()
+                        render_evidence_summary()
                     else:
                         ui.notify('No similar responses found', type='info')
 
@@ -1216,6 +1588,7 @@ def coding_page():
                                                 render_right()
                                                 render_left()
                                                 render_stats()
+                                                render_evidence_summary()
 
                                             with ui.row().classes("gap-2").style("margin-top:12px"):
                                                 ui.button("Merge", on_click=confirm_merge).props("size=sm").style("background:var(--accent);color:white")
@@ -1321,6 +1694,7 @@ def coding_page():
                                         storage['coding_annotations'].append(ann)
                                         ui.notify('Accepted ✓', type='positive')
                                         render_stats()
+                                        render_evidence_summary()
                                         render_saturation_curve()
                                         render_filter_bar()
                                         render_right()
@@ -1476,6 +1850,7 @@ def coding_page():
         render_left()
         render_right()
         render_stats()
+        render_evidence_summary()
         if len(existing_names) >= 2:
             try:
                 from grounded_evals.open_coding.compare import compare_codes
@@ -1488,17 +1863,16 @@ def coding_page():
             except Exception:
                 pass
 
-    # Main split layout
-    with ui.splitter(value=60).classes('w-full max-w-5xl mx-auto').style("margin-top: 0.5rem") as splitter:
-        with splitter.before:
-            with ui.element('div').classes('w-full').style("padding: 12px") as left_panel:
-                pass
-        with splitter.after:
-            with ui.element('div').classes('w-full').style("padding: 12px") as right_panel:
-                pass
+    # Main review layout
+    with ui.element('div').classes('coding-workbench-grid'):
+        with ui.element('div').classes('coding-workbench-panel') as left_panel:
+            pass
+        with ui.element('aside').classes('coding-workbench-panel coding-workbench-right') as right_panel:
+            pass
 
     def handle_key(e):
-        key = e.key
+        raw_key = e.key
+        key = str(getattr(raw_key, 'name', raw_key) or '')
         if key == 'ArrowRight':
             nav(1)
         elif key == 'ArrowLeft':
@@ -1522,6 +1896,7 @@ def coding_page():
 
     ui.keyboard(on_key=handle_key, ignore=['input', 'select', 'textarea', 'button'])
 
+    render_evidence_summary()
     render_stats()
     render_filter_bar()
     render_saturation_curve()
