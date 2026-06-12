@@ -267,35 +267,6 @@ Core paths:
 | `grounded-evals/Dockerfile` | Container image for the web app |
 | `plugins/gedd/` | Codex plugin package |
 
-## CloudFront Deployment
-
-The sample hosted app is:
-
-```text
-https://d2esgpsbblnxif.cloudfront.net
-```
-
-The app is Cognito-protected. The public health endpoint should report the current localization build:
-
-```bash
-curl -sS https://d2esgpsbblnxif.cloudfront.net/health
-```
-
-Expected release marker:
-
-```json
-{"status":"ok","release":"2026-06-12-localization-50"}
-```
-
-Use the auth-aware smoke test after a deployment:
-
-```bash
-cd grounded-evals
-python3 scripts/release_check.py \
-  --base-url https://d2esgpsbblnxif.cloudfront.net \
-  --expect-auth
-```
-
 ## Validation
 
 Before committing app or workflow changes:
