@@ -340,6 +340,13 @@ def _build_domain_registry():
     """Build list of domain specs; add HRBot/EduBot if available."""
     from grounded_evals.ui.demo_data import load_demo_data
     from grounded_evals.ui.support_bot_demo import load_support_bot_demo
+    from grounded_evals.ui.inductive_pm_demo import (
+        INDUCTIVE_PM_CODEBOOK,
+        INDUCTIVE_PM_EVAL_HISTORY,
+        INDUCTIVE_PM_JUDGE_PROMPT,
+        INDUCTIVE_PM_SAMPLE_QUERIES,
+        load_inductive_pm_demo,
+    )
     from grounded_evals.ui.domain_demos import (
         load_clinical_demo, load_lex_demo, load_wealth_demo,
         CLINICAL_CODEBOOK, CLINICAL_CODING_ANNOTATIONS, CLINICAL_PARADIGM_MODEL, CLINICAL_JUDGE_PROMPT, CLINICAL_EVAL_HISTORY,
@@ -348,6 +355,21 @@ def _build_domain_registry():
     )
 
     domains = [
+        {
+            "id": "inductive_pm_workbench", "name": "PM Annotation Workbench", "icon": "rate_review",
+            "operator": "AI PM Readiness Team",
+            "tagline": "50 synthetic traces -> open coding -> axial coding -> saturation -> LLM-as-a-judge prompt",
+            "domain": "AI PM Release Readiness", "risk_level": "critical",
+            "regulations": ["Open Coding", "Axial Coding", "Theoretical Saturation"],
+            "loader": load_inductive_pm_demo,
+            "codebook": INDUCTIVE_PM_CODEBOOK,
+            "sample_queries": INDUCTIVE_PM_SAMPLE_QUERIES,
+            "paradigm_phenomenon": "Release gate criteria generated from saturated PM annotations",
+            "paradigm_consequence": "A defensible judge prompt grounded in 50 PM-labeled customer-facing failures",
+            "judge_prompt": INDUCTIVE_PM_JUDGE_PROMPT,
+            "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in INDUCTIVE_PM_EVAL_HISTORY],
+            "n_queries": 50, "n_codes": len(INDUCTIVE_PM_CODEBOOK),
+        },
         {
             "id": "travel", "name": "TravelBot", "icon": "flight", "operator": "SkyLink Travel",
             "tagline": "Flight booking AI — hallucination, policy miss, incomplete data",
@@ -831,7 +853,8 @@ def _render_domain(domain: dict):
     codebook = domain.get("codebook", [])
     judge_prompt = domain.get("judge_prompt", "").strip()
     judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
-    is_featured = domain.get("id") in {"game_producer", "game_operator"}
+    is_featured = domain.get("id") in {"inductive_pm_workbench", "game_producer", "game_operator"}
+    load_label = "Load 50-query workbench" if domain.get("id") == "inductive_pm_workbench" else "Load scenario"
 
     def make_loader(d=domain):
         def _load():
@@ -856,13 +879,15 @@ def _render_domain(domain: dict):
                     ui.label(domain["tagline"]).classes("ds-detail-copy")
 
             ui.button(
-                "Load scenario",
+                load_label,
                 icon="input",
                 on_click=make_loader(),
             ).classes("ds-primary-load").props("unelevated no-caps")
 
         with ui.element("div").classes("ds-chip-row"):
-            if is_featured:
+            if domain.get("id") == "inductive_pm_workbench":
+                ui.html('<span class="ds-pill ds-feature-badge">Main PM workflow</span>')
+            elif is_featured:
                 ui.html('<span class="ds-pill ds-feature-badge">Release quality gate</span>')
             ui.html(
                 f'<span class="ds-pill {risk_class}">{_html.escape(risk.upper())} risk</span>'
@@ -932,6 +957,7 @@ def demos_page():
 
     domains = _build_domain_registry()
     active_tab = {"idx": 0}
+    workbench_ids = {"inductive_pm_workbench"}
     featured_ids = {"game_producer", "game_operator"}
 
     with ui.column().classes("w-full max-w-6xl mx-auto").style("padding: 1.5rem; gap: 0"):
@@ -939,11 +965,11 @@ def demos_page():
         # Page header
         with ui.element("div").classes("ds-page-heading"):
             with ui.element("div"):
-                ui.html('<div class="ds-page-title">Sample Scenarios</div>')
+                ui.html('<div class="ds-page-title">Demos and PM Workbench</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
-                    'Example AI PM readiness cases for inspiration. Load one to see seeded golden '
-                    'queries, PM annotations, failure modes, and judge-prompt seeds.'
+                    'Load the main 50-query PM annotation demo or a domain scenario. Each demo seeds '
+                    'golden queries, PM annotations, failure modes, and judge-prompt evidence.'
                     '</div>'
                 )
             ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')
@@ -974,12 +1000,20 @@ def demos_page():
             active_tab["idx"] = idx
             picker_area.clear()
             with picker_area:
+                workbench_indexes = [
+                    i for i, d in enumerate(domains) if d.get("id") in workbench_ids
+                ]
                 release_gate_indexes = [
                     i for i, d in enumerate(domains) if d.get("id") in featured_ids
                 ]
                 other_indexes = [
-                    i for i, d in enumerate(domains) if d.get("id") not in featured_ids
+                    i for i, d in enumerate(domains)
+                    if d.get("id") not in featured_ids and d.get("id") not in workbench_ids
                 ]
+                if workbench_indexes:
+                    ui.html('<div class="ds-picker-title">Main workbench</div>')
+                    for i in workbench_indexes:
+                        render_picker_button(i, domains[i])
                 if release_gate_indexes:
                     ui.html('<div class="ds-picker-title">Release gates</div>')
                     for i in release_gate_indexes:

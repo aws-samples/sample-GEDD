@@ -277,6 +277,13 @@ def coding_page():
     responses = _build_responses(storage)
 
     if not responses:
+        def load_pm_workbench_demo() -> None:
+            from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
+
+            load_inductive_pm_demo(app.storage.user)
+            ui.notify("50-query PM workbench demo loaded.", type="positive")
+            ui.navigate.to("/coding")
+
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
             with ui.element("div").style(
                 "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
@@ -284,15 +291,15 @@ def coding_page():
             ):
                 ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
                 ui.label("PM Annotation Workbench").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Name product failures in domain language. Load a scenario or return to Coach.").style(
+                ui.label("Load the 50-query inductive PM demo or start from your own generated traces.").style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
-                    ui.button("Open Coach", icon="auto_awesome",
-                              on_click=lambda: ui.navigate.to("/coach")).style(
+                    ui.button("Load 50-query PM demo", icon="play_circle",
+                              on_click=load_pm_workbench_demo).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )
-                    ui.button("Load a reference scenario", icon="collections_bookmark",
+                    ui.button("Browse demos", icon="collections_bookmark",
                               on_click=lambda: ui.navigate.to("/demos")).props("outline").style(
                         "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
                     )
@@ -303,6 +310,56 @@ def coding_page():
     kb_refs: dict = {'save': None}
     filter_state: dict = {'mode': 'all', 'model': None}
     view_mode: dict = {'value': 'detailed'}
+
+    methodology = storage.get('demo_methodology') or {}
+    if methodology:
+        with ui.element("div").classes("w-full max-w-5xl mx-auto").style(
+            "margin: 0 0 12px; padding: 14px; border: 1px solid rgba(94,106,210,0.25); "
+            "border-radius: var(--radius-xl); background: var(--bg-surface-1)"
+        ):
+            with ui.row().classes("items-start justify-between gap-3 flex-wrap"):
+                with ui.column().style("gap:2px; max-width:640px"):
+                    ui.label("Inductive PM workbench demo").style(
+                        "font-size:0.92rem; font-weight:700; color:var(--text-primary)"
+                    )
+                    ui.label(
+                        "Open coding names failures from traces, axial coding groups root causes, "
+                        "and theoretical saturation tells the PM when the judge prompt is stable enough to draft."
+                    ).style("font-size:0.76rem; color:var(--text-tertiary); line-height:1.5")
+                with ui.row().classes("gap-2 flex-wrap"):
+                    for value, label in [
+                        (str(methodology.get('synthetic_query_count', len(responses))), "synthetic queries"),
+                        (str(methodology.get('open_code_count', len(storage.get('codebook', [])))), "open codes"),
+                        (str(methodology.get('new_codes_in_final_window', 0)), "new codes in final window"),
+                    ]:
+                        with ui.element("div").style(
+                            "min-width:112px; padding:9px 10px; border-radius:8px; "
+                            "background:var(--bg-surface-2); border:1px solid var(--border-subtle); text-align:center"
+                        ):
+                            ui.label(value).style(
+                                "font-size:1.05rem; font-weight:750; color:var(--green-bright); "
+                                "font-variant-numeric:tabular-nums"
+                            )
+                            ui.label(label).style(
+                                "font-size:0.62rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0"
+                            )
+            with ui.row().classes("gap-2 flex-wrap").style("margin-top:10px"):
+                for label, copy in [
+                    ("Open Coding", "PM labels what appears in the trace."),
+                    ("Axial Coding", "Codes cluster into causes, context, and consequences."),
+                    ("Saturation", "Final examples repeat existing codes."),
+                    ("Judge", "Prompt is generated from the saturated codebook."),
+                ]:
+                    with ui.element("div").style(
+                        "flex:1; min-width:170px; padding:9px 10px; border-radius:8px; "
+                        "background:rgba(94,106,210,0.08); border:1px solid rgba(94,106,210,0.18)"
+                    ):
+                        ui.label(label).style(
+                            "font-size:0.72rem; font-weight:700; color:var(--accent-bright)"
+                        )
+                        ui.label(copy).style(
+                            "font-size:0.68rem; color:var(--text-secondary); line-height:1.4; margin-top:3px"
+                        )
 
     # ── Filtering helpers ─────────────────────────────────────────────────
 
@@ -463,11 +520,18 @@ def coding_page():
             weighted_pct = (saturated_w / total_w * 100) if total_w > 0 else 0
 
             recent_new = 0
-            if len(annotations_list) >= 3:
+            saturation_window = 3
+            if methodology:
+                try:
+                    saturation_window = int(methodology.get('saturation_window', 3) or 3)
+                except (TypeError, ValueError):
+                    saturation_window = 3
+            saturation_window = max(1, min(saturation_window, len(annotations_list)))
+            if len(annotations_list) >= saturation_window:
                 prev: set = set()
-                for ann in annotations_list[:-3]:
+                for ann in annotations_list[:-saturation_window]:
                     prev.update(ann.get('codes', []))
-                for ann in annotations_list[-3:]:
+                for ann in annotations_list[-saturation_window:]:
                     for c in ann.get('codes', []):
                         if c not in prev:
                             recent_new += 1
@@ -493,21 +557,21 @@ def coding_page():
                     "font-size: 0.85rem; font-weight: 700; color: var(--green-bright); min-width: 36px; text-align: right"
                 )
 
-            if len(annotations_list) >= 3 and recent_new == 0:
+            if len(annotations_list) >= saturation_window and recent_new == 0:
                 with ui.row().classes("items-center gap-3 flex-wrap").style("margin-top: 6px"):
-                    ui.label("🎯 Saturation reached — last 3 annotations revealed no new codes.").style(
+                    ui.label(f"Theoretical saturation reached - final {saturation_window} annotations revealed no new codes.").style(
                         "font-size: 0.75rem; color: var(--green-bright); font-weight: 500"
                     )
-                    ui.button("Create Judge Prompt →", icon="gavel",
+                    ui.button("Create Judge Prompt", icon="gavel",
                               on_click=lambda: ui.navigate.to("/judge")).props("size=xs").style(
                         "background:var(--accent);color:white;border-radius:6px;font-size:0.7rem"
                     )
             elif weighted_pct < 50:
-                ui.label(f"⚠️ Critical failures need deeper exploration ({weighted_pct:.0f}% weighted coverage).").style(
+                ui.label(f"Critical failures need deeper exploration ({weighted_pct:.0f}% weighted coverage).").style(
                     "font-size: 0.75rem; color: var(--yellow); margin-top: 4px"
                 )
             else:
-                ui.label(f"📈 Still discovering — {len(seen_codes)} codes from {len(annotations_list)} annotations.").style(
+                ui.label(f"Still discovering - {len(seen_codes)} codes from {len(annotations_list)} annotations.").style(
                     "font-size: 0.75rem; color: var(--yellow); margin-top: 4px"
                 )
 
@@ -526,7 +590,7 @@ def coding_page():
                         try:
                             n_needed = max(1, min(50, int(((y_last + 1) / k) ** (1 / alpha)) - n_last))
                             ui.label(
-                                f"🔮 Forecast: ~{n_needed} more annotation(s) until next new code (α={alpha:.2f})"
+                                f"Forecast: ~{n_needed} more annotation(s) until next new code (alpha={alpha:.2f})"
                             ).style("font-size: 0.72rem; color: var(--accent-bright); margin-top: 4px")
                         except (ValueError, ZeroDivisionError, OverflowError):
                             pass

@@ -7,12 +7,12 @@
 
 You shipped an AI agent. Now you need trustworthy labels from the people who understand the work. That is where most eval workflows break down: reviewers score raw traces, generic tables, or dashboards that were not built for the task they are judging.
 
-**GEDD is a scenario-first release-readiness workbench for AI Product Managers and domain experts.** A PM loads realistic launch-risk scenarios, reviews the agent in the shape of the task, names failure modes in the expert's vocabulary, and leaves with a release report plus a validated `session.json` that engineering can turn into an automated judge and CI gate.
+**GEDD is a PM annotation workbench for turning observed AI product failures into a defensible LLM-as-a-judge.** A PM loads demos or custom traces, reviews the customer-facing answer in context, names failure modes in the expert's vocabulary, checks saturation, and leaves with a judge prompt plus a validated `session.json` that engineering can turn into an automated release gate.
 
 <img width="1512" height="776" alt="Screenshot 2026-06-05 at 9 15 46 PM" src="https://github.com/user-attachments/assets/e54440e6-1e7f-4762-80c9-6f371f4df7ae" />
 
 
-> *The product is the PM review loop: scenarios, expert labels, failure patterns, judge rules, and a release report engineering can act on.*
+> *The product is the PM annotation loop: golden queries, expert labels, open codes, axial categories, saturation evidence, judge rules, and a release report engineering can act on.*
 
 ![GEDD demo — query → responses → annotate → codes emerge → judge](grounded-evals/docs/GEDD_optimized.gif)
 
@@ -41,11 +41,12 @@ GEDD turns domain review into production evaluation assets:
 
 | PM action | Product surface | Engineering artifact |
 |-----------|-----------------|----------------------|
-| Pick a realistic launch-risk scenario | Scenario Library with preloaded domains, golden queries, labels, codebooks, and judges | Reusable release-risk scenario |
+| Load or generate review traces | PM Workbench demos with a 50-query inductive example plus domain scenarios | Golden query set and response queue |
 | Inspect the agent behavior in context | Run queue with task-shaped response view, filters, hotkeys, progress, and first-pass verdicts | Reliable human labels |
-| Explain what went wrong | PM Annotation Workbench with failure codes, severity, confidence, and memos | Domain-specific codebook |
-| Compare failures across examples | Pattern Map with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
-| Convert observed failures into criteria | Judge Builder with rubric dimensions, hard-fail rules, and calibration | G-Eval judge prompt |
+| Explain what went wrong | PM Annotation Workbench with open codes, severity, confidence, and memos | Domain-specific codebook |
+| Compare failures across examples | Axial coding views with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
+| Check whether the codebook is stable | Saturation curve and final-window new-code count | Evidence that the judge criteria are ready to draft |
+| Convert observed failures into criteria | Judge Builder using the PM-derived failure modes directly | LLM-as-a-judge prompt |
 | Package the evidence | Release Report and CLI export | `session.json`, golden dataset, judge prompt, MLflow artifacts |
 
 The goal is not to make a larger synthetic benchmark. It is to preserve expert judgment at the moment of review, then automate from that evidence.
@@ -60,7 +61,7 @@ The reviewer should see the thing they are judging. If the task is email, show a
 |-----------|---------|
 | Show the real task | The workbench keeps query, response, model, notes, verdicts, filters, and progress in one review queue |
 | Protect reviewer focus | Hotkeys, unreviewed filters, quick verdicts, triage mode, and save-and-next flows reduce context switching |
-| Capture expert language | `Annotate` turns domain vocabulary into failure codes, severity, confidence, and memos |
+| Capture expert language | `PM Workbench` turns domain vocabulary into failure codes, severity, confidence, and memos |
 | Build from observed evidence | The judge is built only after real failures have been observed, coded, and mapped into patterns |
 | Preserve handoff context | `session.json`, exports, judge prompts, and MLflow artifacts carry the review evidence into engineering |
 
@@ -103,14 +104,14 @@ flowchart TD
 
 | Surface | Who | What happens | Output |
 |---------|-----|-------------|--------|
-| Scenarios | AI PM / Domain Expert | Load a realistic agent risk scenario | Queries, annotations, codebook, judge seed |
-| Annotate | AI PM / Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
-| Patterns | AI PM / Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
+| Demos | AI PM / Domain Expert | Load a realistic workbench or domain scenario | Queries, annotations, codebook, judge seed |
+| PM Workbench | AI PM / Domain Expert | Name what went wrong in domain language | Failure codebook, severity, confidence, memos |
+| Axial coding | AI PM / Domain Expert | Map repeated failures into causes and consequences | Paradigm model and priority matrix |
 | Judge | AI PM + ML Engineer | Convert labels into judge criteria | G-Eval rubric, hard-fail rules, calibration set |
 | Report | AI PM + ML Engineer | Review release readiness and export evidence | Release report, `session.json`, judge prompt |
 | MLflow | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> The web app is now organized around the AI PM release loop: `Scenarios` for launch-risk examples, `Annotate` for codebook creation, `Patterns` for root causes, `Judge` for release gates, and `Report` for executive evidence. Custom setup and response-running are contextual actions from Home or empty states, not primary tabs.
+> The web app is now organized around the PM annotation workbench: `PM Workbench` for coding traces, `Demos` for seeded examples, `Judge` for prompt generation, and `Report` for evidence handoff. Custom setup and response-running are contextual actions from Home or empty states, not the main path.
 
 > **CLI parity:** Steps 1-5 can still run inside `grounded-evals chat`. Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
 
@@ -134,7 +135,9 @@ This keeps the rubric downstream of evidence. The expert observes what breaks fi
 
 **Open Coding generates queries across 7 categories:** Happy Path, Edge Cases, Adversarial, Ambiguous, Multi-turn, Error Recovery, and Persona Variation. Each query varies along dimensions of complexity, tone, specificity, and user expertise. The `grounded-evals fracture` and `check-saturation` commands automate coverage tracking.
 
-**Error codes are mapped to 8 standard evaluation dimensions** used to weight the final judge rubric:
+Older G-Eval workflows can still map error codes into standard evaluation dimensions, but the main workbench path no longer requires mapping. The default judge prompt is generated directly from PM-derived failure modes, severity, memos, and axial context.
+
+Legacy dimensions remain available for teams that want weighted rubrics:
 
 | Dimension | Example error codes |
 |-----------|---------------------|
@@ -147,7 +150,7 @@ This keeps the rubric downstream of evidence. The expert observes what breaks fi
 | `bias` | `discrimination`, `unfair_treatment` |
 | `quality` | catch-all for style and formatting failures |
 
-The `grounded-evals analyze` command maps expert error codes to these dimensions automatically (keyword-based), or pass `--llm` for richer mapping with rationale.
+The `grounded-evals analyze` command can map expert error codes to these dimensions automatically when a team needs legacy weighted-rubric output.
 
 ---
 
@@ -206,7 +209,7 @@ pip install -e ".[dev]"
 grounded-evals serve
 ```
 Open `localhost:8080`
-18 pre-loaded scenarios
+50-query PM workbench + demo scenarios
 
 </td>
 <td width="33%">
@@ -221,7 +224,7 @@ Open `localhost:8080`
 grounded-evals chat --session session.json
 ```
 
-Scenarios → Annotate → Patterns → Judge → Report
+Demos -> PM Workbench -> Judge -> Report
 
 </td>
 <td width="33%">
@@ -255,11 +258,10 @@ The website is the default first experience because it is the annotation workben
 
 | Page | Purpose | What you do there |
 |------|---------|-------------------|
-| Home | PM-oriented entry | Continue active review work, open scenarios, or start a custom agent |
-| Scenarios | Core product surface | Load one of 18 high-stakes AI agent scenarios with queries, labels, codebooks, and judges already attached |
-| Annotate | PM Annotation Workbench | Identify product risks, create failure codes, apply severity/confidence, write memos, use triage mode, and track saturation |
-| Patterns | Pattern Map | Map codes into user-impact root causes and release priorities |
-| Judge | Release gate builder | Convert codebook and pattern analysis into judge dimensions, hard-fails, and calibration |
+| Home | PM-oriented entry | Load the 50-query PM workbench demo, continue active review work, open demos, or start a custom agent |
+| PM Workbench | Core product surface | Identify product risks, create open codes, apply severity/confidence, write memos, use triage mode, and track saturation |
+| Demos | Scenario library | Load the main inductive PM demo or high-stakes domain scenarios with queries, labels, codebooks, and judges attached |
+| Judge | Release gate builder | Convert PM annotations and failure modes directly into an LLM-as-a-judge prompt |
 | Report | Release readiness | Review executive summary, failure patterns, model performance, calibration health, and export artifacts |
 | Custom setup | Home option | Capture agent spec, system prompt, runtime choice, and golden queries only when evaluating a new custom agent |
 | Run responses | Contextual action | Generate or compare model responses when a custom workflow needs fresh outputs before annotation |
@@ -414,15 +416,18 @@ AWS-native by default. CloudFront provides the public workbench domain, IAM hand
 
 ---
 
-## 18 Demo Scenarios
+## Demo Scenarios
 
-No LLM calls needed. Each is pre-loaded with golden queries, annotations, error codes, and a generated judge.
+No LLM calls needed. The main demo loads a 50-query PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The scenario library also includes high-stakes domain demos with golden queries, annotations, error codes, and generated judges.
 
 <details>
-<summary><b>View all 18 demos</b></summary>
+<summary><b>View demo library</b></summary>
 
 | Demo | Domain | Key failure modes |
 |------|--------|------------------|
+| **PM Annotation Workbench** | AI PM release readiness | 50 synthetic traces, 10 open codes, axial coding, saturation, generated judge prompt |
+| **AAA Game Producer** | AAA game production | Launch promise drift, entitlement matrix errors, accessibility gate failures |
+| **AAA Game Operator** | AAA live service | Incident ETA fabrication, compensation promise drift, exploit amplification |
 | **AdTechBot** | Advertising / MarTech | Consent bypass, sensitive targeting, dark patterns, attribution overclaim |
 | **TravelBot** | Flight booking | Hallucinated entities, fabricated booking data |
 | **ClinicalBot** | Clinical triage | Missed escalation, contraindication miss |
@@ -459,7 +464,7 @@ No LLM calls needed. Each is pre-loaded with golden queries, annotations, error 
 | `mlflow` | Create SageMaker MLflow artifacts and optionally run evals (Step 6 — ML Engineer only) | `--tracking-uri`, `--run-eval` |
 | `export` | Write golden dataset | `--format jsonl\|csv\|json` |
 | `status` | Session dashboard | `--session` |
-| `analyze` | Map error codes to 8 standard eval dimensions | `--llm` for LLM-enriched mapping with rationale |
+| `analyze` | Optional mapping of error codes to legacy eval dimensions | `--llm` for LLM-enriched mapping with rationale |
 | `serve` | Start the web UI | `--host`, `--port`, `--reload` |
 | `fracture` | Fracture domain into test categories | |
 | `check-saturation` | Check dataset coverage | |
@@ -483,7 +488,7 @@ For a local website smoke test:
 ```bash
 grounded-evals serve --host 127.0.0.1 --port 8080
 
-for p in / /demos /coach /eval /coding /analysis /judge /report /health; do
+for p in / /coding /demos /coach /judge /report /health; do
   curl -sS -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:8080$p"
 done
 ```

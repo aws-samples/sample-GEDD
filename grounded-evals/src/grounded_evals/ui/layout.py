@@ -6,19 +6,19 @@ from nicegui import app, ui
 
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
-    {"path": "/coach", "label": "AI PM Readiness", "icon": "auto_awesome", "primary": True},
+    {"path": "/coding", "label": "PM Workbench", "icon": "rate_review", "primary": True},
     {
         "path": "/demos",
-        "label": "Sample Scenarios",
+        "label": "Demos",
         "icon": "collections_bookmark",
         "featured": True,
         "children": [
-            {"path": "/demos", "label": "Load Scenarios", "icon": "collections_bookmark"},
-            {"path": "/coding", "label": "Scenario Annotations", "icon": "rate_review"},
-            {"path": "/judge", "label": "Scenario Judge", "icon": "gavel"},
-            {"path": "/report", "label": "Scenario Report", "icon": "assessment"},
+            {"path": "/demos", "label": "Load Demos", "icon": "collections_bookmark"},
+            {"path": "/judge", "label": "Judge Prompt", "icon": "gavel"},
+            {"path": "/report", "label": "Release Report", "icon": "assessment"},
         ],
     },
+    {"path": "/coach", "label": "AI PM Coach", "icon": "auto_awesome"},
 ]
 
 BRAND_CSS = """
@@ -340,10 +340,10 @@ def _get_progress_state() -> list[dict]:
     judge = s.get("_generated_judge_prompt", "")
 
     steps = [
-        {"label": "Scenario", "path": "/demos", "done": bool(session_data.get("agent_spec", {}).get("name"))},
-        {"label": "Annotations", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
-        {"label": "Scenario Judge", "path": "/judge", "done": bool(judge)},
-        {"label": "Scenario Report", "path": "/report", "done": False},
+        {"label": "Demo", "path": "/demos", "done": bool(session_data.get("agent_spec", {}).get("name"))},
+        {"label": "PM Workbench", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
+        {"label": "Judge Prompt", "path": "/judge", "done": bool(judge)},
+        {"label": "Report", "path": "/report", "done": False},
     ]
     # Mark the analysis step done if all queries have PM annotations.
     if golden and len(annotations) >= len(golden):
@@ -401,9 +401,9 @@ def page_layout(title: str = "", current_path: str = ""):
                 if is_active:
                     button.classes("nav-active")
                 elif item.get("primary"):
-                    button.classes("coach-nav-btn").tooltip("Start the AI PM readiness workflow")
+                    button.classes("coach-nav-btn").tooltip("Open the PM annotation workbench")
                 elif item.get("featured"):
-                    button.classes("scenario-nav-btn").tooltip("Browse examples for PM inspiration")
+                    button.classes("scenario-nav-btn").tooltip("Load completed demos for PM inspiration")
                 elif item.get("core"):
                     button.classes("core-nav-btn")
                 button.style(
@@ -442,6 +442,7 @@ def page_layout(title: str = "", current_path: str = ""):
                                 "_simple_judge_prompt", "_generated_judge_prompt",
                                 "_jb_generated_at", "custom_annotation_labels",
                                 "shared_eval_results", "shared_annotator",
+                                "demo_methodology",
                             ]
                             for key in keys_to_clear:
                                 app.storage.user.pop(key, None)

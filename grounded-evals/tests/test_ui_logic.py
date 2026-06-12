@@ -104,31 +104,29 @@ def test_is_similar_near_duplicate_codes():
 # ── _get_progress (home_page) ─────────────────────────────────────────────────
 
 
-def test_main_nav_groups_downstream_pages_under_sample_scenarios():
+def test_main_nav_makes_pm_workbench_primary_and_groups_handoff_pages_under_demos():
     from grounded_evals.ui.layout import NAV_ITEMS
 
     labels = [item["label"] for item in NAV_ITEMS]
     paths = [item["path"] for item in NAV_ITEMS]
 
-    assert "Annotate" not in labels
+    assert "PM Workbench" in labels
+    assert "/coding" in paths
     assert "Judge" not in labels
     assert "Report" not in labels
-    assert "/coding" not in paths
     assert "/judge" not in paths
     assert "/report" not in paths
 
-    scenarios = next(item for item in NAV_ITEMS if item["label"] == "Sample Scenarios")
-    assert [child["path"] for child in scenarios["children"]] == [
+    demos = next(item for item in NAV_ITEMS if item["label"] == "Demos")
+    assert [child["path"] for child in demos["children"]] == [
         "/demos",
-        "/coding",
         "/judge",
         "/report",
     ]
-    assert [child["label"] for child in scenarios["children"]] == [
-        "Load Scenarios",
-        "Scenario Annotations",
-        "Scenario Judge",
-        "Scenario Report",
+    assert [child["label"] for child in demos["children"]] == [
+        "Load Demos",
+        "Judge Prompt",
+        "Release Report",
     ]
 
 
@@ -147,10 +145,10 @@ def test_scenario_progress_rail_excludes_coach_flow():
 
     assert [step["path"] for step in steps] == ["/demos", "/coding", "/judge", "/report"]
     assert [step["label"] for step in steps] == [
-        "Scenario",
-        "Annotations",
-        "Scenario Judge",
-        "Scenario Report",
+        "Demo",
+        "PM Workbench",
+        "Judge Prompt",
+        "Report",
     ]
 
 
@@ -227,8 +225,9 @@ def test_domain_registry_includes_all_launch_demos():
     domains = _build_domain_registry()
     names = {d["name"] for d in domains}
 
-    assert len(domains) == 20
+    assert len(domains) >= 21
     assert {
+        "PM Annotation Workbench",
         "AAA Game Producer",
         "AAA Game Operator",
         "RxBot",
@@ -254,6 +253,27 @@ def test_home_expert_discoveries_are_domain_specific():
     } == codes
     assert {item["demo_id"] for item in featured} == {"rx", "insure", "tax"}
     assert all(item["prompt"] and item["unsafe_answer"] and item["gate"] for item in featured)
+
+
+def test_inductive_pm_demo_loads_50_query_workbench():
+    from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
+
+    storage = {"authenticated": True, "email": "pm@example.com"}
+    load_inductive_pm_demo(storage)
+
+    session = storage["session_data"]
+    methodology = storage["demo_methodology"]
+
+    assert session["agent_spec"]["name"] == "PlayerReady PM Workbench"
+    assert len(session["golden_prompts"]) == 50
+    assert len(storage["annotations"]) == 50
+    assert len(storage["coding_annotations"]) == 50
+    assert len(storage["codebook"]) == 10
+    assert methodology["synthetic_query_count"] == 50
+    assert methodology["open_code_count"] == 10
+    assert methodology["saturation_window"] == 8
+    assert methodology["new_codes_in_final_window"] == 0
+    assert "open coding" in storage["_generated_judge_prompt"].lower()
 
 
 # ── _build_responses (coding_page) ───────────────────────────────────────────

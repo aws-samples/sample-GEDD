@@ -1192,7 +1192,7 @@ def home_page():
 
     from grounded_evals.ui.demos_page import _build_domain_registry
     domain_cards = _build_domain_registry()
-    domain_priority = {"game_producer": 0, "game_operator": 1, "adtech": 2}
+    domain_priority = {"inductive_pm_workbench": 0, "game_producer": 1, "game_operator": 2, "adtech": 3}
     domain_cards = sorted(
         domain_cards,
         key=lambda domain: domain_priority.get(domain.get("id", ""), 99),
@@ -1210,38 +1210,38 @@ def home_page():
 
     core_steps = [
         (
-            "Define the agent",
-            "Capture the customer-facing AI product, target user, job, source of truth, and release risk.",
-            "Output: product brief",
-        ),
-        (
-            "Shape the system prompt",
-            "Make the product rules, boundaries, escalation policy, and evidence requirements explicit.",
-            "Output: system prompt",
-        ),
-        (
-            "Generate golden queries",
-            "Create normal, edge, adversarial, ambiguous, and recovery prompts with the domain expert.",
+            "Load 50 traces",
+            "Start with a synthetic customer-facing game assistant dataset spanning launch, live ops, store, and moderation risk.",
             "Output: golden query set",
         ),
         (
-            "Analyze errors",
-            "Review responses, add PM annotations, set severity, and name repeated failure modes.",
-            "Output: annotated failures",
+            "Open coding",
+            "Review each response and name the product failure in PM/domain language instead of forcing a generic taxonomy.",
+            "Output: open codebook",
         ),
         (
-            "Create judge prompt",
-            "Turn the PM's error modes and memos into hard-fail rules for an LLM-as-a-judge.",
+            "Axial coding",
+            "Group codes into root causes, context, strategies, and user consequences that explain why failures repeat.",
+            "Output: paradigm model",
+        ),
+        (
+            "Saturation check",
+            "Confirm the final review window repeats existing codes before treating the rubric as stable.",
+            "Output: saturation evidence",
+        ),
+        (
+            "Generate judge",
+            "Turn the saturated codebook and PM memos into hard-fail release gates for an LLM-as-a-judge.",
             "Output: judge prompt",
         ),
     ]
 
     coach_questions = [
-        "What customer-facing AI product are we gating, and what decision does it influence?",
-        "What facts, policies, tools, or source-of-truth documents must the answer respect?",
-        "Which golden queries prove the product works across normal, edge, and adversarial cases?",
-        "What did the PM or domain expert annotate as incorrect, partial, severe, or release-blocking?",
-        "Which repeated error modes should become hard-fail rules in the judge rubric?",
+        "What user-facing promise would this answer create if it shipped?",
+        "Which source of truth should the assistant have used before answering?",
+        "Is the problem a one-off answer issue or a repeated product failure mode?",
+        "What severity should block release rather than wait for a future patch?",
+        "Which PM-named code should become a hard-fail judge rule?",
     ]
 
     artifacts = [
@@ -1253,9 +1253,9 @@ def home_page():
     ]
 
     starter_demos = [
+        ("inductive_pm_workbench", "50-query PM Workbench"),
         ("game_producer", "AAA Game Producer"),
         ("game_operator", "AAA Game Operator"),
-        ("rx", "RxBot"),
     ]
 
     with ui.column().classes("w-full").style(
@@ -1280,33 +1280,33 @@ def home_page():
         with ui.element("section").classes("simple-hero animate-in stagger-1"):
             ui.html(
                 '<div class="coach-kicker">'
-                '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
-                "AI PM Release Readiness"
+                '<span class="material-icons" style="font-size:0.95rem">rate_review</span>'
+                "PM Annotation Workbench"
                 "</div>"
             )
             ui.html(
                 '<h1 class="simple-headline">'
-                "Find the failures that decide whether your agent is shippable."
+                "Turn PM annotations into a defensible LLM-as-a-judge."
                 "</h1>"
             )
             ui.html(
                 '<div class="simple-subhead">'
-                "Offline eval techniques for AI PMs. Observe agent behavior, name failures in "
-                "domain language, and leave with a judge prompt and release report engineering can act on."
+                "Load demos, review customer-facing traces, use open coding and axial coding to find repeated "
+                "failure modes, then generate the judge prompt from saturated evidence."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
                 ui.button(
-                    "Open AI PM Coach",
-                    icon="auto_awesome",
-                    on_click=lambda: ui.navigate.to("/coach"),
+                    "Load 50-query PM demo",
+                    icon="play_circle",
+                    on_click=lambda: load_homepage_demo("inductive_pm_workbench"),
                 ).props("color=primary size=md unelevated").style(
                     "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                 )
                 ui.button(
-                    "Load an example",
-                    icon="collections_bookmark",
-                    on_click=lambda: ui.navigate.to("/demos"),
+                    "Open Workbench",
+                    icon="rate_review",
+                    on_click=lambda: ui.navigate.to("/coding"),
                 ).props("outline size=md no-caps").style(
                     "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
@@ -1323,20 +1323,20 @@ def home_page():
 
         with ui.element("div").classes("readiness-metric-strip animate-in stagger-2"):
             for value, label in [
-                ("20", "example launch-risk scenarios"),
-                ("8", "rubric dimensions"),
-                ("Evidence handoff", "annotations + judge prompt for engineering"),
+                ("50", "synthetic PM review traces"),
+                ("10", "open codes from observed failures"),
+                ("0", "new codes in final saturation window"),
             ]:
                 with ui.element("div").classes("readiness-metric"):
                     ui.html(f'<div class="readiness-metric-value">{value}</div>')
                     ui.html(f'<div class="readiness-metric-label">{label}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-2"):
-            ui.html('<div class="simple-panel-title">The AI PM readiness loop</div>')
+            ui.html('<div class="simple-panel-title">The PM annotation workbench loop</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "This is the product workflow. The readiness gate comes from observed failures "
-                "and PM annotations, not from generic quality guesses."
+                "This is now the main product flow. The release gate comes from observed failures, PM annotations, "
+                "and saturation evidence, not from generic quality guesses."
                 "</div>"
             )
             with ui.element("div").classes("core-flow-grid"):
@@ -1348,15 +1348,15 @@ def home_page():
                         ui.html(f'<div class="core-flow-output">{output}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">The Coach is the PM readiness partner</div>')
+            ui.html('<div class="simple-panel-title">The workbench keeps the PM in the product problem</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "It asks the questions that keep the PM and domain expert in the product problem before a judge prompt is written."
+                "The review queue, codebook, memos, saturation curve, and judge prompt all stay connected to the same evidence."
                 "</div>"
             )
             with ui.element("div").classes("assistant-grid"):
                 with ui.element("div").classes("assistant-card"):
-                    ui.html('<div class="assistant-label">Coach asks</div>')
+                    ui.html('<div class="assistant-label">PM annotation prompts</div>')
                     for question in coach_questions:
                         ui.html(f'<div class="coach-question">{question}</div>')
                 with ui.element("div").classes("assistant-card"):
@@ -1370,11 +1370,11 @@ def home_page():
                                     ui.html(f'<div class="artifact-copy">{copy}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">Sample scenarios are examples</div>')
+            ui.html('<div class="simple-panel-title">Demos are the fastest way to see the method</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "Use them for PM inspiration and demo data. They are not the product workflow; "
-                "the Coach is where real AI PM readiness work happens."
+                "The sample scenarios show how PMs and domain experts translate launch-risk examples into "
+                "annotations, codes, and judge prompts."
                 "</div>"
             )
             with ui.element("div").classes("compact-example-row"):
