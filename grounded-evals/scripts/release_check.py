@@ -19,16 +19,28 @@ from pathlib import Path
 ROUTES = ["/", "/demos", "/coach", "/eval", "/coding", "/analysis", "/judge", "/report", "/health"]
 CONTENT_CHECKS = {
     "/": [
-        "AI PM Release Readiness",
-        "Find the failures that decide whether your agent is shippable",
-        "domains tested",
-        "AdTech",
-        "What the domain expert discovers",
+        "Turn PM annotations into a defensible LLM-as-a-judge.",
+        "Load 50-query localization demo",
+        "PM Annotation Workbench",
+        "Starter datasets for the AI PM flow",
+        "50-query Localization",
     ],
-    "/demos": ["Scenario Library", "AdTechBot", "Consent Bypass", "RxBot", "MigrateBot", "EnergyBot"],
-    "/coding": ["PM Annotation Workbench", "product risk", "severity", "confidence", "memo", "judge"],
-    "/judge": ["Judge Builder", "Release Gate", "Generate"],
-    "/report": ["AI PM Release Readiness", "Next PM action"],
+    "/demos": [
+        "Demos and PM Workbench",
+        "Load the main 50-query localization annotation demo",
+        "AAA Game Localization Workbench",
+        "Main 50-query demo",
+        "50 golden queries",
+    ],
+    "/coding": [
+        "PM Annotation Workbench",
+        "AAA Game Localization Workbench",
+        "Load the 50-query localization PM demo",
+        "Load 50-query localization demo",
+        "Judge from evidence",
+    ],
+    "/judge": ["Create a simple judge prompt", "Open PM Annotations", "AI PM Coach"],
+    "/report": ["Release Report", "Review release readiness and export evidence.", "Build a judge first"],
 }
 
 
@@ -135,11 +147,11 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         browser = await p.chromium.launch()
         page = await browser.new_page(viewport={"width": 1440, "height": 1000})
         for route, selector_text in [
-            ("/", "Find the failures that decide whether your agent is shippable"),
-            ("/demos", "Scenario Library"),
+            ("/", "Load 50-query localization demo"),
+            ("/demos", "Demos and PM Workbench"),
             ("/coding", "PM Annotation Workbench"),
-            ("/judge", "Judge Builder"),
-            ("/report", "AI PM Release Readiness"),
+            ("/judge", "Create a simple judge prompt"),
+            ("/report", "Release Report"),
         ]:
             try:
                 response = await page.goto(f"{base_url}{route}", wait_until="networkidle", timeout=30000)

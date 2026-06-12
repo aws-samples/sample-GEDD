@@ -46,7 +46,7 @@ GEDD turns domain review into production evaluation assets:
 | Explain what went wrong | PM Annotation Workbench with open codes, severity, confidence, and memos | Domain-specific codebook |
 | Compare failures across examples | Axial coding views with root causes, triggers, contexts, and consequences | Paradigm model and risk priorities |
 | Check whether the codebook is stable | Saturation curve and final-window new-code count | Evidence that the judge criteria are ready to draft |
-| Convert observed failures into criteria | Judge Builder using the PM-derived failure modes directly | LLM-as-a-judge prompt |
+| Convert observed failures into criteria | Judge page using the PM-derived failure modes directly | LLM-as-a-judge prompt |
 | Package the evidence | Release Report and CLI export | `session.json`, golden dataset, judge prompt, MLflow artifacts |
 
 The goal is not to make a larger synthetic benchmark. It is to preserve expert judgment at the moment of review, then automate from that evidence.
@@ -112,7 +112,7 @@ flowchart TD
 | Report | AI PM + ML Engineer | Review release readiness and export evidence | Release report, `session.json`, judge prompt |
 | MLflow | ML Engineer | `grounded-evals mlflow --run-eval` | SageMaker experiment + CI/CD gates |
 
-> The web app is organized around the AI PM flow: `Home`, `AI PM Coach`, `PM Workbench`, `Judge`, and `Report` are the primary tabs. Starter datasets are seed data from Home or the scenario library, not the main navigation path. Use the top-right refresh action to reset a loaded demo or start a new project without signing out.
+> The web app is organized around the AI PM flow: `Home`, `AI PM Coach`, `PM Workbench`, `Judge`, and `Report` are the primary tabs. Starter datasets are seed data from Home or the Demos page, not the main navigation path. Use the top-right refresh action to reset a loaded demo or start a new project without signing out.
 
 > **CLI parity:** Steps 1-5 can still run inside `grounded-evals chat`. Step 6 (`grounded-evals mlflow`) is a separate command invoked by the ML Engineer after receiving the `session.json` handoff — it is not part of the coaching loop.
 
@@ -169,7 +169,7 @@ flowchart TD
     end
 
     subgraph ENGINEER["🔧 ML ENGINEER"]
-        J["Build Judge<br/><i>Rubric + weights + hard-fails</i>"]
+        J["Judge<br/><i>Rubric + weights + hard-fails</i>"]
         K{"Calibrate<br/>κ ≥ 0.80?"}
         CI["CI/CD Gate<br/><i>TSR ≥ 95%</i>"]
         J --> K
@@ -268,11 +268,11 @@ The sample CloudFront deployment is available at `https://d2esgpsbblnxif.cloudfr
 | PM Workbench | Core product surface | Identify product risks, create open codes, apply severity/confidence, write memos, use triage mode, and track saturation |
 | Judge | Release gate builder | Convert PM annotations and failure modes directly into an LLM-as-a-judge prompt |
 | Report | Release readiness | Review executive summary, failure patterns, model performance, calibration health, and export artifacts |
-| Starter datasets | Home/scenario library option | Load the main inductive PM demo or high-stakes domain scenarios with queries, labels, codebooks, and judges attached |
+| Starter datasets | Home/demos option | Load the main 50-query localization workbench or high-stakes domain scenarios with queries, labels, codebooks, and judges attached |
 | Run responses | Contextual action | Generate or compare model responses when a custom workflow needs fresh outputs before annotation |
 | Header actions | Session controls | Reset the loaded demo/project, export/import a handoff session, or sign out |
 
-The primary navigation is intentionally short: `Home`, `AI PM Coach`, `PM Workbench`, `Judge`, and `Report`. The scenario library remains available for seeded examples, but demos are treated as starter data rather than the main product path.
+The primary navigation is intentionally short: `Home`, `AI PM Coach`, `PM Workbench`, `Judge`, and `Report`. The Demos page remains available for seeded examples, but demos are treated as starter data rather than the main product path.
 
 The top-right refresh icon opens **Start a New Project?**. Confirming **Start Fresh** clears the current agent definition, golden queries, annotations, codebook, memos, eval results, judge prompts, and demo metadata while preserving the current login session. The same header also supports session import/export so a domain expert can hand a completed session to an ML engineer without copying browser state.
 
@@ -389,7 +389,7 @@ That is the difference between a generic judge and a judge a domain owner can de
 ```mermaid
 flowchart TD
     WEB["AI PM web app<br/><i>Coach + Workbench + Judge + Report</i>"]
-    ASSIST["Codex skill / CLI<br/><i>guided automation</i>"]
+    ASSIST["Codex plugin skill / CLI<br/><i>guided automation</i>"]
     SJ["session.json<br/><i>validated handoff</i>"]
     CLI["grounded-evals CLI<br/><i>export + judge + mlflow</i>"]
     CF["CloudFront<br/><i>public web domain</i>"]
@@ -425,7 +425,7 @@ AWS-native by default. CloudFront provides the public workbench domain, IAM hand
 
 ## Starter Datasets
 
-No LLM calls needed. The main starter dataset loads a 50-query game localization PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The scenario library also includes high-stakes domain demos with golden queries, annotations, error codes, and generated judges. These datasets are for exploration and workshops; the main product flow remains AI PM Coach -> PM Workbench -> Judge -> Report.
+No LLM calls needed. The main starter dataset loads a 50-query game localization PM annotation workbench with open coding, axial coding, saturation metadata, and a generated judge prompt. The Demos page also includes high-stakes domain scenarios with golden queries, annotations, error codes, and generated judges. These datasets are for exploration and workshops; the main product flow remains AI PM Coach -> PM Workbench -> Judge -> Report.
 
 <details>
 <summary><b>View starter dataset library</b></summary>
