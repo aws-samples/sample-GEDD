@@ -104,33 +104,20 @@ def test_is_similar_near_duplicate_codes():
 # ── _get_progress (home_page) ─────────────────────────────────────────────────
 
 
-def test_main_nav_makes_pm_workbench_primary_and_groups_handoff_pages_under_demos():
+def test_main_nav_keeps_ai_pm_flow_as_top_level_tabs():
     from grounded_evals.ui.layout import NAV_ITEMS
 
     labels = [item["label"] for item in NAV_ITEMS]
     paths = [item["path"] for item in NAV_ITEMS]
 
-    assert "PM Workbench" in labels
-    assert "/coding" in paths
-    assert "Judge" not in labels
-    assert "Report" not in labels
-    assert "/judge" not in paths
-    assert "/report" not in paths
-
-    demos = next(item for item in NAV_ITEMS if item["label"] == "Demos")
-    assert [child["path"] for child in demos["children"]] == [
-        "/demos",
-        "/judge",
-        "/report",
-    ]
-    assert [child["label"] for child in demos["children"]] == [
-        "Load Demos",
-        "Judge Prompt",
-        "Release Report",
-    ]
+    assert labels == ["Home", "AI PM Coach", "PM Workbench", "Judge", "Report"]
+    assert paths == ["/", "/coach", "/coding", "/judge", "/report"]
+    assert "Demos" not in labels
+    assert all("children" not in item for item in NAV_ITEMS)
+    assert next(item for item in NAV_ITEMS if item["label"] == "PM Workbench")["primary"] is True
 
 
-def test_scenario_progress_rail_excludes_coach_flow():
+def test_ai_pm_progress_rail_uses_coach_to_judge_flow():
     from grounded_evals.ui import layout
 
     storage = {
@@ -143,13 +130,39 @@ def test_scenario_progress_rail_excludes_coach_flow():
     with patch.object(layout, "app", _make_mock_app(storage)):
         steps = layout._get_progress_state()
 
-    assert [step["path"] for step in steps] == ["/demos", "/coding", "/judge", "/report"]
+    assert [step["path"] for step in steps] == ["/coach", "/coding", "/judge", "/report"]
     assert [step["label"] for step in steps] == [
-        "Demo",
+        "Coach",
         "PM Workbench",
-        "Judge Prompt",
+        "Judge",
         "Report",
     ]
+
+
+def test_clear_project_state_preserves_login_and_removes_demo_state():
+    from grounded_evals.ui.layout import _clear_project_state
+
+    storage = {
+        "authenticated": True,
+        "email": "pm@example.com",
+        "oauth_tokens": {"access_token": "token"},
+        "session_data": {"agent_spec": {"name": "DemoBot"}},
+        "annotations": [{"query": "q"}],
+        "codebook": [{"name": "Failure"}],
+        "coding_annotations": [{"codes": ["Failure"]}],
+        "demo_methodology": {"synthetic_query_count": 50},
+        "eval_history": [{"run": 1}],
+        "_judge_mappings": [{"code": "Failure"}],
+        "_generated_judge_prompt": "judge prompt",
+    }
+
+    _clear_project_state(storage)
+
+    assert storage == {
+        "authenticated": True,
+        "email": "pm@example.com",
+        "oauth_tokens": {"access_token": "token"},
+    }
 
 
 def test_get_progress_empty_storage():

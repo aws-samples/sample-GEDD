@@ -559,8 +559,8 @@ def coding_page():
                               on_click=load_pm_workbench_demo).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )
-                    ui.button("Browse demos", icon="collections_bookmark",
-                              on_click=lambda: ui.navigate.to("/demos")).props("outline").style(
+                    ui.button("Start with Coach", icon="auto_awesome",
+                              on_click=lambda: ui.navigate.to("/coach")).props("outline").style(
                         "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
                     )
         return
@@ -1087,9 +1087,9 @@ def coding_page():
 
             if not responses:
                 with ui.column().classes("items-start gap-2"):
-                    ui.label('No responses to code yet. Load a scenario or return to Coach.').style("color: var(--text-tertiary)")
-                    ui.button("Load a scenario", icon="collections_bookmark",
-                              on_click=lambda: ui.navigate.to("/demos")).props("size=sm color=primary")
+                    ui.label('No responses to code yet. Start with Coach or load the PM demo from Home.').style("color: var(--text-tertiary)")
+                    ui.button("Open AI PM Coach", icon="auto_awesome",
+                              on_click=lambda: ui.navigate.to("/coach")).props("size=sm color=primary")
                 return
 
             if not filtered:

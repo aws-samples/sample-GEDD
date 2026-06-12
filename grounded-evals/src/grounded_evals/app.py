@@ -41,7 +41,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-06-10-no-patterns"
+APP_RELEASE = "2026-06-11-reset-actions"
 
 
 def _cognito_hosted_domain() -> str:

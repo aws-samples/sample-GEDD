@@ -414,7 +414,7 @@ def judge_builder_page() -> None:
                     ui.button("Open PM Annotations", icon="label", on_click=lambda: ui.navigate.to("/coding")).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )
-                    ui.button("Sample Scenarios", icon="collections_bookmark", on_click=lambda: ui.navigate.to("/demos")).props(
+                    ui.button("AI PM Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
                         "outline"
                     ).style("color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px")
         return

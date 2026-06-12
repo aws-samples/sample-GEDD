@@ -6,20 +6,21 @@ from nicegui import app, ui
 
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
-    {"path": "/coding", "label": "PM Workbench", "icon": "rate_review", "primary": True},
-    {
-        "path": "/demos",
-        "label": "Demos",
-        "icon": "collections_bookmark",
-        "featured": True,
-        "children": [
-            {"path": "/demos", "label": "Load Demos", "icon": "collections_bookmark"},
-            {"path": "/judge", "label": "Judge Prompt", "icon": "gavel"},
-            {"path": "/report", "label": "Release Report", "icon": "assessment"},
-        ],
-    },
     {"path": "/coach", "label": "AI PM Coach", "icon": "auto_awesome"},
+    {"path": "/coding", "label": "PM Workbench", "icon": "rate_review", "primary": True},
+    {"path": "/judge", "label": "Judge", "icon": "gavel"},
+    {"path": "/report", "label": "Report", "icon": "assessment"},
 ]
+
+PROJECT_STATE_KEEP_KEYS = {"authenticated", "email", "oauth_tokens", "oauth_state"}
+
+
+def _clear_project_state(storage: dict) -> None:
+    """Clear the loaded demo/project while preserving the current login state."""
+    for key in list(storage.keys()):
+        if key not in PROJECT_STATE_KEEP_KEYS:
+            storage.pop(key, None)
+
 
 BRAND_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -201,31 +202,6 @@ body {
   background: linear-gradient(135deg, rgba(94,106,210,0.36), rgba(78,167,252,0.22)) !important;
   border-color: var(--accent-bright) !important;
 }
-.scenario-nav-btn {
-  color: var(--accent-bright) !important;
-  background: var(--accent-tint) !important;
-  border: 1px solid rgba(94,106,210,0.22) !important;
-}
-.scenario-nav-btn:hover {
-  background: rgba(94,106,210,0.2) !important;
-  border-color: var(--accent) !important;
-}
-.scenario-submenu {
-  background: var(--bg-surface-2) !important;
-  border: 1px solid var(--border-default) !important;
-  border-radius: var(--radius-lg) !important;
-  box-shadow: 0 16px 40px rgba(0,0,0,0.35) !important;
-  min-width: 190px !important;
-}
-.scenario-submenu .q-item {
-  color: var(--text-secondary) !important;
-  min-height: 34px !important;
-  font-size: 0.78rem !important;
-}
-.scenario-submenu .q-item:hover {
-  color: var(--text-primary) !important;
-  background: var(--bg-hover) !important;
-}
 .core-nav-btn {
   color: var(--text-secondary) !important;
 }
@@ -340,9 +316,9 @@ def _get_progress_state() -> list[dict]:
     judge = s.get("_generated_judge_prompt", "")
 
     steps = [
-        {"label": "Demo", "path": "/demos", "done": bool(session_data.get("agent_spec", {}).get("name"))},
+        {"label": "Coach", "path": "/coach", "done": bool(golden)},
         {"label": "PM Workbench", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
-        {"label": "Judge Prompt", "path": "/judge", "done": bool(judge)},
+        {"label": "Judge", "path": "/judge", "done": bool(judge)},
         {"label": "Report", "path": "/report", "done": False},
     ]
     # Mark the analysis step done if all queries have PM annotations.
@@ -377,33 +353,17 @@ def page_layout(title: str = "", current_path: str = ""):
                 '</span>'
             )
 
-        with ui.row().classes("app-nav-row items-center gap-none"):
+        with ui.row().classes("app-nav-row items-center gap-xs"):
             for item in NAV_ITEMS:
-                child_paths = {child["path"] for child in item.get("children", [])}
-                is_active = current_path == item["path"] or current_path in child_paths
-                has_children = bool(item.get("children"))
-                if has_children:
-                    button = ui.button(item["label"], icon=item["icon"]).props(
-                        "flat no-caps size=sm"
-                    )
-                    with button:
-                        with ui.menu().classes("scenario-submenu").props("auto-close"):
-                            for child in item["children"]:
-                                ui.menu_item(
-                                    child["label"],
-                                    on_click=lambda p=child["path"]: ui.navigate.to(p),
-                                )
-                else:
-                    button = ui.button(
-                        item["label"], icon=item["icon"],
-                        on_click=lambda p=item["path"]: ui.navigate.to(p),
-                    ).props("flat no-caps size=sm")
+                is_active = current_path == item["path"]
+                button = ui.button(
+                    item["label"], icon=item["icon"],
+                    on_click=lambda p=item["path"]: ui.navigate.to(p),
+                ).props("flat no-caps size=sm")
                 if is_active:
                     button.classes("nav-active")
                 elif item.get("primary"):
                     button.classes("coach-nav-btn").tooltip("Open the PM annotation workbench")
-                elif item.get("featured"):
-                    button.classes("scenario-nav-btn").tooltip("Load completed demos for PM inspiration")
                 elif item.get("core"):
                     button.classes("core-nav-btn")
                 button.style(
@@ -434,18 +394,7 @@ def page_layout(title: str = "", current_path: str = ""):
                             "color:var(--text-tertiary)"
                         )
                         def do_reset():
-                            keys_to_clear = [
-                                "session_data", "current_step", "annotations", "messages",
-                                "prompt_variants", "codebook", "coding_annotations", "memos",
-                                "paradigm_model", "failure_patterns", "eval_results",
-                                "eval_selected_models", "_eval_judge_results",
-                                "_simple_judge_prompt", "_generated_judge_prompt",
-                                "_jb_generated_at", "custom_annotation_labels",
-                                "shared_eval_results", "shared_annotator",
-                                "demo_methodology",
-                            ]
-                            for key in keys_to_clear:
-                                app.storage.user.pop(key, None)
+                            _clear_project_state(app.storage.user)
                             dlg.close()
                             ui.navigate.to("/")
                         ui.button("Start Fresh", icon="refresh", on_click=do_reset).props(
@@ -529,21 +478,21 @@ def page_layout(title: str = "", current_path: str = ""):
                             auto_upload=True,
                         ).props("accept=.json dense color=primary")
 
-        with ui.row().classes("app-action-row items-center gap-none"):
-            ui.button(icon="add_circle_outline", on_click=confirm_new_project).props(
+        with ui.row().classes("app-action-row items-center gap-xs"):
+            ui.button(icon="refresh", on_click=confirm_new_project).props(
                 "flat round size=sm"
-            ).style("color: var(--text-muted)").tooltip("New Project")
+            ).style("color: var(--text-muted)").tooltip("Reset demo / new project")
 
             ui.button(icon="ios_share", on_click=open_session_dialog).props(
                 "flat round size=sm"
-            ).style("color: var(--text-muted)").tooltip("Report Handoff")
+            ).style("color: var(--text-muted)").tooltip("Report handoff")
 
             ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
                 "color: var(--text-muted)"
             ).tooltip("Logout")
 
-    # Scenario progress rail. Coach stays separate from sample-scenario artifacts.
-    workflow_paths = {"/demos", "/coding", "/judge", "/report"}
+    # AI PM readiness flow: coach -> annotate evidence -> judge -> report.
+    workflow_paths = {"/coach", "/coding", "/judge", "/report"}
     if current_path in workflow_paths:
         steps = _get_progress_state()
         with ui.element("div").classes("progress-rail"):

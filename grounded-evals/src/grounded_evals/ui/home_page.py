@@ -1165,7 +1165,7 @@ def home_page():
     def load_homepage_demo(demo_id: str) -> None:
         domain = domain_by_id.get(demo_id)
         if not domain:
-            ui.navigate.to("/demos")
+            ui.navigate.to("/coach")
             return
         domain["loader"](app.storage.user)
         ui.notify(f'{domain["name"]} loaded into the annotation workbench.', type="positive")
@@ -1254,8 +1254,8 @@ def home_page():
             )
             ui.html(
                 '<div class="simple-subhead">'
-                "Load demos, review customer-facing traces, use open coding and axial coding to find repeated "
-                "failure modes, then generate the judge prompt from saturated evidence."
+                "Coach a PM to define golden queries, review customer-facing traces, name repeated failure modes, "
+                "and generate the judge prompt from PM-owned evidence."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
@@ -1267,11 +1267,18 @@ def home_page():
                     "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                 )
                 ui.button(
+                    "Start with Coach",
+                    icon="auto_awesome",
+                    on_click=lambda: ui.navigate.to("/coach"),
+                ).props("outline size=md no-caps").style(
+                    "color: var(--accent-bright); border-color: var(--border-subtle)"
+                )
+                ui.button(
                     "Open Workbench",
                     icon="rate_review",
                     on_click=lambda: ui.navigate.to("/coding"),
-                ).props("outline size=md no-caps").style(
-                    "color: var(--accent-bright); border-color: var(--border-subtle)"
+                ).props("flat size=md no-caps").style(
+                    "color: var(--text-secondary)"
                 )
             with ui.element("div").classes("hero-demo-frame"):
                 ui.html(
@@ -1323,11 +1330,10 @@ def home_page():
                                     ui.html(f'<div class="artifact-copy">{copy}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">Demos are the fastest way to see the method</div>')
+            ui.html('<div class="simple-panel-title">Starter datasets for the AI PM flow</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "The sample scenarios show how PMs and domain experts translate launch-risk examples into "
-                "annotations, codes, and judge prompts."
+                "Use these only as seed data. The product flow stays simple: Coach, PM Workbench, Judge, Report."
                 "</div>"
             )
             with ui.element("div").classes("compact-example-row"):
