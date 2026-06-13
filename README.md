@@ -55,6 +55,8 @@ grounded-evals serve --host 127.0.0.1 --port 8080
 
 Open `http://127.0.0.1:8080`.
 
+No Codex skill or plugin is required.
+
 Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment variables are configured. If port `8080` is busy, use `--port 8081`.
 
 For the fastest product tour, use one of the seeded 50-query demos. They do not require model calls:
@@ -201,26 +203,16 @@ grounded-evals --help
 grounded-evals mlflow --help
 ```
 
-## Codex Plugin And Bundled Skill
+## Web App And CLI
 
-This repo includes Codex-native workflow guidance. The accurate wording is `Codex plugin and bundled skill`.
+GEDD ships as a web app and a CLI. No Codex skill or plugin is required.
 
-| Asset | Path | Meaning |
+| Interface | Entry point | Use |
 |---|---|---|
-| Codex plugin package | `plugins/gedd/` | Installable package that exposes the GEDD workflow to Codex |
-| Bundled Codex skill | `plugins/gedd/skills/gedd/SKILL.md` | Instructions packaged inside the plugin and invoked as `$gedd` when available |
-| Local marketplace entry | `.agents/plugins/marketplace.json` | Repo-local catalog metadata that points Codex at `./plugins/gedd` |
-| Claude Code commands | `grounded-evals/.claude/commands/` | Separate Claude Code slash-command files; these are not Codex skills |
+| Web app | `grounded-evals serve` | Primary workflow for demos, PM annotation, judge building, and report export |
+| CLI | `grounded-evals --help` | Repeatable validation, exports, automation, and MLflow runs |
 
-Use the bundled skill when you want Codex to guide the workflow:
-
-```text
-Use $gedd to evaluate my AI agent.
-Use $gedd to package my current session for ML engineering handoff.
-Use $gedd to build a judge from the domain expert's failure codes.
-```
-
-The skill should keep the workbench first. CLI automation is the right path for CI, MLflow, scripted exports, and headless checks.
+Use the web app first unless you are automating an established workflow. The CLI is the right path for CI, MLflow, scripted exports, and headless checks.
 
 ## Runtime And Provider Configuration
 
@@ -248,10 +240,8 @@ flowchart TD
     MLFLOW["MLflow / SageMaker MLflow<br/>datasets, scorers, runs"]
     CI["CI/CD gate<br/>regression checks"]
     RUNTIME["Agent runtime<br/>Bedrock, Anthropic, AgentCore"]
-    CODEX["Codex plugin<br/>bundled $gedd skill"]
 
     DEMO --> WEB
-    CODEX --> WEB
     WEB --> SESSION
     WEB --> REPORT
     REPORT --> CLI
@@ -275,7 +265,6 @@ Core paths:
 | `grounded-evals/src/grounded_evals/cli.py` | Command-line workflow |
 | `grounded-evals/infra/` | AWS CDK infrastructure |
 | `grounded-evals/Dockerfile` | Container image for the web app |
-| `plugins/gedd/` | Codex plugin package |
 
 ## Validation
 

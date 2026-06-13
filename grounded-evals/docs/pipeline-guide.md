@@ -46,15 +46,9 @@ grounded-evals serve
 
 Open `http://localhost:8080`. Start with a pre-loaded demo if you are new, then use Coach, Eval Harness, Tag, Root Causes, Build Judge, and Report to create a validated handoff.
 
-### Option B: Codex skill or CLI commands
+### Option B: CLI commands
 
-In Codex, use the repo skill:
-
-```text
-Use $gedd to evaluate my AI agent with the website-first workflow.
-```
-
-For headless or automation-oriented work:
+No Codex skill or plugin is required. For headless or automation-oriented work:
 
 ```bash
 # Step 1-2: Interactive coaching

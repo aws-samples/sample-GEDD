@@ -2,7 +2,7 @@
 
 Use this checklist before a public beta, workshop launch, or production launch of GEDD.
 
-The current product is suitable for a controlled preview when the local test suite, route smoke test, docs, skill, plugin, and handoff paths pass. Treat it as production-ready only after the full browser workflow, auth modes, AWS deployment, and MLflow handoff have been verified in the target environment.
+The current product is suitable for a controlled preview when the local test suite, route smoke test, docs, workflow entry points, and handoff paths pass. Treat it as production-ready only after the full browser workflow, auth modes, AWS deployment, and MLflow handoff have been verified in the target environment.
 
 ---
 
@@ -11,7 +11,7 @@ The current product is suitable for a controlled preview when the local test sui
 | Launch type | Minimum bar | Use when |
 |-------------|-------------|----------|
 | Internal preview | Local install, unit tests, route smoke, demo loading, README/setup accuracy | Team review, design critique, early PM feedback |
-| Public beta | Internal preview checks plus browser E2E, fresh-user install, skill/plugin validation, security scan, known limits documented | Workshops, open-source announcement, early adopters |
+| Public beta | Internal preview checks plus browser E2E, fresh-user install, workflow entry-point validation, security scan, known limits documented | Workshops, open-source announcement, early adopters |
 | Production launch | Public beta checks plus Cognito auth, ECS deployment, TLS, persistent storage, MLflow handoff, monitoring, rollback, and support owner | External users depend on it for live evaluation work |
 
 **Current recommendation:** launch as beta/preview until the browser E2E, deployed auth, AWS deployment, and MLflow handoff checks are complete.
@@ -50,8 +50,8 @@ Fill this out for every launch candidate.
 Suggested stale-doc scan:
 
 ```bash
-rg -n 'python -m grounded_evals\.app|Eight industries|5-step workflow|Step 3: Deploy|Claude Code conversation|\.codex/skills' \
-  README.md SETUP.md grounded-evals/docs .agents plugins
+rg -n 'python -m grounded_evals\.app|Eight industries|5-step workflow|Step 3: Deploy|Claude Code conversation|plugins/gedd|\.agents/plugins' \
+  README.md SETUP.md grounded-evals/docs
 ```
 
 ---
@@ -219,35 +219,31 @@ Pass criteria:
 
 ---
 
-## 8. Codex Skill And Plugin Gate
+## 8. Web App And CLI Gate
 
-Validate both the repo-scoped skill and installable plugin package.
+Validate the supported entry points: website and CLI.
 
 | Asset | Required result |
 |-------|-----------------|
-| `.agents/skills/gedd/SKILL.md` | Valid skill metadata and website-first instructions |
-| `plugins/gedd/.codex-plugin/plugin.json` | Valid manifest with `skills: "./skills/"` |
-| `plugins/gedd/skills/gedd/SKILL.md` | Same launch-safe workflow as repo skill |
-| `.agents/plugins/marketplace.json` | Local marketplace points to `./plugins/gedd` |
+| `README.md` | Quick start uses `grounded-evals serve` and states that no skill or plugin is required |
+| `grounded-evals serve --help` | Web app entry point is executable |
+| `grounded-evals --help` | CLI entry point is executable |
 
-Codex validator paths are installation-specific. In Codex, use `$skill-creator` and `$plugin-creator` validators, or run the local validator scripts for your machine and record the exact output in release evidence.
+Manual checks:
 
-Manual prompt checks:
-
-```text
-Use $gedd to evaluate my AI agent with the website-first workflow.
-Use $gedd to package my current session for ML engineering handoff.
-Use $gedd to build a judge from the domain expert's failure codes.
+```bash
+cd grounded-evals
+grounded-evals --help
+grounded-evals serve --help
 ```
 
 Pass criteria:
 
 | Check | Required result |
 |-------|-----------------|
-| Skill trigger | Codex selects or accepts `$gedd` for GEDD work |
-| First recommendation | Starts with the website unless user asks for CLI-only automation |
-| Handoff guidance | Includes `validate-session`, `handoff`, `export`, `judge`, and `mlflow` where relevant |
-| Plugin install | Plugin appears through repo marketplace after Codex restart |
+| Website path | README and setup docs lead with the web app |
+| CLI path | `validate-session`, `handoff`, `export`, `judge`, and `mlflow` remain documented |
+| No plugin dependency | Core docs do not require a Codex skill or plugin to use GEDD |
 
 ---
 
@@ -375,7 +371,7 @@ Pass criteria:
 | Engineer | `SETUP.md` | Local setup, providers, auth, env vars, and deployment are current |
 | Domain expert | `grounded-evals/docs/domain-expert-guide.md` | No CLI required to understand the workflow |
 | ML engineer | `grounded-evals/docs/pipeline-guide.md` | Handoff and MLflow path are executable |
-| Codex user | `README.md`, `.agents/skills/gedd/SKILL.md`, `plugins/gedd/skills/gedd/SKILL.md` | Skill vs plugin expectations are clear |
+| CLI user | `README.md`, `grounded-evals/docs/pipeline-guide.md` | Web app vs CLI expectations are clear and no plugin is required |
 | Maintainer | This checklist | Launch gates are repeatable |
 
 ---

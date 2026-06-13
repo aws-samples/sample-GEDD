@@ -877,7 +877,7 @@ def mlflow_export(session: str, results: str, experiment: str | None,
 
     \b
     Two-persona workflow:
-      Domain Expert: runs /gedd skill → produces session.json
+      Domain Expert: uses the GEDD web app or CLI → produces session.json
       ML Engineer:   runs this command → creates MLflow eval pipeline
 
     \b

@@ -2,7 +2,7 @@
 
 Everything you need to get GEDD running locally and deployed. The PM-facing tour lives in [README.md](README.md); this doc is the engineer's reference.
 
-Before a public beta or production launch, run the [launch checklist](grounded-evals/docs/launch-checklist.md). It covers fresh install, browser E2E, auth, AWS deployment, Codex skill/plugin validation, MLflow handoff, rollback, and no-go criteria.
+Before a public beta or production launch, run the [launch checklist](grounded-evals/docs/launch-checklist.md). It covers fresh install, browser E2E, auth, AWS deployment, web-app and CLI validation, MLflow handoff, rollback, and no-go criteria.
 
 ---
 
