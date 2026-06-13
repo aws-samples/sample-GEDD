@@ -150,27 +150,6 @@ It gives engineering:
 | Implementation queue | Prioritizes failure codes by severity and count, with tagged examples and definitions of done |
 | Runbook | Gives commands the ML engineer can run immediately |
 
-## Architecture
-
-```mermaid
-flowchart LR
-    subgraph REVIEW["PM review loop"]
-        INPUT["Seeded demos or imported traces"] --> WEB["GEDD web app<br/>Home -> AI PM Coach -> PM Workbench -> Judge -> Report"]
-        WEB --> SESSION["session.json handoff<br/>agent spec, queries, labels, codebook, judge prompt"]
-        WEB --> HANDOFF["ML engineer handoff<br/>gates, artifact status, implementation queue"]
-    end
-
-    subgraph ENGINEERING["Engineering eval loop"]
-        SESSION -->|validate, export, judge| PIPELINE["CLI / MLflow pipeline"]
-        HANDOFF -->|fixes and priorities| RUNTIME["Candidate agent runtime<br/>Bedrock, Anthropic, AgentCore"]
-        RUNTIME -->|system under test| PIPELINE
-        PIPELINE --> MLFLOW["MLflow / SageMaker MLflow<br/>datasets, judges, eval runs"]
-        MLFLOW --> CI["CI/CD regression gate"]
-    end
-
-    CI -. new failures or traces .-> WEB
-```
-
 ## License And Security
 
 License: MIT-0. See [LICENSE](LICENSE).
