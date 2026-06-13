@@ -1,11 +1,13 @@
-# GEDD - Grounded Eval-Driven Development for AI Agents
+# GEDD - A Systematic Evidence-Driven LLM-as-a-Judge Framework for AI Agents
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-GEDD is an annotation-first workflow for turning domain-owner review of AI agent behavior into release gates engineering can run.
+GEDD is a systematic evidence-driven LLM-as-a-judge framework for AI agents.
+
+It is an annotation-first workflow for turning domain-owner review of AI agent behavior into release gates engineering can run.
 
 The web app gives product managers, domain experts, and ML engineers one shared path:
 
