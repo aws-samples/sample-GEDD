@@ -153,25 +153,22 @@ It gives engineering:
 ## Architecture
 
 ```mermaid
-flowchart TD
-    WEB["NiceGUI web app<br/>Home, Coach, Workbench, Judge, Report"]
-    DEMO["Seeded demos<br/>50-query localization + domain scenarios"]
-    SESSION["session.json<br/>agent, prompt, queries, labels, codebook"]
-    REPORT["ML engineer handoff<br/>gates, artifacts, queue, commands"]
-    CLI["grounded-evals CLI<br/>export, judge, validate, mlflow"]
-    MLFLOW["MLflow / SageMaker MLflow<br/>datasets, scorers, runs"]
-    CI["CI/CD gate<br/>regression checks"]
-    RUNTIME["Agent runtime<br/>Bedrock, Anthropic, AgentCore"]
+flowchart LR
+    subgraph REVIEW["PM review loop"]
+        INPUT["Seeded demos or imported traces"] --> WEB["GEDD web app<br/>Home -> AI PM Coach -> PM Workbench -> Judge -> Report"]
+        WEB --> SESSION["session.json handoff<br/>agent spec, queries, labels, codebook, judge prompt"]
+        WEB --> HANDOFF["ML engineer handoff<br/>gates, artifact status, implementation queue"]
+    end
 
-    DEMO --> WEB
-    WEB --> SESSION
-    WEB --> REPORT
-    REPORT --> CLI
-    SESSION --> CLI
-    CLI --> MLFLOW
-    MLFLOW --> CI
-    CI --> RUNTIME
-    RUNTIME --> WEB
+    subgraph ENGINEERING["Engineering eval loop"]
+        SESSION -->|validate, export, judge| PIPELINE["CLI / MLflow pipeline"]
+        HANDOFF -->|fixes and priorities| RUNTIME["Candidate agent runtime<br/>Bedrock, Anthropic, AgentCore"]
+        RUNTIME -->|system under test| PIPELINE
+        PIPELINE --> MLFLOW["MLflow / SageMaker MLflow<br/>datasets, judges, eval runs"]
+        MLFLOW --> CI["CI/CD regression gate"]
+    end
+
+    CI -. new failures or traces .-> WEB
 ```
 
 ## License And Security
