@@ -1157,10 +1157,11 @@ def home_page():
     domain_cards = _build_domain_registry()
     domain_priority = {
         "inductive_pm_workbench": 0,
-        "game_producer": 1,
-        "game_localization": 2,
-        "game_operator": 3,
-        "adtech": 4,
+        "gdpr_auditor_workbench": 1,
+        "game_producer": 2,
+        "game_localization": 3,
+        "game_operator": 4,
+        "adtech": 5,
     }
     domain_cards = sorted(
         domain_cards,
@@ -1180,7 +1181,7 @@ def home_page():
     core_steps = [
         (
             "Load 50 traces",
-            "Start with a synthetic game localization QA dataset spanning runtime strings, RTL UI, store copy, subtitles, and regional risk.",
+            "Start with a seeded localization or AWS cloud GDPR dataset, or load your own traces into the same workbench.",
             "Output: golden query set",
         ),
         (
@@ -1223,6 +1224,7 @@ def home_page():
 
     starter_demos = [
         ("inductive_pm_workbench", "50-query Localization"),
+        ("gdpr_auditor_workbench", "50-query AWS Cloud GDPR"),
         ("game_producer", "AAA Game Producer"),
         ("game_localization", "AAA Game Localization"),
         ("game_operator", "AAA Game Operator"),
@@ -1262,16 +1264,24 @@ def home_page():
             ui.html(
                 '<div class="simple-subhead">'
                 "Coach a PM to define golden queries, review customer-facing traces, name repeated failure modes, "
-                "and generate the judge prompt from PM-owned evidence."
+                "and generate the judge prompt from PM-owned evidence. Seed it with localization or "
+                "AWS cloud GDPR data, or bring your own traces."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
                 ui.button(
-                    "Load 50-query localization demo",
+                    "Localization Demo",
                     icon="play_circle",
                     on_click=lambda: load_homepage_demo("inductive_pm_workbench"),
-                ).props("color=primary size=md unelevated").style(
+                ).props("color=primary size=md unelevated no-caps").style(
                     "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
+                )
+                ui.button(
+                    "AWS GDPR Demo",
+                    icon="policy",
+                    on_click=lambda: load_homepage_demo("gdpr_auditor_workbench"),
+                ).props("outline size=md no-caps").style(
+                    "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
                 ui.button(
                     "Start with Coach",
@@ -1279,13 +1289,6 @@ def home_page():
                     on_click=lambda: ui.navigate.to("/coach"),
                 ).props("outline size=md no-caps").style(
                     "color: var(--accent-bright); border-color: var(--border-subtle)"
-                )
-                ui.button(
-                    "Open Workbench",
-                    icon="rate_review",
-                    on_click=lambda: ui.navigate.to("/coding"),
-                ).props("flat size=md no-caps").style(
-                    "color: var(--text-secondary)"
                 )
             with ui.element("div").classes("hero-demo-frame"):
                 ui.html(

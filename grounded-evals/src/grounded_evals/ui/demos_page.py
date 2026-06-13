@@ -347,6 +347,13 @@ def _build_domain_registry():
         INDUCTIVE_PM_SAMPLE_QUERIES,
         load_inductive_pm_demo,
     )
+    from grounded_evals.ui.gdpr_auditor_demo import (
+        GDPR_AUDITOR_CODEBOOK,
+        GDPR_AUDITOR_EVAL_HISTORY,
+        GDPR_AUDITOR_JUDGE_PROMPT,
+        GDPR_AUDITOR_SAMPLE_QUERIES,
+        load_gdpr_auditor_demo,
+    )
     from grounded_evals.ui.domain_demos import (
         load_clinical_demo, load_lex_demo, load_wealth_demo,
         CLINICAL_CODEBOOK, CLINICAL_CODING_ANNOTATIONS, CLINICAL_PARADIGM_MODEL, CLINICAL_JUDGE_PROMPT, CLINICAL_EVAL_HISTORY,
@@ -369,6 +376,35 @@ def _build_domain_registry():
             "judge_prompt": INDUCTIVE_PM_JUDGE_PROMPT,
             "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in INDUCTIVE_PM_EVAL_HISTORY],
             "n_queries": 50, "n_codes": len(INDUCTIVE_PM_CODEBOOK),
+        },
+        {
+            "id": "gdpr_auditor_workbench",
+            "name": "AWS Cloud GDPR Auditor Workbench",
+            "icon": "policy",
+            "operator": "Northstar Cloud Privacy",
+            "tagline": (
+                "50 AWS cloud GDPR traces -> open coding -> axial coding -> "
+                "saturation -> cloud privacy judge prompt"
+            ),
+            "domain": "AWS Cloud GDPR / PM Workbench",
+            "risk_level": "critical",
+            "regulations": ["GDPR", "AWS data residency", "DSAR and breach duties"],
+            "loader": load_gdpr_auditor_demo,
+            "codebook": GDPR_AUDITOR_CODEBOOK,
+            "sample_queries": GDPR_AUDITOR_SAMPLE_QUERIES,
+            "paradigm_phenomenon": (
+                "Sounds Cloud-Safe, Still Fails GDPR"
+            ),
+            "paradigm_consequence": (
+                "Wrong region, wrong retention, broken DSAR and delete handling, unsafe Bedrock "
+                "or Rekognition use, regulator exposure"
+            ),
+            "judge_prompt": GDPR_AUDITOR_JUDGE_PROMPT,
+            "pass_rates": [
+                int(r["pass_rate"].rstrip("%")) for r in GDPR_AUDITOR_EVAL_HISTORY
+            ],
+            "n_queries": 50,
+            "n_codes": len(GDPR_AUDITOR_CODEBOOK),
         },
         {
             "id": "travel", "name": "TravelBot", "icon": "flight", "operator": "SkyLink Travel",
@@ -897,13 +933,18 @@ def _render_domain(domain: dict):
     codebook = domain.get("codebook", [])
     judge_prompt = domain.get("judge_prompt", "").strip()
     judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
+    workbench_labels = {
+        "inductive_pm_workbench": "Load 50-query localization demo",
+        "gdpr_auditor_workbench": "Load 50-query AWS Cloud GDPR demo",
+    }
     is_featured = domain.get("id") in {
         "inductive_pm_workbench",
+        "gdpr_auditor_workbench",
         "game_producer",
         "game_localization",
         "game_operator",
     }
-    load_label = "Load 50-query localization demo" if domain.get("id") == "inductive_pm_workbench" else "Load scenario"
+    load_label = workbench_labels.get(domain.get("id"), "Load scenario")
 
     def make_loader(d=domain):
         def _load():
@@ -934,7 +975,7 @@ def _render_domain(domain: dict):
             ).classes("ds-primary-load").props("unelevated no-caps")
 
         with ui.element("div").classes("ds-chip-row"):
-            if domain.get("id") == "inductive_pm_workbench":
+            if domain.get("id") in workbench_labels:
                 ui.html('<span class="ds-pill ds-feature-badge">Main 50-query demo</span>')
             elif is_featured:
                 ui.html('<span class="ds-pill ds-feature-badge">Release quality gate</span>')
@@ -1006,7 +1047,7 @@ def demos_page():
 
     domains = _build_domain_registry()
     active_tab = {"idx": 0}
-    workbench_ids = {"inductive_pm_workbench"}
+    workbench_ids = {"inductive_pm_workbench", "gdpr_auditor_workbench"}
     featured_ids = {"game_producer", "game_localization", "game_operator"}
 
     with ui.column().classes("w-full max-w-6xl mx-auto").style("padding: 1.5rem; gap: 0"):
@@ -1017,7 +1058,7 @@ def demos_page():
                 ui.html('<div class="ds-page-title">Demos and PM Workbench</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
-                    'Load the main 50-query localization annotation demo or a domain scenario. Each demo seeds '
+                    'Load a 50-query PM workbench demo or a domain scenario. Each demo seeds '
                     'golden queries, PM annotations, failure modes, and judge-prompt evidence.'
                     '</div>'
                 )

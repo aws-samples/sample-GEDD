@@ -106,6 +106,53 @@ def test_build_fix_queue_prioritizes_release_blockers():
     assert len(queue[0]["examples"]) == 2
 
 
+def test_report_build_rubric_error_mode_mix_empty():
+    from grounded_evals.ui.report_page import _build_rubric_error_mode_mix
+
+    mix = _build_rubric_error_mode_mix([], [])
+
+    assert mix["total_instances"] == 0
+    assert mix["distinct_modes"] == 0
+    assert mix["slices"] == []
+
+
+def test_report_build_rubric_error_mode_mix_groups_tail_and_filters_unknown_codes():
+    from grounded_evals.ui.report_page import _build_rubric_error_mode_mix
+
+    codebook = [
+        {"name": "A"},
+        {"name": "B"},
+        {"name": "C"},
+        {"name": "D"},
+        {"name": "E"},
+        {"name": "F"},
+    ]
+    annotations = [
+        {"codes": ["A", "B"]},
+        {"codes": "A"},
+        {"error_code": "B"},
+        {"codes": ["C"]},
+        {"codes": ["D"]},
+        {"codes": ["E"]},
+        {"codes": ["F"]},
+        {"codes": ["Ghost"]},
+    ]
+
+    mix = _build_rubric_error_mode_mix(codebook, annotations, limit=3)
+
+    assert mix["total_instances"] == 8
+    assert mix["distinct_modes"] == 6
+    assert mix["top_mode"] == "A"
+    assert mix["top_count"] == 2
+    assert [slice_["name"] for slice_ in mix["slices"]] == [
+        "A",
+        "B",
+        "C",
+        "Other identified modes",
+    ]
+    assert mix["slices"][-1]["value"] == 3
+
+
 def test_build_engineering_handoff_includes_ci_runbook():
     from grounded_evals.ui.report_page import _build_engineering_handoff
 
@@ -133,13 +180,66 @@ def test_build_engineering_handoff_includes_ci_runbook():
         health_total=82,
         health_gaps=[],
         kappa=None,
+        reference_examples=12,
     )
 
-    assert handoff["status"] == "blocked_by_p0"
+    assert handoff["status"] == "needs_calibration"
     assert handoff["metrics"]["golden_queries"] == 50
     assert handoff["implementation_queue"][0]["priority"] == "P0"
+    assert handoff["judge_strategy"]["primary_mode"] == "single_answer_pass_fail"
+    assert handoff["dataset_profile"]["pass_examples"] == 35
+    assert handoff["dataset_profile"]["reference_examples"] == 12
+    assert handoff["output_contract"]["pass"] == "boolean"
     assert any("mlflow" in command for command in handoff["commands"])
     assert handoff["artifact_status"][3]["artifact"] == "judge_prompt.txt"
+
+
+def test_build_judge_builder_handoff_export_uses_dedicated_shape():
+    from grounded_evals.ui.report_page import (
+        _build_engineering_handoff,
+        _build_judge_builder_handoff_export,
+    )
+
+    handoff = _build_engineering_handoff(
+        agent_name="LocaleGate",
+        total=12,
+        correct=6,
+        partial=2,
+        incorrect=4,
+        pass_rate_pct=50.0,
+        golden_count=12,
+        n_blockers=1,
+        codebook=[{"name": "Gameplay Meaning Reversal", "definition": "wrong player action"}],
+        coding_annotations=[
+            {
+                "codes": ["Gameplay Meaning Reversal"],
+                "severity": "critical",
+                "query": "Revive ally copy reversed.",
+                "response": "Attack the ally.",
+            }
+        ],
+        judge_prompt="judge prompt text",
+        health_total=70,
+        health_gaps=["Need more borderline examples"],
+        kappa=None,
+        reference_examples=4,
+    )
+
+    export = _build_judge_builder_handoff_export(
+        agent_name="LocaleGate",
+        agent_description="Launch guard",
+        handoff=handoff,
+        judge_prompt="judge prompt text",
+    )
+
+    assert export["artifact"] == "judge_builder_handoff"
+    assert export["schema_version"] == "2026-06-13"
+    assert export["agent"]["name"] == "LocaleGate"
+    assert export["handoff"]["judge_strategy"]["starter_model"] == "gpt-5.5"
+    assert export["handoff"]["promotion_gates"][0]["gate"] == "Judge-human agreement"
+    assert export["handoff"]["judge_coverage_queue"][0]["code"] == "Gameplay Meaning Reversal"
+    assert export["judge_prompt"]["available"] is True
+    assert export["judge_prompt"]["text"] == "judge prompt text"
 
 
 # ── _is_similar (coding_page) ─────────────────────────────────────────────────
@@ -315,8 +415,9 @@ def test_domain_registry_includes_all_launch_demos():
     domains = _build_domain_registry()
     names = {d["name"] for d in domains}
 
-    assert len(domains) >= 21
+    assert len(domains) >= 22
     assert {
+        "AWS Cloud GDPR Auditor Workbench",
         "AAA Game Localization Workbench",
         "AAA Game Producer",
         "AAA Game Localization",
@@ -368,6 +469,29 @@ def test_inductive_pm_demo_loads_50_query_localization_workbench():
         code["name"] for code in storage["codebook"]
     }
     assert "localization" in storage["_generated_judge_prompt"].lower()
+    assert "open coding" in storage["_generated_judge_prompt"].lower()
+
+
+def test_gdpr_auditor_demo_loads_50_query_workbench():
+    from grounded_evals.ui.gdpr_auditor_demo import load_gdpr_auditor_demo
+
+    storage = {"authenticated": True, "email": "dpo@example.com"}
+    load_gdpr_auditor_demo(storage)
+
+    session = storage["session_data"]
+    methodology = storage["demo_methodology"]
+
+    assert session["agent_spec"]["name"] == "AWS Cloud GDPR Auditor Workbench"
+    assert len(session["golden_prompts"]) == 50
+    assert len(storage["annotations"]) == 50
+    assert len(storage["coding_annotations"]) == 50
+    assert len(storage["codebook"]) == 10
+    assert methodology["synthetic_query_count"] == 50
+    assert methodology["open_code_count"] == 10
+    assert methodology["saturation_window"] == 8
+    assert methodology["new_codes_in_final_window"] == 0
+    assert "Confused About Who Is Responsible" in {code["name"] for code in storage["codebook"]}
+    assert "gdpr" in storage["_generated_judge_prompt"].lower()
     assert "open coding" in storage["_generated_judge_prompt"].lower()
 
 
@@ -541,6 +665,53 @@ def test_annotation_export_payload_includes_judge_input_artifacts():
     assert payload["coding_annotations"][0]["query"] == "Will it ship at 60 FPS?"
     assert payload["judge_prompt"]["text"] == "judge prompt"
     assert payload["failure_modes"][0]["name"] == "Feature Promise Hallucination"
+
+
+def test_build_rubric_error_mode_mix_empty():
+    from grounded_evals.ui.coding_page import _build_rubric_error_mode_mix
+
+    mix = _build_rubric_error_mode_mix([], [])
+
+    assert mix["total_instances"] == 0
+    assert mix["distinct_modes"] == 0
+    assert mix["slices"] == []
+
+
+def test_build_rubric_error_mode_mix_groups_tail_and_filters_unknown_codes():
+    from grounded_evals.ui.coding_page import _build_rubric_error_mode_mix
+
+    codebook = [
+        {"name": "A"},
+        {"name": "B"},
+        {"name": "C"},
+        {"name": "D"},
+        {"name": "E"},
+        {"name": "F"},
+    ]
+    annotations = [
+        {"codes": ["A", "B"]},
+        {"codes": "A"},
+        {"error_code": "B"},
+        {"codes": ["C"]},
+        {"codes": ["D"]},
+        {"codes": ["E"]},
+        {"codes": ["F"]},
+        {"codes": ["Ghost"]},
+    ]
+
+    mix = _build_rubric_error_mode_mix(codebook, annotations, limit=3)
+
+    assert mix["total_instances"] == 8
+    assert mix["distinct_modes"] == 6
+    assert mix["top_mode"] == "A"
+    assert mix["top_count"] == 2
+    assert [slice_["name"] for slice_ in mix["slices"]] == [
+        "A",
+        "B",
+        "C",
+        "Other identified modes",
+    ]
+    assert mix["slices"][-1]["value"] == 3
 
 
 # ── _label_css_color and _get_all_labels (eval_tab) ──────────────────────────

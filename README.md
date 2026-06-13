@@ -16,7 +16,7 @@ The web app gives product managers, domain experts, and ML engineers one shared 
 5. Convert the observed failures into an LLM-as-a-judge prompt.
 6. Export a validated handoff for CI, MLflow, and model regression work.
 
-The current first-run experience is a 50-query AAA game localization demo. It shows how a localization producer can move from raw agent traces to open codes, root-cause patterns, saturation evidence, a judge prompt, and an ML engineer implementation queue.
+The current first-run experience ships with two 50-query PM workbench demos: an AAA game localization session and an AWS cloud GDPR auditor session. They show how a domain owner can move from raw agent traces to open codes, root-cause patterns, saturation evidence, a judge prompt, and an ML engineer implementation queue.
 
 <img width="1512" height="776" alt="GEDD PM annotation workbench" src="https://github.com/user-attachments/assets/e54440e6-1e7f-4762-80c9-6f371f4df7ae" />
 
@@ -55,12 +55,12 @@ Open `http://127.0.0.1:8080`.
 
 Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment variables are configured. If port `8080` is busy, use `--port 8081`.
 
-For the fastest product tour, use the seeded localization demo. It does not require model calls:
+For the fastest product tour, use one of the seeded 50-query demos. They do not require model calls:
 
 1. Open `Home` or `Demos`.
-2. Click `Load 50-query localization demo`.
+2. Click `Load 50-query localization demo` or `Load 50-query AWS Cloud GDPR demo`.
 3. Open `PM Workbench` to review the labeled traces, failure codes, memos, and saturation state.
-4. Open `Judge` to inspect or revise the generated localization judge prompt.
+4. Open `Judge` to inspect or revise the generated judge prompt.
 5. Open `Report` to review release readiness and download the ML engineer handoff.
 
 To reset after loading a demo, use the top-right refresh action. Confirm `Start Fresh` to clear the loaded project data while keeping the current login session.
@@ -71,7 +71,7 @@ To reset after loading a demo, use the top-right refresh action. Confirm `Start 
 
 | Page | Purpose | Main actions |
 |---|---|---|
-| `Home` | Entry point | Load the 50-query localization demo, continue active work, or start a custom agent |
+| `Home` | Entry point | Load the 50-query localization or AWS Cloud GDPR demo, continue active work, or start a custom agent |
 | `AI PM Coach` | Guided setup | Capture agent definition, system prompt, runtime choice, and golden-query plan |
 | `PM Workbench` | Annotation surface | Review responses, assign verdicts, create failure codes, set severity, write memos, and monitor saturation |
 | `Judge` | Release gate builder | Generate and edit an LLM-as-a-judge prompt from the observed failure modes |
@@ -109,6 +109,14 @@ Example failure codes in the demo include:
 | Culturalization Risk Dismissal | The response treats regional content risk as a translation-only issue |
 
 Those labels are the point of the workflow. The judge is not asked to score generic helpfulness first. It is asked to enforce the domain owner's observed release blockers.
+
+## The 50-Query AWS Cloud GDPR Demo
+
+The second main workbench demo is a synthetic AWS cloud GDPR audit session for `CloudAuditGate`.
+
+It includes 50 golden queries covering S3 and CloudWatch retention, CloudTrail and centralized logging, Bedrock prompt reuse, Rekognition and high-risk review, DSAR and deletion handling across backups and data lakes, shared responsibility, cross-region transfers, and breach escalation from AWS security incidents. The output is the same PM-owned package as the localization demo: annotations, open codes, axial coding, saturation evidence, and an audit-ready judge prompt.
+
+The AWS Cloud GDPR demo uses plain-language tags on purpose, for example `Data Used For The Wrong Job`, `Collecting Or Keeping Too Much Data`, `EU Data Moved The Wrong Way`, and `Trying To Work Around GDPR`. The point is to make the GEDD loop easy to follow: annotate the failure in human language first, then turn that observed pattern into the judge gate.
 
 ## Bring Your Own Agent
 

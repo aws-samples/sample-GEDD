@@ -178,6 +178,89 @@ def _annotation_export_payload(storage: dict, failure_modes: list[dict] | None =
     }
 
 
+_RUBRIC_PIE_COLORS = [
+    '#5e6ad2',
+    '#4ade80',
+    '#f0bf00',
+    '#eb5757',
+    '#2dd4bf',
+    '#f97316',
+    '#60a5fa',
+    '#f472b6',
+]
+
+
+def _build_rubric_error_mode_mix(
+    codebook: list[dict],
+    coding_annotations: list[dict],
+    limit: int = 6,
+) -> dict:
+    """Aggregate identified error modes into a readable rubric pie chart payload."""
+    counts: Counter = Counter()
+    known_names = {
+        str(entry.get('name', '')).strip()
+        for entry in codebook or []
+        if isinstance(entry, dict) and str(entry.get('name', '')).strip()
+    }
+
+    for ann in coding_annotations or []:
+        if not isinstance(ann, dict):
+            continue
+        raw_codes = ann.get('codes', [])
+        if isinstance(raw_codes, str):
+            codes = [raw_codes]
+        elif isinstance(raw_codes, list):
+            codes = raw_codes[:]
+        else:
+            codes = []
+        error_code = ann.get('error_code')
+        if error_code:
+            codes.append(error_code)
+        for code in codes:
+            name = str(code).strip()
+            if name and (not known_names or name in known_names):
+                counts[name] += 1
+
+    ordered = sorted(
+        (
+            {'name': name, 'value': count}
+            for name, count in counts.items()
+            if count > 0
+        ),
+        key=lambda item: (-item['value'], item['name']),
+    )
+    if not ordered:
+        return {
+            'total_instances': 0,
+            'distinct_modes': 0,
+            'top_mode': '',
+            'top_count': 0,
+            'slices': [],
+        }
+
+    slices = []
+    for idx, item in enumerate(ordered[:limit]):
+        slices.append({
+            'name': item['name'],
+            'value': item['value'],
+            'itemStyle': {'color': _RUBRIC_PIE_COLORS[idx % len(_RUBRIC_PIE_COLORS)]},
+        })
+    if len(ordered) > limit:
+        slices.append({
+            'name': 'Other identified modes',
+            'value': sum(item['value'] for item in ordered[limit:]),
+            'itemStyle': {'color': '#4a4e55'},
+        })
+
+    return {
+        'total_instances': sum(item['value'] for item in ordered),
+        'distinct_modes': len(ordered),
+        'top_mode': ordered[0]['name'],
+        'top_count': ordered[0]['value'],
+        'slices': slices,
+    }
+
+
 def _is_similar(a: str, b: str) -> bool:
     """Jaccard n-gram + word overlap similarity check."""
     def _ngrams(s: str, n: int = 3) -> set[str]:
@@ -544,20 +627,31 @@ def coding_page():
             ui.notify("50-query localization demo loaded.", type="positive")
             ui.navigate.to("/coding")
 
+        def load_gdpr_workbench_demo() -> None:
+            from grounded_evals.ui.gdpr_auditor_demo import load_gdpr_auditor_demo
+
+            load_gdpr_auditor_demo(app.storage.user)
+            ui.notify("50-query AWS Cloud GDPR demo loaded.", type="positive")
+            ui.navigate.to("/coding")
+
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
             with ui.element("div").style(
                 "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
                 "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
             ):
                 ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("AAA Game Localization Workbench").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Load the 50-query localization PM demo or start from your own generated traces.").style(
+                ui.label("PM Workbench Demos").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Load the 50-query localization or AWS Cloud GDPR PM demo, or start from your own generated traces.").style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
-                with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
+                with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):
                     ui.button("Load 50-query localization demo", icon="play_circle",
                               on_click=load_pm_workbench_demo).style(
                         "background: var(--accent); color: white; border-radius: 6px"
+                    )
+                    ui.button("Load 50-query AWS Cloud GDPR demo", icon="policy",
+                              on_click=load_gdpr_workbench_demo).props("outline").style(
+                        "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
                     )
                     ui.button("Start with Coach", icon="auto_awesome",
                               on_click=lambda: ui.navigate.to("/coach")).props("outline").style(
@@ -1499,6 +1593,46 @@ def coding_page():
                         '</div>'
                     )
                     ui.separator().style("opacity:0.1;margin:10px 0")
+
+            rubric_mix = _build_rubric_error_mode_mix(codebook_now, ann_list)
+            if rubric_mix['slices']:
+                ui.html(
+                    '<div style="font-size:0.7rem;font-weight:600;color:var(--text-tertiary);'
+                    'text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px">Rubric Error-Mode Pie</div>'
+                    '<div style="font-size:0.63rem;color:var(--text-muted);margin-bottom:4px">'
+                    'Each slice is one PM-identified error mode that the judge rubric will enforce.</div>'
+                )
+                ui.echart({
+                    "tooltip": {"trigger": "item", "formatter": "{b}: {c} ({d}%)"},
+                    "legend": {
+                        "orient": "vertical",
+                        "right": "0%",
+                        "top": "center",
+                        "textStyle": {"color": "#b4b8c0", "fontSize": 10},
+                        "icon": "circle",
+                        "itemWidth": 8,
+                        "itemHeight": 8,
+                        ":formatter": "function(name){return name.length > 22 ? name.slice(0, 22) + '...' : name;}",
+                    },
+                    "series": [{
+                        "type": "pie",
+                        "radius": ["42%", "68%"],
+                        "center": ["34%", "50%"],
+                        "data": rubric_mix['slices'],
+                        "label": {"show": False},
+                        "labelLine": {"show": False},
+                        "emphasis": {"itemStyle": {"shadowBlur": 10}},
+                    }],
+                    "backgroundColor": "transparent",
+                }).style("height:210px; width:100%")
+                ui.label(
+                    f"{rubric_mix['distinct_modes']} identified modes across "
+                    f"{rubric_mix['total_instances']} tagged failures."
+                ).style("font-size:0.7rem;color:var(--text-secondary);margin-top:4px")
+                ui.label(
+                    f"Most common: {rubric_mix['top_mode']} ({rubric_mix['top_count']} examples)"
+                ).style("font-size:0.68rem;color:var(--accent-bright);margin-top:2px")
+                ui.separator().style("opacity:0.1;margin:10px 0")
 
             # ── Codebook ──────────────────────────────────────────────────
             ui.label('Codebook').style("font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em")
