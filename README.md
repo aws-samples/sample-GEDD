@@ -20,9 +20,7 @@ The web app gives product managers, domain experts, and ML engineers one shared 
 
 The current first-run experience ships with two 50-query PM workbench demos: an AAA game localization session and an AWS cloud GDPR auditor session. They show how a domain owner can move from raw agent traces to open codes, root-cause patterns, saturation evidence, a judge prompt, and an ML engineer implementation queue.
 
-<img width="1512" height="776" alt="GEDD PM annotation workbench" src="https://github.com/user-attachments/assets/e54440e6-1e7f-4762-80c9-6f371f4df7ae" />
-
-![GEDD demo: query to response to annotation to judge](grounded-evals/docs/GEDD_optimized.gif)
+![GEDD PM annotation walkthrough](grounded-evals/docs/GEDD_optimized.gif)
 
 The longer methodology essay is in [METHODOLOGY.md](METHODOLOGY.md). This README is the practical product and engineering guide.
 
