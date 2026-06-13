@@ -174,55 +174,6 @@ flowchart TD
     RUNTIME --> WEB
 ```
 
-Core paths:
-
-| Path | Responsibility |
-|---|---|
-| `grounded-evals/src/grounded_evals/app.py` | App entry point, health endpoint, release marker |
-| `grounded-evals/src/grounded_evals/ui/` | NiceGUI pages, layout, demos, workbench, judge, report |
-| `grounded-evals/src/grounded_evals/open_coding/` | Domain fracturing, query comparison, saturation checks |
-| `grounded-evals/src/grounded_evals/axial_coding/` | Root-cause and paradigm-model mapping |
-| `grounded-evals/src/grounded_evals/judge_builder/` | Rubric, prompt generation, calibration, judge variants |
-| `grounded-evals/src/grounded_evals/guide/` | Session persistence and handoff validation |
-| `grounded-evals/src/grounded_evals/cli.py` | Command-line workflow |
-| `grounded-evals/infra/` | AWS CDK infrastructure |
-| `grounded-evals/Dockerfile` | Container image for the web app |
-
-## Validation
-
-Before committing app or workflow changes:
-
-```bash
-cd grounded-evals
-PYTHONPATH=src pytest
-PYTHONPATH=src python3 -m grounded_evals.cli --help
-```
-
-For local web smoke tests:
-
-```bash
-grounded-evals serve --host 127.0.0.1 --port 8080
-
-for p in / /coding /demos /coach /judge /report /health; do
-  curl -sS -o /dev/null -w "$p %{http_code}\n" "http://127.0.0.1:8080$p"
-done
-```
-
-For README-only changes, `git diff --check` and stale-message scans are usually enough.
-
-## Additional Docs
-
-| Doc | Use |
-|---|---|
-| [SETUP.md](SETUP.md) | Local setup, provider configuration, auth, troubleshooting, deployment |
-| [METHODOLOGY.md](METHODOLOGY.md) | Grounded-theory method behind the workflow |
-| [Pipeline Guide](grounded-evals/docs/pipeline-guide.md) | End-to-end workflow and CI/CD shape |
-| [Domain Expert Guide](grounded-evals/docs/domain-expert-guide.md) | PM and SME review walkthrough |
-| [PM To ML LLM Judge](grounded-evals/docs/pm-to-ml-llm-judge.md) | Turning annotated sessions into production judges |
-| [Building An LLM Judge](grounded-evals/docs/building-llm-as-a-judge.md) | Judge design and calibration details |
-| [Cohen's Kappa](grounded-evals/docs/cohens-kappa-for-llm-judges.md) | Judge-human agreement guidance |
-| [Launch Checklist](grounded-evals/docs/launch-checklist.md) | Release readiness checks |
-
 ## License And Security
 
 License: MIT-0. See [LICENSE](LICENSE).
