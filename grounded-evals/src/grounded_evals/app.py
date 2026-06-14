@@ -148,7 +148,7 @@ def health():
 
 app.add_middleware(AuthMiddleware)
 
-# Serve docs directory for demo gif and static assets
+# Serve docs directory for demo media and static assets
 from pathlib import Path as _Path
 _docs_dir = _Path(__file__).parent.parent.parent / "docs"
 if not _docs_dir.exists():

@@ -631,7 +631,7 @@ def coding_page():
             from grounded_evals.ui.gdpr_auditor_demo import load_gdpr_auditor_demo
 
             load_gdpr_auditor_demo(app.storage.user)
-            ui.notify("50-query AWS Cloud GDPR demo loaded.", type="positive")
+            ui.notify("Loaded 50 live AwsGdprAuditor responses with seeded GDPR expert open coding.", type="positive")
             ui.navigate.to("/coding")
 
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
@@ -641,7 +641,7 @@ def coding_page():
             ):
                 ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
                 ui.label("PM Workbench Demos").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Load the 50-query localization or AWS Cloud GDPR PM demo, or start from your own generated traces.").style(
+                ui.label("Load the 50-query localization demo or the live AWS GDPR assistant snapshot, or start from your own generated traces.").style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):
@@ -649,7 +649,7 @@ def coding_page():
                               on_click=load_pm_workbench_demo).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )
-                    ui.button("Load 50-query AWS Cloud GDPR demo", icon="policy",
+                    ui.button("Load 50-query AWS GDPR assistant demo", icon="policy",
                               on_click=load_gdpr_workbench_demo).props("outline").style(
                         "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
                     )
