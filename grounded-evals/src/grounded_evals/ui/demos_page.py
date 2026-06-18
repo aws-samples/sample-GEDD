@@ -263,7 +263,6 @@ DEMOS_CSS = """
 .ds-verdict-correct { color: var(--green-bright); }
 .ds-verdict-incorrect { color: var(--red); }
 .ds-verdict-partial { color: var(--yellow); }
-.ds-verdict-observed { color: var(--accent-bright); }
 .ds-query-text {
   font-size: 0.82rem;
   color: var(--text-primary);
@@ -349,11 +348,10 @@ def _build_domain_registry():
         load_inductive_pm_demo,
     )
     from grounded_evals.ui.gdpr_auditor_demo import (
-        GDPR_AUDITOR_DEMO_CODEBOOK,
-        GDPR_AUDITOR_DEMO_JUDGE_PROMPT,
-        GDPR_AUDITOR_DEMO_SAMPLE_QUERIES,
-        GDPR_AUDITOR_RUNTIME_EVAL_HISTORY,
-        GDPR_AUDITOR_RUNTIME_META,
+        GDPR_AUDITOR_CODEBOOK,
+        GDPR_AUDITOR_EVAL_HISTORY,
+        GDPR_AUDITOR_JUDGE_PROMPT,
+        GDPR_AUDITOR_SAMPLE_QUERIES,
         load_gdpr_auditor_demo,
     )
     from grounded_evals.ui.domain_demos import (
@@ -381,37 +379,32 @@ def _build_domain_registry():
         },
         {
             "id": "gdpr_auditor_workbench",
-            "name": "AWS GDPR Assistant Demo",
+            "name": "AWS Cloud GDPR Auditor Workbench",
             "icon": "policy",
             "operator": "Northstar Cloud Privacy",
             "tagline": (
-                "50 AWS cloud GDPR golden queries with real AwsGdprAuditor responses and "
-                "seeded GDPR expert open coding"
+                "50 AWS cloud GDPR traces -> open coding -> axial coding -> "
+                "saturation -> cloud privacy judge prompt"
             ),
             "domain": "AWS Cloud GDPR / PM Workbench",
             "risk_level": "critical",
             "regulations": ["GDPR", "AWS data residency", "DSAR and breach duties"],
             "loader": load_gdpr_auditor_demo,
-            "codebook": GDPR_AUDITOR_DEMO_CODEBOOK,
-            "sample_queries": GDPR_AUDITOR_DEMO_SAMPLE_QUERIES,
+            "codebook": GDPR_AUDITOR_CODEBOOK,
+            "sample_queries": GDPR_AUDITOR_SAMPLE_QUERIES,
             "paradigm_phenomenon": (
-                "Live AWS GDPR assistant behavior from the deployed AgentCore runtime"
+                "Sounds Cloud-Safe, Still Fails GDPR"
             ),
             "paradigm_consequence": (
-                "Shows where the live runtime is strong, where expert review found drift, and "
-                "which failure modes now drive the seeded judge"
+                "Wrong region, wrong retention, broken DSAR and delete handling, unsafe Bedrock "
+                "or Rekognition use, regulator exposure"
             ),
-            "judge_prompt": GDPR_AUDITOR_DEMO_JUDGE_PROMPT,
+            "judge_prompt": GDPR_AUDITOR_JUDGE_PROMPT,
             "pass_rates": [
-                int(r["pass_rate"].rstrip("%")) for r in GDPR_AUDITOR_RUNTIME_EVAL_HISTORY
+                int(r["pass_rate"].rstrip("%")) for r in GDPR_AUDITOR_EVAL_HISTORY
             ],
             "n_queries": 50,
-            "n_codes": len(GDPR_AUDITOR_DEMO_CODEBOOK),
-            "runtime_backed": True,
-            "runtime_name": GDPR_AUDITOR_RUNTIME_META.get("runtime_name", "AwsGdprAuditor"),
-            "runtime_region": GDPR_AUDITOR_RUNTIME_META.get("region", "us-east-1"),
-            "runtime_generated_at": GDPR_AUDITOR_RUNTIME_META.get("generated_at", ""),
-            "runtime_arn": GDPR_AUDITOR_RUNTIME_META.get("runtime_arn", ""),
+            "n_codes": len(GDPR_AUDITOR_CODEBOOK),
         },
         {
             "id": "travel", "name": "TravelBot", "icon": "flight", "operator": "SkyLink Travel",
@@ -933,9 +926,8 @@ def _build_domain_registry():
 # ── Domain tab content renderer ───────────────────────────────────────────────
 
 def _render_domain(domain: dict):
-    runtime_backed = bool(domain.get("runtime_backed"))
-    pass_rates = domain.get("pass_rates") or []
-    fail_rate = None if not pass_rates else 100 - pass_rates[-1]
+    pass_rates = domain.get("pass_rates", [30, 50, 65])
+    fail_rate = 100 - pass_rates[-1]
     risk = domain["risk_level"]
     risk_class = f"ds-pill-{risk}"
     codebook = domain.get("codebook", [])
@@ -943,7 +935,7 @@ def _render_domain(domain: dict):
     judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
     workbench_labels = {
         "inductive_pm_workbench": "Load 50-query localization demo",
-        "gdpr_auditor_workbench": "Load 50-query AWS GDPR assistant demo",
+        "gdpr_auditor_workbench": "Load 50-query AWS Cloud GDPR demo",
     }
     is_featured = domain.get("id") in {
         "inductive_pm_workbench",
@@ -991,18 +983,8 @@ def _render_domain(domain: dict):
                 f'<span class="ds-pill {risk_class}">{_html.escape(risk.upper())} risk</span>'
             )
             ui.html(f'<span class="ds-pill">{domain["n_queries"]} golden queries</span>')
-            if runtime_backed:
-                ui.html('<span class="ds-pill ds-feature-badge">Live runtime snapshot</span>')
-                ui.html(
-                    f'<span class="ds-pill">{_html.escape(domain.get("runtime_name", ""))}</span>'
-                )
-                if fail_rate is not None:
-                    ui.html(f'<span class="ds-pill">{fail_rate}% current fail rate</span>')
-                if domain.get("n_codes"):
-                    ui.html(f'<span class="ds-pill">{domain["n_codes"]} failure modes</span>')
-            else:
-                ui.html(f'<span class="ds-pill">{fail_rate}% current fail rate</span>')
-                ui.html(f'<span class="ds-pill">{domain["n_codes"]} failure modes</span>')
+            ui.html(f'<span class="ds-pill">{fail_rate}% current fail rate</span>')
+            ui.html(f'<span class="ds-pill">{domain["n_codes"]} failure modes</span>')
             for regulation in domain.get("regulations", [])[:3]:
                 ui.html(f'<span class="ds-pill">{_html.escape(regulation)}</span>')
 
@@ -1016,22 +998,13 @@ def _render_domain(domain: dict):
 
         with ui.element("div").classes("ds-evidence-grid"):
             with ui.element("div").classes("ds-section"):
-                ui.html(
-                    '<div class="ds-section-title">'
-                    + (
-                        "Golden queries with live responses"
-                        if runtime_backed
-                        else "Golden queries with verdicts"
-                    )
-                    + "</div>"
-                )
+                ui.html('<div class="ds-section-title">Golden queries with verdicts</div>')
                 for sq in domain.get("sample_queries", [])[:4]:
                     verdict = sq["verdict"]
                     verdict_icon = {
                         "correct": "check_circle",
                         "incorrect": "cancel",
                         "partial": "warning",
-                        "observed": "smart_toy",
                     }.get(verdict, "help")
                     with ui.element("div").classes("ds-query-item"):
                         with ui.element("div").classes("ds-query-top"):
@@ -1044,73 +1017,25 @@ def _render_domain(domain: dict):
                                 ui.label(sq.get("note", "")).classes("ds-query-note")
 
             with ui.element("div").classes("ds-section"):
-                if runtime_backed and codebook:
-                    ui.html('<div class="ds-section-title">Failure modes found</div>')
-                    for code in codebook[:5]:
-                        name = code.get("name") or code.get("label", "")
-                        definition = code.get("definition", "")
-                        severity = code.get("severity_label", code.get("type", ""))
-                        clipped = definition[:126] + ("..." if len(definition) > 126 else "")
-                        with ui.element("div").classes("ds-mode-item"):
-                            ui.html(
-                                '<div class="ds-mode-name">'
-                                f'<span>{_html.escape(name)}</span>'
-                                f'<span class="ds-mode-severity">{_html.escape(severity)}</span>'
-                                '</div>'
-                            )
-                            ui.label(clipped).classes("ds-mode-def")
-                    runtime_details = [
-                        f"Runtime: {domain.get('runtime_name', 'AwsGdprAuditor')}",
-                        f"Region: {domain.get('runtime_region', 'us-east-1')}",
-                        (
-                            f"Snapshot generated: {domain.get('runtime_generated_at', '')}"
-                            if domain.get("runtime_generated_at")
-                            else ""
-                        ),
-                        "Seeded with GDPR expert annotations on the live runtime snapshot.",
-                    ]
-                    for detail in runtime_details:
-                        if not detail:
-                            continue
-                        with ui.element("div").classes("ds-mode-item"):
-                            ui.label(detail).classes("ds-mode-def")
-                elif runtime_backed:
-                    ui.html('<div class="ds-section-title">Runtime details</div>')
-                    runtime_details = [
-                        f"Runtime: {domain.get('runtime_name', 'AwsGdprAuditor')}",
-                        f"Region: {domain.get('runtime_region', 'us-east-1')}",
-                        (
-                            f"Snapshot generated: {domain.get('runtime_generated_at', '')}"
-                            if domain.get("runtime_generated_at")
-                            else ""
-                        ),
-                        "The workbench reflects the deployed runtime snapshot.",
-                    ]
-                    for detail in runtime_details:
-                        if not detail:
-                            continue
-                        with ui.element("div").classes("ds-mode-item"):
-                            ui.label(detail).classes("ds-mode-def")
-                else:
-                    ui.html('<div class="ds-section-title">Failure modes found</div>')
-                    for code in codebook[:5]:
-                        name = code.get("name") or code.get("label", "")
-                        definition = code.get("definition", "")
-                        severity = code.get("severity_label", code.get("type", ""))
-                        clipped = definition[:126] + ("..." if len(definition) > 126 else "")
-                        with ui.element("div").classes("ds-mode-item"):
-                            ui.html(
-                                '<div class="ds-mode-name">'
-                                f'<span>{_html.escape(name)}</span>'
-                                f'<span class="ds-mode-severity">{_html.escape(severity)}</span>'
-                                '</div>'
-                            )
-                            ui.label(clipped).classes("ds-mode-def")
+                ui.html('<div class="ds-section-title">Failure modes found</div>')
+                for code in codebook[:5]:
+                    name = code.get("name") or code.get("label", "")
+                    definition = code.get("definition", "")
+                    severity = code.get("severity_label", code.get("type", ""))
+                    clipped = definition[:126] + ("..." if len(definition) > 126 else "")
+                    with ui.element("div").classes("ds-mode-item"):
+                        ui.html(
+                            '<div class="ds-mode-name">'
+                            f'<span>{_html.escape(name)}</span>'
+                            f'<span class="ds-mode-severity">{_html.escape(severity)}</span>'
+                            '</div>'
+                        )
+                        ui.label(clipped).classes("ds-mode-def")
 
-                    if judge_snippet:
-                        with ui.element("div").classes("ds-judge-preview"):
-                            ui.html('<div class="ds-section-title">Judge prompt seed</div>')
-                            ui.label(judge_snippet).classes("ds-judge-text")
+                if judge_snippet:
+                    with ui.element("div").classes("ds-judge-preview"):
+                        ui.html('<div class="ds-section-title">Judge prompt seed</div>')
+                        ui.label(judge_snippet).classes("ds-judge-text")
 
 
 # ── Page ──────────────────────────────────────────────────────────────────────

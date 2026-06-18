@@ -290,7 +290,7 @@ Optional AgentCore runtime:
 
 ```bash
 cd grounded-evals
-AGENTCORE_CLI=/private/tmp/agentcore-cli-runner/node_modules/.bin/agentcore ./scripts/deploy-agent.sh
+./scripts/deploy-agent.sh
 ```
 
 Pass criteria:

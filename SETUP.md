@@ -130,8 +130,6 @@ export COGNITO_CLIENT_ID=your-client-id
 | Wrong region error | Ensure `AWS_REGION` matches where you enabled Bedrock models |
 | Models not responding | Check that the specific model ID is available in your region |
 | Login not working | If you intended password auth, set `ADMIN_PASSWORD` before starting the app |
-| `agentcore` CLI missing or too old | Set `AGENTCORE_CLI=/private/tmp/agentcore-cli-runner/node_modules/.bin/agentcore` before `./scripts/deploy-agent.sh`, or point `AGENTCORE_CLI` at another working 0.19+ binary |
-| `No agentcore project found` during deploy | Set `AGENTCORE_PROJECT_DIR` to the directory containing `agentcore.json` before running `./scripts/deploy-agent.sh` |
 
 ---
 

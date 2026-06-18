@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends gcc curl && \
 
 COPY pyproject.toml .
 COPY src/ src/
-COPY docs/GEDD_optimized.webp docs/
+COPY docs/GEDD_optimized.gif docs/
 
 RUN pip install --no-cache-dir -e .
 

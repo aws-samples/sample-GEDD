@@ -1224,7 +1224,7 @@ def home_page():
 
     starter_demos = [
         ("inductive_pm_workbench", "50-query Localization"),
-        ("gdpr_auditor_workbench", "50-query AWS GDPR Assistant"),
+        ("gdpr_auditor_workbench", "50-query AWS Cloud GDPR"),
         ("game_producer", "AAA Game Producer"),
         ("game_localization", "AAA Game Localization"),
         ("game_operator", "AAA Game Operator"),
@@ -1265,7 +1265,7 @@ def home_page():
                 '<div class="simple-subhead">'
                 "Coach a PM to define golden queries, review customer-facing traces, name repeated failure modes, "
                 "and generate the judge prompt from PM-owned evidence. Seed it with localization or "
-                "a live AWS GDPR assistant snapshot, or bring your own traces."
+                "AWS cloud GDPR data, or bring your own traces."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
@@ -1277,7 +1277,7 @@ def home_page():
                     "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                 )
                 ui.button(
-                    "AWS GDPR Assistant Demo",
+                    "AWS GDPR Demo",
                     icon="policy",
                     on_click=lambda: load_homepage_demo("gdpr_auditor_workbench"),
                 ).props("outline size=md no-caps").style(
@@ -1292,7 +1292,7 @@ def home_page():
                 )
             with ui.element("div").classes("hero-demo-frame"):
                 ui.html(
-                    '<img class="hero-demo-media" src="/docs/GEDD_optimized.webp" '
+                    '<img class="hero-demo-media" src="/docs/GEDD_optimized.gif" '
                     'alt="AI PM readiness workflow preview">'
                 )
                 ui.html(
