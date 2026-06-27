@@ -1,4 +1,4 @@
-# GEDD - A Systematic Evidence Driven LLM As a Judge Framework & A Systematic Evidence Driven SPEC Framework
+# GEDD - A Systematic Evidence Driven LLM As a Judge + SPEC Framework for continuous learning
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
