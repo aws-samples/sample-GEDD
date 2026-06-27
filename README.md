@@ -150,6 +150,64 @@ It gives engineering:
 | Implementation queue | Prioritizes failure codes by severity and count, with tagged examples and definitions of done |
 | Runbook | Gives commands the ML engineer can run immediately |
 
+## GEDD Power for Kiro
+
+The repository includes a **Kiro Power** (`power-gedd/`) that converts GEDD annotations directly into structured engineering specs inside Kiro.
+
+### What it does
+
+The Power packages the GEDD methodology into an on-demand workflow. When activated, it guides domain experts from error analysis to a complete Kiro spec:
+
+```
+Agent Failures → Annotate → Codebook → Paradigm Model → requirements.md → design.md → tasks.md
+```
+
+| GEDD Artifact | Becomes | Output |
+|---------------|---------|--------|
+| Failure codes + severity | User stories + acceptance criteria | requirements.md |
+| Paradigm model (root causes) | Architecture decisions + constraints | design.md |
+| Golden queries + annotations | Verification test cases | requirements.md |
+| Priority queue (severity × frequency × weight) | Ordered implementation tasks | tasks.md |
+
+### Install
+
+In Kiro: **Powers panel → Add Custom Power → Import from folder** → select `power-gedd/`.
+
+The Power activates automatically when you mention keywords like "annotation", "failure codes", "error analysis", "codebook", or "agent evaluation".
+
+### Usage
+
+Two entry points:
+
+1. **Import existing session** — Load a `session.json` exported from the GEDD web app or CLI. The Power validates completeness and generates specs from the evidence.
+
+2. **Start fresh** — The Power guides you through: define agent → build golden queries → annotate responses → discover patterns → generate specs.
+
+### Quick test
+
+```
+You: "I want to analyze my agent's failure patterns and create requirements"
+Kiro: [activates GEDD Power, checks for session.json, walks through pipeline]
+```
+
+Or load the built-in TravelBot demo to see the full pipeline produce a spec from 14 golden queries, 10 failure codes, and a paradigm model.
+
+### Power structure
+
+```
+power-gedd/
+├── POWER.md                         # Metadata, onboarding, steering mappings
+└── steering/
+    ├── annotation-workflow.md       # Guide annotation from scratch
+    ├── session-import.md            # Import existing session.json
+    ├── pattern-discovery.md         # Open coding → axial coding
+    ├── requirements-generation.md   # Failures → requirements.md
+    ├── design-generation.md         # Paradigm models → design.md
+    └── tasks-generation.md          # Priority queue → tasks.md
+```
+
+For the full story behind the Power, see [blog-gedd-power.md](blog-gedd-power.md).
+
 ## License And Security
 
 License: MIT-0. See [LICENSE](LICENSE).
