@@ -36,7 +36,7 @@ jobs:
           scan-ref: .
           severity: HIGH,CRITICAL
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.95.5
+        uses: trufflesecurity/trufflehog@v3.95.6
         with:
           extra_args: --only-verified
 
