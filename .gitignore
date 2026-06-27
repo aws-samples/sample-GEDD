@@ -1,2 +1,11 @@
 .DS_Store
+.nicegui/
+node_modules/
+outputs/
+__pycache__/
+*.pyc
+.venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
