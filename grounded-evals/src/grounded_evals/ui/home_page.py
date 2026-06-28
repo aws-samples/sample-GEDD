@@ -1258,7 +1258,7 @@ def home_page():
             )
             ui.html(
                 '<h1 class="simple-headline">'
-                "Turn PM annotations into a defensible LLM-as-a-judge."
+                "Turn PM annotations into a defensible LLM-as-a-judge + improved specs."
                 "</h1>"
             )
             ui.html(

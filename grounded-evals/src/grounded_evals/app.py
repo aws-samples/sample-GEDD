@@ -180,7 +180,7 @@ def login_page():
 
     with ui.column().classes("absolute-center items-center").style("gap: 1.5rem"):
         ui.html('<div class="brand-title" style="font-size:1.4rem; color:#f7f8f8; font-weight:700">GEDD</div>')
-        ui.html('<div style="font-size:0.8rem; color:#6e737b">AI PM Readiness Tool</div>')
+        ui.html('<div style="font-size:0.8rem; color:#6e737b">LLM Judge + SPEC Framework</div>')
         with ui.card().style("width: 320px; padding: 2rem; border-radius: 12px; background: #141516; border: 1px solid rgba(255,255,255,0.09)"):
             ui.label("Sign in").style("font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; color: #f7f8f8")
             email = ui.input("Email").classes("w-full").props("dark outlined dense")
@@ -393,7 +393,7 @@ def main_page() -> None:
                     step = s["current_step"]
                     if step == 1:
                         welcome = (
-                            '<div class="msg-ai"><strong>Hey! 👋 I\'m your AI PM readiness coach.</strong><br><br>'
+                            '<div class="msg-ai"><strong>Hey! 👋 I\'m your GEDD evaluation coach.</strong><br><br>'
                             'I\'ll guide you through the release-readiness flow for your AI product:<br>'
                             '1. <strong>Define your agent</strong> — name, capabilities, users<br>'
                             '2. <strong>Craft a system prompt</strong><br>'
@@ -829,7 +829,7 @@ def main_page() -> None:
 
 def run() -> None:
     ui.run(
-        title="GEDD — AI PM Readiness Tool",
+        title="GEDD — LLM Judge + SPEC Framework",
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "grounded-evals"
 version = "0.1.0"
-description = "Open Coding guided workflow for AI Agent golden dataset generation and LLM-as-a-Judge creation"
+description = "GEDD — A Systematic Evidence Driven LLM As a Judge + SPEC Framework for Continuous Learning"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic[bedrock]>=0.104.1",

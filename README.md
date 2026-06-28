@@ -1,13 +1,17 @@
-# GEDD - A Systematic Evidence Driven LLM As a Judge Framework
+# GEDD — A Systematic Evidence Driven LLM As a Judge + SPEC Framework for Continuous Learning
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-GEDD is a Systematic Evidence Driven LLM As a Judge Framework for AI agents.
+GEDD is a systematic evidence-driven framework that combines **LLM-as-a-Judge evaluation** with **structured SPEC generation** in a continuous learning lifecycle for AI agents.
 
-It is an annotation-first workflow for turning domain-owner review of AI agent behavior into release gates engineering can run.
+Kiro generates baseline specs. The agent runs. Domain experts annotate what goes wrong. GEDD converts those observations into an executable judge *and* improved engineering specs — then the cycle repeats.
+
+```
+① Baseline Specs → ② Agent Runs → ③ Expert Annotates → ④ Judge + Improved Specs → ⑤ Next Iteration
+```
 
 The web app gives product managers, domain experts, and ML engineers one shared path:
 
@@ -16,7 +20,7 @@ The web app gives product managers, domain experts, and ML engineers one shared 
 3. Review the responses in a task-shaped workbench.
 4. Name failures in the domain owner's vocabulary.
 5. Convert the observed failures into an LLM-as-a-judge prompt.
-6. Export a validated handoff for CI, MLflow, and model regression work.
+6. Export improved specs and a validated handoff for CI, MLflow, and model regression work.
 
 The current first-run experience ships with two 50-query PM workbench demos: an AAA game localization session and an AWS cloud GDPR auditor session. They show how a domain owner can move from raw agent traces to open codes, root-cause patterns, saturation evidence, a judge prompt, and an ML engineer implementation queue.
 

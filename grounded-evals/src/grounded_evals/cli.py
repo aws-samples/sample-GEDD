@@ -63,7 +63,7 @@ def _coverage_table(state, indent: str = "  ") -> str:
 
 @click.group()
 def main() -> None:
-    """grounded-evals: Build golden eval datasets and analyse AI agent failures."""
+    """GEDD: Systematic Evidence Driven LLM Judge + SPEC Framework for continuous learning."""
 
 
 STEP_NAMES = {
