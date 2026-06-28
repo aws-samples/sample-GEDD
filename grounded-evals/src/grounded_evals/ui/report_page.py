@@ -1376,14 +1376,68 @@ def report_page():
         with ui.element("div").classes("page-card"):
             ui.label("Export").classes("rr-section-title")
             ui.label(
-                "Core artifacts only: report, judge-builder packet, dataset, codebook, and judge prompt."
+                "Core artifacts only: report, error analysis, judge-builder packet, "
+                "dataset, codebook, and judge prompt."
             ).style("font-size: 0.78rem; color: var(--text-muted); margin-top: 6px")
             with ui.row().classes("gap-2 flex-wrap").style("margin-top: 12px"):
-                ui.button("Error Analysis (MD)", on_click=download_error_analysis_md, icon="description").props("size=sm dark").style("background: var(--accent); color: white")
-                ui.button("HTML Report", on_click=download_html_report, icon="download").props("outline size=sm dark")
-                ui.button("Judge Builder Packet", on_click=download_judge_builder_packet, icon="integration_instructions").props("outline size=sm dark")
-                ui.button("Golden Dataset", on_click=download_golden_dataset, icon="download").props("outline size=sm dark")
-                ui.button("Codebook", on_click=download_codebook, icon="download").props("outline size=sm dark")
-                ui.button("Judge Prompt", on_click=download_judge_prompt, icon="download").props("outline size=sm dark")
+                ui.button(
+                    "Error Analysis (MD)",
+                    on_click=download_error_analysis_md, icon="description",
+                ).props("size=sm dark").style(
+                    "background: var(--accent); color: white"
+                )
+                ui.button(
+                    "HTML Report",
+                    on_click=download_html_report, icon="download",
+                ).props("outline size=sm dark")
+                ui.button(
+                    "Judge Builder Packet",
+                    on_click=download_judge_builder_packet,
+                    icon="integration_instructions",
+                ).props("outline size=sm dark")
+                ui.button(
+                    "Golden Dataset",
+                    on_click=download_golden_dataset, icon="download",
+                ).props("outline size=sm dark")
+                ui.button(
+                    "Codebook",
+                    on_click=download_codebook, icon="download",
+                ).props("outline size=sm dark")
+                ui.button(
+                    "Judge Prompt",
+                    on_click=download_judge_prompt, icon="download",
+                ).props("outline size=sm dark")
+
+            # Markdown preview
+            with ui.expansion(
+                "Preview: Error Analysis (MD)", icon="preview"
+            ).classes("w-full").style("margin-top: 10px"):
+                from grounded_evals.guide.markdown_export import (
+                    export_error_analysis_md,
+                )
+
+                md_preview = export_error_analysis_md(storage)
+                preview_lines = md_preview.split("\n")[:60]
+                truncated = len(md_preview.split("\n")) > 60
+                preview_text = "\n".join(preview_lines)
+                if truncated:
+                    preview_text += (
+                        f"\n\n... ({len(md_preview.split(chr(10)))} "
+                        f"total lines, ~{len(md_preview)//4} tokens)"
+                    )
+                with ui.scroll_area().style(
+                    "max-height: 320px; width: 100%"
+                ):
+                    with ui.element("pre").style(
+                        "font-size: 0.72rem; line-height: 1.5; "
+                        "color: var(--text-secondary); "
+                        "white-space: pre-wrap; word-break: break-word; "
+                        "padding: 10px; background: var(--bg-base); "
+                        "border-radius: 8px; "
+                        "border: 1px solid var(--border-subtle)"
+                    ):
+                        ui.label(preview_text).style(
+                            "font-family: monospace; font-size: 0.72rem"
+                        )
 
     return
