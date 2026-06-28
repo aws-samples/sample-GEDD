@@ -987,6 +987,13 @@ def report_page():
             return
         ui.download(prompt.encode(), "judge_prompt.txt")
 
+    def download_error_analysis_md():
+        from grounded_evals.guide.markdown_export import export_error_analysis_md
+
+        md = export_error_analysis_md(storage)
+        safe_name = agent_name.replace(" ", "_").replace("/", "-").lower()
+        ui.download(md.encode(), f"{safe_name}_error_analysis.md")
+
     recent_memos = storage.get("memos", [])
     judge_prompt_text = storage.get("_generated_judge_prompt", "")
     handoff_status_color = (
@@ -1372,6 +1379,7 @@ def report_page():
                 "Core artifacts only: report, judge-builder packet, dataset, codebook, and judge prompt."
             ).style("font-size: 0.78rem; color: var(--text-muted); margin-top: 6px")
             with ui.row().classes("gap-2 flex-wrap").style("margin-top: 12px"):
+                ui.button("Error Analysis (MD)", on_click=download_error_analysis_md, icon="description").props("size=sm dark").style("background: var(--accent); color: white")
                 ui.button("HTML Report", on_click=download_html_report, icon="download").props("outline size=sm dark")
                 ui.button("Judge Builder Packet", on_click=download_judge_builder_packet, icon="integration_instructions").props("outline size=sm dark")
                 ui.button("Golden Dataset", on_click=download_golden_dataset, icon="download").props("outline size=sm dark")

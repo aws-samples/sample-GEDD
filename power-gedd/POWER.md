@@ -40,18 +40,24 @@ Agent Failures → Annotate → Codebook → Paradigm Model → Requirements →
 
 ## Step 1: Check for existing GEDD session
 
-Look for an existing `session.json` file in the workspace. Common locations:
+Look for an existing error analysis markdown file in the workspace. Common locations:
+- `./*_error_analysis.md`
+- `./error-analysis.md`
+- `./outputs/*_error_analysis.md`
+
+Also check for legacy `session.json` files:
 - `./session.json`
 - `./outputs/session.json`
-- `./grounded-evals/outputs/session.json`
 
-If found, offer to load it. If not, guide the user through creating annotations from scratch.
+If a markdown file is found, offer to load it directly.
+If only a session.json exists, suggest: `grounded-evals export-md --session session.json`
+If neither is found, guide the user through creating annotations from scratch.
 
 ## Step 2: Understand the annotation state
 
-When loading a session, check for:
+When loading an error-analysis.md (or session.json), check for:
 - **Agent spec** — name, description, capabilities, system prompt
-- **Golden prompts** — the test queries with category assignments
+- **Golden queries** — the test queries with category assignments
 - **Annotations** — verdicts (correct/partial/incorrect), failure codes, severity, memos
 - **Codebook** — failure labels with definitions
 - **Paradigm model** — if axial coding has been done (causal conditions → phenomenon → consequences)
@@ -70,7 +76,7 @@ Create a hook at `.kiro/hooks/gedd-review.kiro.hook`:
   "description": "After editing annotation files, validate coverage and suggest next steps",
   "when": {
     "type": "fileEdited",
-    "patterns": ["**/session.json", "**/annotations.json", "**/codebook.json"]
+    "patterns": ["**/*_error_analysis.md", "**/error-analysis.md", "**/session.json", "**/annotations.json", "**/codebook.json"]
   },
   "then": {
     "type": "askAgent",
@@ -88,7 +94,7 @@ Create a hook at `.kiro/hooks/gedd-review.kiro.hook`:
 - Generating requirements.md from annotations → `requirements-generation.md`
 - Generating design.md from root cause analysis → `design-generation.md`
 - Generating tasks.md from implementation queue → `tasks-generation.md`
-- Importing an existing session.json → `session-import.md`
+- Importing an existing error-analysis.md or session.json → `session-import.md`
 
 ---
 
