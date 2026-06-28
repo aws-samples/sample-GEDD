@@ -152,56 +152,71 @@ It gives engineering:
 
 ## GEDD Power for Kiro
 
-The repository includes a **Kiro Power** (`power-gedd/`) that converts GEDD annotations directly into structured engineering specs inside Kiro.
+The repository includes a **Kiro Power** (`power-gedd/`) that implements a continuous learning lifecycle for agent specs. Kiro generates baseline requirements; domain experts annotate what goes wrong; GEDD upgrades the specs with evidence.
 
 ### What it does
 
-The Power packages the GEDD methodology into an on-demand workflow. When activated, it guides domain experts from error analysis to a complete Kiro spec:
+The Power turns the gap between "what we assumed" and "what we observed" into better engineering specs — every iteration:
 
 ```
-Agent Failures → Annotate → Codebook → Paradigm Model → requirements.md → design.md → tasks.md
+① Kiro Baseline → ② Agent Runs → ③ Expert Annotates → ④ GEDD Processes → ⑤ Improved Specs
+      ↑                                                                          │
+      └──────────────────────── next iteration ←─────────────────────────────────┘
 ```
 
-| GEDD Artifact | Becomes | Output |
-|---------------|---------|--------|
-| Failure codes + severity | User stories + acceptance criteria | requirements.md |
-| Paradigm model (root causes) | Architecture decisions + constraints | design.md |
-| Golden queries + annotations | Verification test cases | requirements.md |
-| Priority queue (severity × frequency × weight) | Ordered implementation tasks | tasks.md |
+| Phase | Input | Output |
+|-------|-------|--------|
+| Baseline | Agent description + system prompt | `requirements.md` v1 (assumed) |
+| Annotate | Agent responses + domain expertise | `error-analysis.md` (observed) |
+| Improve | Baseline + annotations + paradigm model | `requirements.md` v2+ (evidence-backed) |
+
+| Spec Element | Baseline | After Annotations |
+|-------------|----------|-------------------|
+| User stories | Generic capabilities | Grounded in observed failures |
+| Acceptance criteria | Assumed from system prompt | Actual failed responses as negative tests |
+| Priority ordering | Engineer's guess | severity × frequency × dimension_weight |
+| Verification | Unit tests | Golden queries + LLM judge (κ ≥ 0.80) |
 
 ### Install
 
 In Kiro: **Powers panel → Add Custom Power → Import from folder** → select `power-gedd/`.
 
-The Power activates automatically when you mention keywords like "annotation", "failure codes", "error analysis", "codebook", or "agent evaluation".
+The Power activates automatically when you mention keywords like "annotation", "failure codes", "error analysis", "codebook", "requirements", or "agent evaluation".
 
 ### Usage
 
-Two entry points:
+Three entry points depending on where you are in the lifecycle:
 
-1. **Import existing session** — Load a `session.json` exported from the GEDD web app or CLI. The Power validates completeness and generates specs from the evidence.
+1. **Generate baseline** — No annotations yet. Kiro generates initial requirements from the agent spec. These are marked as unvalidated.
 
-2. **Start fresh** — The Power guides you through: define agent → build golden queries → annotate responses → discover patterns → generate specs.
+2. **Import annotations** — Load an `error-analysis.md` exported from the GEDD web app (Report → "Error Analysis (MD)") or CLI (`grounded-evals export-md`). The Power compares against existing specs and upgrades them.
+
+3. **Start fresh** — No agent spec, no annotations. The Power guides you through the full cycle: define agent → build golden queries → annotate → discover patterns → generate specs.
 
 ### Quick test
 
 ```
-You: "I want to analyze my agent's failure patterns and create requirements"
-Kiro: [activates GEDD Power, checks for session.json, walks through pipeline]
+You: "I have an error-analysis.md from my domain expert — upgrade my requirements"
+Kiro: [activates GEDD Power, loads annotations, compares to baseline, generates improved specs]
 ```
 
-Or load the built-in TravelBot demo to see the full pipeline produce a spec from 14 golden queries, 10 failure codes, and a paradigm model.
+Or:
+
+```
+You: "Generate baseline requirements for my travel booking agent"
+Kiro: [generates v1 specs from agent description, marks them as needing validation]
+```
 
 ### Power structure
 
 ```
 power-gedd/
-├── POWER.md                         # Metadata, onboarding, steering mappings
+├── POWER.md                         # Lifecycle metadata, onboarding, steering
 └── steering/
     ├── annotation-workflow.md       # Guide annotation from scratch
-    ├── session-import.md            # Import existing session.json
+    ├── session-import.md            # Import error-analysis.md
     ├── pattern-discovery.md         # Open coding → axial coding
-    ├── requirements-generation.md   # Failures → requirements.md
+    ├── requirements-generation.md   # Baseline OR evidence-backed upgrade
     ├── design-generation.md         # Paradigm models → design.md
     └── tasks-generation.md          # Priority queue → tasks.md
 ```

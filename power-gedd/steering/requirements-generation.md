@@ -1,171 +1,244 @@
-# Requirements Generation from GEDD Annotations
+# Requirements Generation — Baseline to Improved
 
-Convert failure patterns, codebook, and paradigm models into structured requirements.
+Generate requirements from the agent spec (baseline), then upgrade them with domain expert annotations (improved). Each annotation round sharpens the specs.
 
-## Prerequisites
-- Completed codebook with failure codes, definitions, and severity
-- Paradigm models for major failures (severity ≥ 3)
-- Saturation evidence confirming coverage
-- Dimension mappings with weights
+## Two Modes
+
+### Mode A: Generate Baseline (no annotations yet)
+
+When the agent has a spec but no annotation evidence, generate initial requirements from:
+- Agent description and capabilities → user stories
+- System prompt constraints → acceptance criteria
+- Known edge cases → assumed test scenarios
+
+This gives Kiro a starting point. It will be wrong in ways no one can predict yet.
+
+### Mode B: Upgrade with Evidence (annotations available)
+
+When an `error-analysis.md` exists, compare annotations against the baseline and produce improved requirements. This is the core value — every upgrade is grounded in observed reality.
 
 ---
 
-## Mapping Strategy
+## The Delta: Baseline → Improved
 
-### From Failure Codes → User Stories
+| Spec Element | Baseline (v1) | Improved (v2+) |
+|-------------|---------------|----------------|
+| User stories | "Agent handles pricing queries" | "Agent NEVER fabricates prices; redirects to official source" |
+| Acceptance criteria | Assumed from system prompt | Actual failed responses as negative test cases |
+| Correctness properties | Theoretical | Formal invariants from paradigm model |
+| Priority | Engineer's intuition | `severity × frequency × dimension_weight` |
+| Coverage | "Should cover edge cases" | Saturation metrics: 8/10 categories at ≥3 examples |
+| Verification | Unit tests | Golden queries + judge agreement κ ≥ 0.80 |
 
-Each failure code with severity ≥ 3 becomes a requirement:
+---
 
-**Template:**
+## Mode A: Baseline Generation
+
+### From Agent Spec → Initial User Stories
+
+For each capability in the agent spec:
+
+```
+As a [target user],
+I want the agent to [capability],
+so that [value proposition from description].
+```
+
+### From System Prompt → Initial Acceptance Criteria
+
+For each constraint/rule in the system prompt:
+
+```
+GIVEN [constraint context]
+WHEN [trigger condition]
+THEN [required agent behavior per system prompt]
+```
+
+### From Known Edge Cases → Initial Test Scenarios
+
+For each `known_edge_case` in the agent spec, generate a requirement noting it needs validation.
+
+**Baseline requirements are always marked as unvalidated:**
+
+```markdown
+### Requirement B-1: [From capability]
+**Status:** ⚠️ Baseline — not yet validated by domain expert
+
+**User Story:** As a [user], I want [capability], so that [value]
+
+#### Acceptance Criteria (assumed)
+1. GIVEN ... WHEN ... THEN ...
+
+#### Validation Needed
+- [ ] Domain expert has reviewed agent responses for this scenario
+- [ ] Failure patterns (if any) have been coded
+- [ ] Severity has been assessed
+```
+
+---
+
+## Mode B: Evidence-Backed Upgrade
+
+### Prerequisites
+- `error-analysis.md` with failure codebook, annotations, and optionally paradigm model
+- Existing baseline `requirements.md` (if not present, generate baseline first)
+
+### From Failure Codes → Upgraded User Stories
+
+Each failure code with severity ≥ critical becomes a requirement:
+
 ```
 As a [target user from agent spec],
-I want the agent to [desired behavior — opposite of failure],
+I want the agent to [desired behavior — opposite of observed failure],
 so that [consequence avoidance from paradigm model].
 ```
 
-**Example:**
+**Example of the upgrade:**
 ```
-Failure Code: "Hallucinated Pricing" (severity 5)
-Paradigm consequence: "User makes purchase decisions on false information"
+BASELINE:
+  As a shopper, I want the agent to answer pricing questions.
 
-→ As a shopper,
-  I want the agent to never invent pricing information,
+IMPROVED (after annotation):
+  As a shopper, I want the agent to NEVER invent pricing information
+  and always redirect to the official pricing page,
   so that I don't make purchase decisions based on fabricated data.
+
+  Evidence: Failure code "Hallucinated Pricing" (severity: catastrophic,
+  frequency: 7, paradigm consequence: "User acts on false info")
 ```
 
-### From Annotations → Acceptance Criteria
+### From Annotations → Upgraded Acceptance Criteria
 
-Each annotated golden query with verdict ≗ incorrect/partial becomes a test case:
+Each incorrect/partial annotation becomes a concrete test case:
 
-**Template:**
 ```
 GIVEN [the query context from golden prompt]
 WHEN [the user asks / the agent receives]
 THEN [the expected behavior — what the agent SHOULD do]
-AND NOT [the observed failure — what it must NOT do]
+AND NOT [the observed failure — what it actually did wrong]
 ```
 
 **Example:**
 ```
-GIVEN a user asking about product pricing without a pricing database connected
+GIVEN a user asking about product pricing without a pricing database
 WHEN the user asks "How much does the Pro plan cost?"
-THEN the agent responds with "I don't have current pricing information" and links to the pricing page
-AND NOT the agent invents a price like "$49/month"
+THEN the agent responds "I don't have current pricing" + links to pricing page
+AND NOT invents "$49/month" (observed in annotation #12, severity: catastrophic)
 ```
 
 ### From Paradigm Model → Correctness Properties
 
-Each paradigm model's action strategies become formal properties:
+Each paradigm model's causal chain becomes a formal invariant:
 
-**Template:**
 ```
-PROPERTY: [name derived from phenomenon]
-FOR ALL queries WHERE [causal conditions exist]
+PROPERTY: [name from phenomenon]
+FOR ALL queries WHERE [causal conditions]
 THE agent SHALL [action strategy]
 AND SHALL NOT [phenomenon behavior]
 VERIFIED BY [golden queries that test this]
-```
-
-**Example:**
-```
-PROPERTY: No Price Hallucination
-FOR ALL queries WHERE user asks about pricing AND no pricing data is in context
-THE agent SHALL decline to quote a price and redirect to official source
-AND SHALL NOT generate any numerical price value
-VERIFIED BY golden queries #12, #27, #34
 ```
 
 ---
 
 ## Requirements Document Structure
 
-Generate `.kiro/specs/{agent-name}/requirements.md` with this structure:
+Generate `.kiro/specs/{agent-name}/requirements.md`:
 
 ```markdown
-# Requirements: {Agent Name} — Iteration {N}
+# Requirements: {Agent Name}
 
-## Introduction
-Brief description of what these requirements address.
-Generated from GEDD session with {X} annotations, {Y} failure codes,
-{Z} saturated categories.
+**Iteration:** {N} | **Last updated from:** {error-analysis.md date}
+**Evidence:** {X} annotations, {Y} failure codes, {Z}% saturation
+
+## Improvement Summary (v{N} delta)
+
+| What changed | Why | Evidence |
+|-------------|-----|----------|
+| Added: "Never fabricate prices" | Observed 7× in annotations | Code: Hallucinated Pricing |
+| Upgraded severity: Escalation → P0 | Domain expert rated catastrophic | Annotations #3, #8 |
+| New property: No PII disclosure | Social engineering succeeded | Code: PII Disclosure |
 
 ## Glossary
 | Term | Definition |
 |------|------------|
 | {failure code} | {definition from codebook} |
-| ... | ... |
 
 ## Functional Requirements
 
-### Requirement 1: {Derived from highest-severity failure code}
+### REQ-1: {Highest-priority failure code}
+**Status:** ✓ Evidence-backed (iteration {N})
+**Priority:** {severity × frequency × dimension_weight}
 
 **User Story:** As a {user}, I want {behavior}, so that {benefit}
 
 #### Acceptance Criteria
-1. {From annotation — GIVEN/WHEN/THEN}
-2. {From annotation — GIVEN/WHEN/THEN}
-3. ...
+1. GIVEN ... WHEN ... THEN ... AND NOT {observed failure}
+2. GIVEN ... WHEN ... THEN ... AND NOT {observed failure}
 
 #### Correctness Properties
-- PROPERTY: {formal property from paradigm model}
+- PROPERTY: {from paradigm model}
 
-#### Evidence
-- Failure code: {code label} (severity {N}, frequency {N})
-- Golden queries: #{id}, #{id}, #{id}
-- Saturation: {status}
+#### Evidence Chain
+- Failure code: {label} (severity {N}, frequency {N})
+- Golden queries: #{id}, #{id}
+- Paradigm model: {phenomenon} → {consequences}
+- Saturation: {category status}
 
-### Requirement 2: ...
-(repeat for each failure code with severity ≥ 3)
+### REQ-2: ...
 
 ## Non-Functional Requirements
 
 ### NFR-1: Coverage Confidence
-The agent evaluation must demonstrate ≥{saturation_score}% category saturation
-before release.
+Evaluation must demonstrate ≥{saturation_score}% category saturation.
 
 ### NFR-2: Judge Agreement
-The automated LLM-as-a-judge must achieve Cohen's κ ≥ 0.80 against human
-annotations before deployment.
+LLM-as-a-judge must achieve Cohen's κ ≥ 0.80 against human annotations.
+
+### NFR-3: Regression Gate
+All previously-passing golden queries must continue passing after changes.
 ```
 
 ---
 
 ## Priority Ordering
 
-Requirements are ordered by a combined score:
+Requirements ordered by evidence weight:
 
 ```
 priority_score = severity × frequency × dimension_weight
 ```
 
-| Severity | Frequency | Dimension Weight | Priority Score |
-|----------|-----------|-----------------|----------------|
-| 5 | 8 | 2.0 (safety) | 80 |
-| 4 | 5 | 1.5 (accuracy) | 30 |
-| 3 | 3 | 1.3 (instruction) | 11.7 |
-
-Higher scores appear first in the requirements document.
+| Dimension | Weight | Rationale |
+|-----------|--------|-----------|
+| Safety | 2.0× | Non-negotiable — failures here block release |
+| Accuracy | 1.5× | Factual errors erode trust irreversibly |
+| Bias | 1.5× | Fairness failures have outsized impact |
+| Instruction Following | 1.3× | System prompt violations indicate fundamental issues |
+| Completeness | 1.2× | Partial answers frustrate users |
+| Quality | 1.0× | Baseline expectation |
+| Tone | 0.8× | Important but rarely blocking |
+| Brand Relevance | 0.8× | Company-specific, not universal |
 
 ---
 
 ## Traceability
 
-Every requirement must trace back to:
+Every improved requirement traces to:
 1. **Failure code(s)** — which observed failures it addresses
 2. **Golden queries** — which test cases demonstrate it
 3. **Paradigm model** — which root cause analysis supports it
 4. **Annotations** — which human judgments ground it
-
-This ensures no requirement is speculative — every one is backed by observed evidence.
+5. **Baseline requirement** — which original requirement it upgrades (or "NEW" if not in baseline)
 
 ---
 
-## When to Regenerate
+## When to Run This Again
 
-Update requirements when:
-- New failure codes emerge from additional annotation rounds
-- Severity changes after re-evaluation
-- Paradigm model is refined with new causal insights
-- Saturation status changes (new categories discovered)
+The lifecycle triggers a new requirements upgrade when:
+- New annotation round adds failure codes not in current specs
+- Severity reassessment changes priority ordering
+- Paradigm model gains new causal insights → new design constraints
+- Saturation changes (new categories discovered or achieved)
+- Agent is updated and re-evaluated → new failures may emerge
 
-The GEDD flywheel means requirements evolve as the agent evolves.
+Each run produces a versioned delta, so the improvement history is preserved.
