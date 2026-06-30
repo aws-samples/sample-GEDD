@@ -637,11 +637,17 @@ def coding_page():
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
             with ui.element("div").style(
                 "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
+                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 480px"
             ):
-                ui.icon("label").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("PM Workbench Demos").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Load the 50-query localization or AWS Cloud GDPR PM demo, or start from your own generated traces.").style(
+                ui.icon("bug_report").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
+                ui.label("Error Analysis → Annotations → Specs").style(
+                    "font-size: 1.1rem; font-weight: 700; color: var(--text-primary)"
+                )
+                ui.label(
+                    "Load a 50-query demo to see the full lifecycle: "
+                    "analyze agent errors, annotate failures with domain expertise, "
+                    "then generate improved specs and a judge prompt from the evidence."
+                ).style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):

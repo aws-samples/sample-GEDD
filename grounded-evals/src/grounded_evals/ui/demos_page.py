@@ -365,7 +365,7 @@ def _build_domain_registry():
         {
             "id": "inductive_pm_workbench", "name": "AAA Game Localization Workbench", "icon": "translate",
             "operator": "Orion Forge Localization",
-            "tagline": "50 synthetic LQA traces -> open coding -> axial coding -> saturation -> localization judge prompt",
+            "tagline": "50 LQA traces → error analysis → annotations → failure codebook → improved specs + judge prompt",
             "domain": "AAA Game Localization / PM Workbench", "risk_level": "critical",
             "regulations": ["LQA", "Runtime tokens", "Regional compliance"],
             "loader": load_inductive_pm_demo,
@@ -383,8 +383,8 @@ def _build_domain_registry():
             "icon": "policy",
             "operator": "Northstar Cloud Privacy",
             "tagline": (
-                "50 AWS cloud GDPR traces -> open coding -> axial coding -> "
-                "saturation -> cloud privacy judge prompt"
+                "50 AWS cloud GDPR traces → error analysis → annotations → "
+                "failure codebook → improved specs + judge prompt"
             ),
             "domain": "AWS Cloud GDPR / PM Workbench",
             "risk_level": "critical",
@@ -408,7 +408,7 @@ def _build_domain_registry():
         },
         {
             "id": "travel", "name": "TravelBot", "icon": "flight", "operator": "SkyLink Travel",
-            "tagline": "Flight booking AI — hallucination, policy miss, incomplete data",
+            "tagline": "Flight booking AI — error analysis reveals hallucination, policy miss, incomplete data patterns",
             "domain": "Travel & Booking", "risk_level": "high",
             "regulations": ["PCI DSS", "DOT Consumer Rules", "GDPR"],
             "loader": load_demo_data,

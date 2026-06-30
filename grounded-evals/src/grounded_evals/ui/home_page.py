@@ -1180,46 +1180,47 @@ def home_page():
 
     core_steps = [
         (
-            "Load 50 traces",
-            "Start with a seeded localization or AWS cloud GDPR dataset, or load your own traces into the same workbench.",
-            "Output: golden query set",
+            "① Error Analysis",
+            "Run your agent against golden queries. Load 50 pre-built traces or bring your own. See exactly where the agent fails.",
+            "Output: agent responses with failure evidence",
         ),
         (
-            "Open coding",
-            "Review each response and name the product failure in PM/domain language instead of forcing a generic taxonomy.",
-            "Output: open codebook",
+            "② Annotate",
+            "Domain expert reviews each response: correct, partial, or incorrect. Name the failure in your vocabulary. Set severity.",
+            "Output: codebook + annotated failures",
         ),
         (
-            "Axial coding",
-            "Group codes into root causes, context, strategies, and user consequences that explain why failures repeat.",
-            "Output: paradigm model",
+            "③ Discover Patterns",
+            "Group repeated failures into root causes using grounded theory. Build the paradigm model: what causes failures and what are the consequences.",
+            "Output: paradigm model + saturation evidence",
         ),
         (
-            "Saturation check",
-            "Confirm the final review window repeats existing codes before treating the rubric as stable.",
-            "Output: saturation evidence",
+            "④ Generate Specs",
+            "Convert observed failure patterns into evidence-backed requirements, design constraints, and prioritized implementation tasks.",
+            "Output: requirements.md + design.md + tasks.md",
         ),
         (
-            "Generate judge",
-            "Turn the saturated codebook and PM memos into hard-fail release gates for an LLM-as-a-judge.",
-            "Output: judge prompt",
+            "⑤ Build Judge",
+            "Turn the codebook into an LLM-as-a-judge prompt that automates what the domain expert does — then loop back and improve.",
+            "Output: LLM judge + continuous learning cycle",
         ),
     ]
 
     coach_questions = [
-        "What user-facing promise would this answer create if it shipped?",
-        "Which source of truth should the assistant have used before answering?",
-        "Is the problem a one-off answer issue or a repeated product failure mode?",
-        "What severity should block release rather than wait for a future patch?",
-        "Which PM-named code should become a hard-fail judge rule?",
+        "What did the agent get wrong that a domain expert would catch?",
+        "Is this a one-off error or a repeating failure pattern?",
+        "What severity should block release vs. wait for a future fix?",
+        "What requirement would have prevented this failure?",
+        "Can this failure be detected automatically by an LLM judge?",
     ]
 
     artifacts = [
-        ("assignment", "Product brief", "Agent purpose, target users, scope, and source of truth."),
-        ("quiz", "Golden queries", "A focused eval set that reflects real product risk."),
-        ("rate_review", "PM annotations", "Correctness labels, severity, confidence, and memos."),
-        ("label", "Error modes", "Expert-named patterns grounded in observed failures."),
-        ("gavel", "Judge rubric", "LLM-as-a-judge criteria and hard-fail rules."),
+        ("bug_report", "Error analysis", "Agent responses that reveal where the system fails."),
+        ("rate_review", "Annotations", "Expert verdicts, failure codes, severity, and memos."),
+        ("account_tree", "Paradigm model", "Root causes, context, and consequences of failures."),
+        ("description", "Improved specs", "Evidence-backed requirements ready for Kiro."),
+        ("gavel", "LLM judge", "Automated release gate grounded in expert observations."),
+        ("loop", "Continuous learning", "Each iteration makes the specs more precise."),
     ]
 
     starter_demos = [
@@ -1252,20 +1253,20 @@ def home_page():
         with ui.element("section").classes("simple-hero animate-in stagger-1"):
             ui.html(
                 '<div class="coach-kicker">'
-                '<span class="material-icons" style="font-size:0.95rem">rate_review</span>'
-                "PM Annotation Workbench"
+                '<span class="material-icons" style="font-size:0.95rem">loop</span>'
+                "Continuous Learning Lifecycle"
                 "</div>"
             )
             ui.html(
                 '<h1 class="simple-headline">'
-                "Turn PM annotations into a defensible LLM-as-a-judge."
+                "Error Analysis → Annotations → Spec-Driven Development"
                 "</h1>"
             )
             ui.html(
                 '<div class="simple-subhead">'
-                "Coach a PM to define golden queries, review customer-facing traces, name repeated failure modes, "
-                "and generate the judge prompt from PM-owned evidence. Seed it with localization or "
-                "AWS cloud GDPR data, or bring your own traces."
+                "Domain experts annotate agent failures. GEDD converts those observations into "
+                "an LLM judge and improved engineering specs. Each iteration makes the system "
+                "more precise. Load a 50-query demo to see the full cycle."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
@@ -1293,19 +1294,19 @@ def home_page():
             with ui.element("div").classes("hero-demo-frame"):
                 ui.html(
                     '<img class="hero-demo-media" src="/docs/GEDD_optimized.gif" '
-                    'alt="AI PM readiness workflow preview">'
+                    'alt="GEDD error analysis and annotation workflow">'
                 )
                 ui.html(
                     '<div class="hero-demo-caption">'
-                    'Query -> Responses -> Annotate -> Codes emerge -> Judge'
+                    'Query → Annotate → Codes emerge → Requirements for Kiro'
                     '</div>'
                 )
 
         with ui.element("div").classes("simple-panel animate-in stagger-2"):
-            ui.html('<div class="simple-panel-title">The PM annotation workbench loop</div>')
+            ui.html('<div class="simple-panel-title">The PM annotation-to-requirements loop</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "This is now the main product flow. The release gate comes from observed failures, PM annotations, "
+                "This is now the main product flow. Kiro requirements come from observed failures, PM annotations, "
                 "and saturation evidence, not from generic quality guesses."
                 "</div>"
             )
@@ -1321,7 +1322,7 @@ def home_page():
             ui.html('<div class="simple-panel-title">The workbench keeps the PM in the product problem</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "The review queue, codebook, memos, saturation curve, and judge prompt all stay connected to the same evidence."
+                "The review queue, codebook, memos, saturation curve, and generated requirements all stay connected to the same evidence."
                 "</div>"
             )
             with ui.element("div").classes("assistant-grid"):
@@ -1343,7 +1344,7 @@ def home_page():
             ui.html('<div class="simple-panel-title">Starter datasets for the AI PM flow</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "Use these only as seed data. The product flow stays simple: Coach, PM Workbench, Judge, Report."
+                "Use these only as seed data. The product flow stays simple: Coach, PM Workbench, Requirements, Report."
                 "</div>"
             )
             with ui.element("div").classes("compact-example-row"):
