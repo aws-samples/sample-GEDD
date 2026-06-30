@@ -1,113 +1,158 @@
 # Session Import Workflow
 
-Guide for importing an existing GEDD session.json into the spec generation pipeline.
+Guide for importing a GEDD error-analysis markdown file into the spec generation pipeline.
 
-## What is session.json?
+## What is error-analysis.md?
 
-A session.json file is the portable handoff artifact from the GEDD web app or CLI.
-It contains the complete annotation history needed to generate specs.
+The `error-analysis.md` file is the canonical handoff artifact from the GEDD web app or CLI.
+It contains structured annotation evidence in a human-readable, LLM-optimized markdown format.
+
+Export it from:
+- **Web app:** Report page → "Error Analysis (MD)" button
+- **CLI:** `grounded-evals export-md --session session.json`
 
 ## Expected Structure
 
-```json
-{
-  "agent_spec": {
-    "name": "AgentName",
-    "description": "What the agent does",
-    "capabilities": [...],
-    "target_users": [...],
-    "constraints": [...],
-    "system_prompt": "..."
-  },
-  "golden_prompts": [...],
-  "categories": [...],
-  "codes": [...],
-  "memos": [...],
-  "annotations": [...],
-  "paradigm_model": {...},
-  "saturation_score": 0.85,
-  "version": "0.1.0"
-}
+```markdown
+# GEDD Error Analysis — {Agent Name}
+
+## Agent Spec
+- **Name:** AgentName
+- **Description:** What the agent does
+- **Capabilities:** cap1, cap2, ...
+- **Target Users:** user1, user2, ...
+
+### System Prompt
+(the agent's system prompt)
+
+## Golden Queries ({n} total, {saturation}% saturated)
+| # | Query | Category | Expected Behavior |
+|---|-------|----------|-------------------|
+
+## Annotations Summary
+- **Total:** N | Correct: X | Partial: Y | Incorrect: Z
+
+## Failure Codebook
+| Code | Severity | Freq | Definition |
+|------|----------|------|------------|
+
+## Paradigm Model
+### Phenomenon
+### Causal Conditions
+### Context
+### Intervening Conditions
+### Action Strategies
+### Consequences
+
+## Annotated Failures ({n} examples)
+### Example N [verdict]
+**Query:** ...
+**Response:** ...
+**Codes:** ...
+**Severity: X | Confidence: Y**
+**Memo:** ...
+
+## Saturation Evidence
+| Category | Queries | Status |
+|----------|---------|--------|
+
+## Memos
+- [Code] memo text...
+
+## Judge Prompt
+(generated judge prompt text)
 ```
 
 ## Import Steps
 
-### Step 1: Locate the session file
+### Step 1: Locate the error analysis file
 
-Search for session.json in common locations:
-- `./session.json`
-- `./outputs/session.json`
-- `./grounded-evals/outputs/session.json`
+Search for the markdown file in common locations:
+- `./*_error_analysis.md`
+- `./error-analysis.md`
+- `./outputs/*_error_analysis.md`
 - Any path the user specifies
 
-### Step 2: Validate completeness
+Also check for legacy `session.json` files. If only a session.json exists,
+suggest the user run `grounded-evals export-md` to generate the markdown.
 
-Check which fields are present and report status:
+### Step 2: Parse and validate completeness
 
-| Field | Required For | Status |
-|-------|-------------|--------|
-| agent_spec | All docs | ✓/✗ |
-| golden_prompts | Requirements | ✓/✗ |
-| codes (codebook) | Requirements, Design | ✓/✗ |
-| annotations | Requirements | ✓/✗ |
-| paradigm_model | Design | ✓/✗ |
-| categories + saturation | All docs | ✓/✗ |
-| memos | Context enrichment | ✓/✗ |
+Extract each section and report status:
 
+| Section | Required For | Status |
+|---------|-------------|--------|
+| Agent Spec | All docs | ✓/✗ |
+| Golden Queries | Requirements | ✓/✗ |
+| Failure Codebook | Requirements, Design | ✓/✗ |
+| Annotated Failures | Requirements | ✓/✗ |
+| Paradigm Model | Design | ✓/✗ |
+| Saturation Evidence | All docs | ✓/✗ |
+| Memos | Context enrichment | ✓/✗ |
 
 ### Step 3: Assess readiness for each document
 
 | Document | Minimum Required |
 |----------|-----------------|
-| requirements.md | agent_spec + codes + annotations (severity ≥ 3) |
-| design.md | Above + paradigm_model with causal conditions |
+| requirements.md | Agent Spec + Codebook + Annotated Failures (severity ≥ critical) |
+| design.md | Above + Paradigm Model with causal conditions |
 | tasks.md | Above + requirements.md + design.md already generated |
 
 ### Step 4: Report gaps
 
-If the session is incomplete, guide the user:
+If the file is incomplete, guide the user:
 
-- **Missing annotations:** "Your session has golden queries but no annotations yet.
+- **Missing annotations:** "Your file has golden queries but no annotated failures.
   Use the annotation workflow to review agent responses."
 - **Missing paradigm model:** "Your annotations are complete but root cause analysis
   hasn't been done. Let's build paradigm models for your high-severity failures."
-- **Low saturation:** "Some categories have < 3 examples. Consider adding more
+- **Low saturation:** "Some categories show ✗ needs more. Consider adding more
   golden queries to reach saturation before generating specs."
+- **No codebook:** "No failure codes found. The domain expert needs to annotate
+  agent responses and name the failure patterns first."
 
 ### Step 5: Extract and transform
 
-Parse the session.json and prepare data for spec generation:
+Parse the markdown sections and prepare data for spec generation:
 
-1. **Build codebook** — Extract all codes with frequency counts and severity stats
+1. **Build codebook** — Extract from the Failure Codebook table (Code, Severity, Freq, Definition)
 2. **Build priority queue** — Score each code: severity × frequency × dimension_weight
-3. **Extract paradigm models** — Pull causal analysis for each major failure
-4. **Map golden queries** — Link queries to codes and categories
-5. **Compute saturation** — Verify coverage claims
+3. **Extract paradigm models** — Parse the Paradigm Model section lists
+4. **Map golden queries** — Parse the Golden Queries table for categories and expected behavior
+5. **Compute saturation** — Read the Saturation Evidence table
 
 ### Step 6: Proceed to generation
 
 Once validated, proceed through:
-1. `requirements-generation.md` — Generate requirements from codes + annotations
-2. `design-generation.md` — Generate design from paradigm models
+1. `requirements-generation.md` — Generate requirements from codebook + annotated failures
+2. `design-generation.md` — Generate design from paradigm model
 3. `tasks-generation.md` — Generate tasks from priority queue
 
 ---
 
-## Handling Partial Sessions
+## Handling Partial Files
 
-### No paradigm model
+### No paradigm model section
 Skip design.md generation. Generate requirements.md and tasks.md only.
 Flag that design requires root cause analysis first.
 
-### No severity scores
-Default all codes to severity 3 (major). Warn the user that prioritization
+### No severity in codebook
+Default all codes to severity "functional". Warn the user that prioritization
 will be flat without severity data.
 
 ### No memos
 Proceed without contextual rationale. Requirements will be less detailed
 in their justification sections.
 
-### Multiple session files
-If multiple session.json files exist (e.g., different annotation rounds),
-merge by taking the latest annotation for each golden query and unioning
-all failure codes.
+### Multiple error analysis files
+If multiple files exist (e.g., different annotation rounds), merge by:
+- Taking the file with more annotated failures
+- Unioning all failure codes from both codebooks
+- Using the most complete paradigm model
+
+### Legacy session.json found
+If only a `session.json` exists (no markdown), instruct:
+```
+grounded-evals export-md --session session.json --output error-analysis.md
+```
+Then proceed with the markdown file.

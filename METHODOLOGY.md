@@ -1,12 +1,14 @@
-# GEDD methodology — grounded theory for AI evaluation
+# GEDD Methodology — Evidence-Driven LLM Judge + SPEC Generation
 
-Reference for product leaders, researchers, and engineers who want the academic depth behind the workflow. The PM-facing tour lives in [README.md](README.md); this doc is for when you need to defend the approach in a design review or hand a buyer something rigorous to read.
+GEDD is a systematic evidence-driven framework that combines LLM-as-a-Judge evaluation with structured SPEC generation in a continuous learning lifecycle. This document covers the academic depth — grounded theory foundations, calibration statistics, and generation techniques — for product leaders, researchers, and engineers who need to defend the approach in a design review.
+
+The practical product guide lives in [README.md](README.md).
 
 ---
 
 ## The mapping
 
-GEDD applies three phases of Strauss & Corbin's grounded theory to LLM evaluation:
+GEDD applies three phases of Strauss & Corbin's grounded theory to LLM evaluation and spec generation:
 
 | Grounded Theory Concept | GEDD Implementation |
 |---|---|

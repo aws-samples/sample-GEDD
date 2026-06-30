@@ -349,7 +349,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">AI PM Readiness Tool</span>'
+                '<span class="brand-context">LLM Judge + SPEC Framework</span>'
                 '</span>'
             )
 

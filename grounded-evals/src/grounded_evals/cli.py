@@ -63,7 +63,7 @@ def _coverage_table(state, indent: str = "  ") -> str:
 
 @click.group()
 def main() -> None:
-    """grounded-evals: Build golden eval datasets and analyse AI agent failures."""
+    """GEDD: Systematic Evidence Driven LLM Judge + SPEC Framework for continuous learning."""
 
 
 STEP_NAMES = {
@@ -562,6 +562,43 @@ def export(session: str, fmt: str, output: str | None) -> None:
             writer.writerows(rows)
 
     click.echo(f"Exported {len(prompts)} queries → {out_path}")
+
+
+@main.command("export-md")
+@click.option("--session", "-s", default="session.json", show_default=True,
+              help="Session file to export from")
+@click.option("--output", "-o", default=None,
+              help="Output file (default: <agent_name>_error_analysis.md)")
+def export_md(session: str, output: str | None) -> None:
+    """Export error analysis as markdown for Kiro Power consumption.
+
+    \b
+    Produces a human-readable, LLM-optimized handoff document containing:
+    agent spec, golden queries, failure codebook, paradigm model,
+    annotated failures, saturation evidence, and judge prompt.
+    """
+    from grounded_evals.guide.markdown_export import export_error_analysis_md
+
+    state, _ = _load_state(session)
+
+    # Build a storage-like dict matching the web app shape
+    storage: dict = {
+        "session_data": state.session.model_dump(mode="json"),
+        "codebook": [
+            {"name": c.label, "definition": c.definition}
+            for c in state.session.codes
+        ],
+        "coding_annotations": state.annotations,
+        "memos": [],
+        "paradigm_model": {},
+        "_generated_judge_prompt": "",
+    }
+
+    md = export_error_analysis_md(storage)
+    agent_name = (state.session.agent_spec.name or "agent").lower().replace(" ", "_")
+    out_path = output or f"{agent_name}_error_analysis.md"
+    Path(out_path).write_text(md)
+    click.echo(f"Exported error analysis → {out_path}")
 
 
 @main.command("validate-session")
