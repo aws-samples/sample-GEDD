@@ -1120,5 +1120,265 @@ def mlflow_export(session: str, results: str, experiment: str | None,
     click.echo()
 
 
+@main.command("generate-ears")
+@click.option("--session", "-s", default="session.json", show_default=True,
+              help="Session JSON file from a GEDD workflow")
+@click.option("--output-dir", "-o", default=".", show_default=True,
+              help="Directory to write output files to")
+def generate_ears(session: str, output_dir: str) -> None:
+    """Generate EARS requirements + baseline + improvement report from a GEDD session."""
+    from uuid import UUID
+
+    from grounded_evals.ears.baseline import BaselineGenerator
+    from grounded_evals.ears.measurement import MeasurementEngine
+    from grounded_evals.ears.parser import EARSParser
+    from grounded_evals.ears.transformer import CodeMetrics, EARSTransformer
+
+    # Load session
+    try:
+        state, _ = _load_state(session)
+    except (ValueError, FileNotFoundError) as exc:
+        click.echo(f"Error loading session: {exc}", err=True)
+        sys.exit(1)
+
+    sess = state.session
+
+    if not sess.codes:
+        click.echo("No failure codes in session. Run the GEDD workflow first.", err=True)
+        sys.exit(1)
+
+    # Build code_metrics dict from session codes
+    code_metrics: dict[UUID, CodeMetrics] = {}
+    for code in sess.codes:
+        # Derive severity from code properties or default to 3
+        severity = getattr(code, "severity", 3) or 3
+        frequency = getattr(code, "frequency", 1) or 1
+        code_metrics[code.id] = CodeMetrics(
+            severity=severity,
+            frequency=frequency,
+            dimension=_infer_dimension(code.label),
+            dimension_weight=1.0,
+        )
+
+    # Run transformer
+    transformer = EARSTransformer()
+    try:
+        gedd_doc = transformer.transform(sess, code_metrics, paradigm=None)
+    except Exception as exc:
+        click.echo(f"Error generating EARS requirements: {exc}", err=True)
+        sys.exit(1)
+
+    # Run baseline generator
+    baseline_gen = BaselineGenerator()
+    baseline_doc = baseline_gen.generate(sess.agent_spec)
+
+    # Run measurement engine
+    engine = MeasurementEngine()
+    try:
+        report = engine.measure(baseline_doc, gedd_doc, sess)
+    except ValueError as exc:
+        click.echo(f"Measurement error: {exc}", err=True)
+        sys.exit(1)
+
+    # Render outputs
+    parser = EARSParser()
+    gedd_md = parser.pretty_print(gedd_doc)
+    baseline_md = parser.pretty_print(baseline_doc)
+
+    # Format improvement report as markdown
+    report_md = _format_improvement_report(report)
+
+    # Write files
+    out_dir = Path(output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    reqs_path = out_dir / "requirements.md"
+    baseline_path = out_dir / "baseline-requirements.md"
+    report_path = out_dir / "improvement-report.md"
+
+    reqs_path.write_text(gedd_md)
+    baseline_path.write_text(baseline_md)
+    report_path.write_text(report_md)
+
+    # Print summary
+    click.echo(f"\nEARS Requirements Generated for: {gedd_doc.agent_name}")
+    click.echo(f"  Requirements : {len(gedd_doc.requirements)} (GEDD-driven)")
+    click.echo(f"  Baseline     : {len(baseline_doc.requirements)} (generic)")
+    click.echo(f"  Improvement  : {report.overall_improvement:.1f}% overall")
+    click.echo(f"\n  Output files:")
+    click.echo(f"    {reqs_path}")
+    click.echo(f"    {baseline_path}")
+    click.echo(f"    {report_path}")
+
+    if report.warnings:
+        click.echo(f"\n  Warnings:")
+        for warning in report.warnings:
+            click.echo(f"    ⚠ {warning}")
+    click.echo()
+
+
+@main.command("measure-improvement")
+@click.option("--gedd-doc", required=True, type=click.Path(exists=True),
+              help="Path to GEDD-driven EARS requirements Markdown file")
+@click.option("--baseline-doc", required=True, type=click.Path(exists=True),
+              help="Path to baseline EARS requirements Markdown file")
+@click.option("--session", "-s", default="session.json", show_default=True,
+              help="Session JSON file for context (codes, categories)")
+def measure_improvement(gedd_doc: str, baseline_doc: str, session: str) -> None:
+    """Compute quality metrics comparing two requirements documents."""
+    from grounded_evals.ears.measurement import MeasurementEngine
+    from grounded_evals.ears.parser import EARSParser, ParseError
+
+    # Read both markdown files
+    try:
+        gedd_md = Path(gedd_doc).read_text()
+        baseline_md = Path(baseline_doc).read_text()
+    except OSError as exc:
+        click.echo(f"Error reading files: {exc}", err=True)
+        sys.exit(1)
+
+    # Parse with EARSParser
+    parser = EARSParser()
+    try:
+        gedd_parsed = parser.parse(gedd_md)
+    except ParseError as exc:
+        click.echo(f"Error parsing GEDD doc: {exc}", err=True)
+        sys.exit(1)
+
+    try:
+        baseline_parsed = parser.parse(baseline_md)
+    except ParseError as exc:
+        click.echo(f"Error parsing baseline doc: {exc}", err=True)
+        sys.exit(1)
+
+    # Load session for context
+    try:
+        state, _ = _load_state(session)
+    except (ValueError, FileNotFoundError) as exc:
+        click.echo(f"Error loading session: {exc}", err=True)
+        sys.exit(1)
+
+    # Run measurement engine
+    engine = MeasurementEngine()
+    try:
+        report = engine.measure(baseline_parsed, gedd_parsed, state.session)
+    except ValueError as exc:
+        click.echo(f"Measurement error: {exc}", err=True)
+        sys.exit(1)
+
+    # Print metrics table
+    click.echo(f"\nImprovement Report: {report.agent_name}")
+    click.echo(f"{'─' * 70}")
+    click.echo(
+        f"  {'Metric':<20} {'Baseline':>10} {'GEDD':>10} "
+        f"{'Delta':>10} {'Change':>10}"
+    )
+    click.echo(f"  {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 10} {'─' * 10}")
+    for comp in report.comparisons:
+        sign = "+" if comp.absolute_improvement >= 0 else ""
+        click.echo(
+            f"  {comp.metric_name:<20} {comp.baseline_score:>9.1f}% "
+            f"{comp.gedd_score:>9.1f}% {sign}{comp.absolute_improvement:>8.1f}% "
+            f"{sign}{comp.percentage_improvement:>8.1f}%"
+        )
+    click.echo(f"  {'─' * 20} {'─' * 10} {'─' * 10} {'─' * 10} {'─' * 10}")
+    sign = "+" if report.overall_improvement >= 0 else ""
+    click.echo(f"  {'Overall':<20} {'':>10} {'':>10} {sign}{report.overall_improvement:>8.1f}%")
+    click.echo()
+
+    if report.warnings:
+        click.echo("  Warnings:")
+        for warning in report.warnings:
+            click.echo(f"    ⚠ {warning}")
+        click.echo()
+
+
+@main.command("parse-ears")
+@click.option("--input", "-i", "input_file", required=True, type=click.Path(exists=True),
+              help="EARS Markdown file to parse")
+@click.option("--output", "-o", default="-",
+              help="Output file for JSON (default: stdout)")
+def parse_ears(input_file: str, output: str) -> None:
+    """Parse an EARS Markdown document into structured JSON."""
+    from grounded_evals.ears.parser import EARSParser, ParseError
+
+    # Read input markdown file
+    try:
+        markdown = Path(input_file).read_text()
+    except OSError as exc:
+        click.echo(f"Error reading input file: {exc}", err=True)
+        sys.exit(1)
+
+    # Parse with EARSParser
+    parser = EARSParser()
+    try:
+        doc = parser.parse(markdown)
+    except ParseError as exc:
+        click.echo(f"Parse error: {exc}", err=True)
+        sys.exit(1)
+
+    # Output as JSON
+    json_output = doc.model_dump_json(indent=2)
+
+    if output == "-":
+        click.echo(json_output)
+    else:
+        try:
+            Path(output).write_text(json_output)
+            click.echo(f"Parsed EARS document written to: {output}", err=True)
+        except OSError as exc:
+            click.echo(f"Error writing output file: {exc}", err=True)
+            sys.exit(1)
+
+
+def _format_improvement_report(report: "ImprovementReport") -> str:
+    """Format an ImprovementReport as a readable Markdown document.
+
+    Args:
+        report: The improvement report from the measurement engine.
+
+    Returns:
+        Formatted Markdown string.
+    """
+    lines: list[str] = []
+    lines.append(f"# Improvement Report: {report.agent_name}")
+    lines.append("")
+    lines.append("## Summary")
+    lines.append("")
+    lines.append(f"Overall improvement: **{report.overall_improvement:.1f}%**")
+    lines.append("")
+    lines.append("## Quality Metrics Comparison")
+    lines.append("")
+    lines.append("| Metric | Baseline | GEDD-Driven | Improvement |")
+    lines.append("|--------|----------|-------------|-------------|")
+    for comp in report.comparisons:
+        sign = "+" if comp.absolute_improvement >= 0 else ""
+        lines.append(
+            f"| {comp.metric_name} | {comp.baseline_score:.1f}% "
+            f"| {comp.gedd_score:.1f}% | {sign}{comp.absolute_improvement:.1f}% |"
+        )
+    lines.append("")
+
+    if report.qualitative_examples:
+        lines.append("## Qualitative Examples")
+        lines.append("")
+        for example in report.qualitative_examples:
+            lines.append(f"**Baseline:** {example.get('baseline', 'N/A')}")
+            lines.append("")
+            lines.append(f"**GEDD-Driven:** {example.get('gedd_driven', 'N/A')}")
+            lines.append("")
+            lines.append(f"*{example.get('improvement_note', '')}*")
+            lines.append("")
+
+    if report.warnings:
+        lines.append("## Warnings")
+        lines.append("")
+        for warning in report.warnings:
+            lines.append(f"- ⚠️ {warning}")
+        lines.append("")
+
+    return "\n".join(lines) + "\n"
+
+
 if __name__ == "__main__":
     main()

@@ -7,7 +7,9 @@ from nicegui import app, ui
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "dashboard"},
     {"path": "/coach", "label": "AI PM Coach", "icon": "auto_awesome"},
-    {"path": "/coding", "label": "PM Workbench", "icon": "rate_review", "primary": True},
+    {"path": "/coding", "label": "PM Workbench", "icon": "rate_review"},
+    {"path": "/requirements", "label": "Kiro Requirements", "icon": "description", "primary": True},
+    {"path": "/improvement", "label": "Spec Quality", "icon": "trending_up", "core": True},
     {"path": "/judge", "label": "Judge", "icon": "gavel"},
     {"path": "/report", "label": "Report", "icon": "assessment"},
 ]
@@ -318,6 +320,7 @@ def _get_progress_state() -> list[dict]:
     steps = [
         {"label": "Coach", "path": "/coach", "done": bool(golden)},
         {"label": "PM Workbench", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
+        {"label": "Requirements", "path": "/requirements", "done": bool(session_data.get("codes"))},
         {"label": "Judge", "path": "/judge", "done": bool(judge)},
         {"label": "Report", "path": "/report", "done": False},
     ]
@@ -491,8 +494,8 @@ def page_layout(title: str = "", current_path: str = ""):
                 "color: var(--text-muted)"
             ).tooltip("Logout")
 
-    # AI PM readiness flow: coach -> annotate evidence -> judge -> report.
-    workflow_paths = {"/coach", "/coding", "/judge", "/report"}
+    # Evidence-driven requirements flow: coach -> annotate -> requirements -> judge -> report.
+    workflow_paths = {"/coach", "/coding", "/requirements", "/improvement", "/judge", "/report"}
     if current_path in workflow_paths:
         steps = _get_progress_state()
         with ui.element("div").classes("progress-rail"):

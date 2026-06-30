@@ -196,15 +196,17 @@ Or load the built-in TravelBot demo to see the full pipeline produce a spec from
 
 ```
 power-gedd/
-├── POWER.md                         # Metadata, onboarding, steering mappings
+├── POWER.md                         # Lifecycle metadata, onboarding, steering
 └── steering/
     ├── annotation-workflow.md       # Guide annotation from scratch
-    ├── session-import.md            # Import existing session.json
+    ├── session-import.md            # Import error-analysis.md
     ├── pattern-discovery.md         # Open coding → axial coding
-    ├── requirements-generation.md   # Failures → requirements.md
+    ├── requirements-generation.md   # EARS requirements (baseline + evidence-backed)
     ├── design-generation.md         # Paradigm models → design.md
     └── tasks-generation.md          # Priority queue → tasks.md
 ```
+
+The Power uses **EARS notation** (Easy Approach to Requirements Syntax, Mavin et al. 2009) — the same constrained natural language format used by Kiro's spec-driven development. Failure codes map to EARS Unwanted Behaviour patterns; paradigm model conditions map to State-driven patterns; golden queries map to Event-driven patterns.
 
 For the full story behind the Power, see [blog-gedd-power.md](blog-gedd-power.md).
 

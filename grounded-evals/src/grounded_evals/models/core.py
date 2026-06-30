@@ -150,3 +150,127 @@ class CoverageReport(BaseModel):
     gaps: list[str] = Field(default_factory=list)
     redundancies: list[str] = Field(default_factory=list)
     saturation_score: float = 0.0
+
+
+# --- EARS Requirements Engine Models ---
+
+
+class EARSPattern(str, Enum):
+    """EARS requirement pattern types."""
+
+    UBIQUITOUS = "ubiquitous"
+    EVENT_DRIVEN = "event_driven"
+    STATE_DRIVEN = "state_driven"
+    UNWANTED = "unwanted"
+    OPTIONAL = "optional"
+    COMPLEX = "complex"
+
+
+class TraceabilityLinkType(str, Enum):
+    """Types of traceability links connecting requirements to GEDD artifacts."""
+
+    FAILURE_CODE = "failure_code"
+    PARADIGM_ELEMENT = "paradigm_element"
+    GOLDEN_QUERY = "golden_query"
+    MEMO = "memo"
+
+
+class TraceabilityLink(BaseModel):
+    """A link from an EARS requirement back to its GEDD source artifact."""
+
+    id: UUID = Field(default_factory=uuid4)
+    link_type: TraceabilityLinkType
+    target_id: UUID
+    target_label: str = ""
+    description: str = ""
+
+
+class EARSRequirement(BaseModel):
+    """A single EARS-patterned requirement with full provenance."""
+
+    id: UUID = Field(default_factory=uuid4)
+    name: str
+    pattern: EARSPattern
+    user_story: str
+    acceptance_criteria: list[str] = Field(default_factory=list)
+    ears_statement: str
+    priority_score: float = 0.0
+    severity: int = 0
+    frequency: int = 0
+    dimension: str = ""
+    dimension_weight: float = 1.0
+    traceability_links: list[TraceabilityLink] = Field(default_factory=list)
+    source_failure_code_id: UUID | None = None
+    created_at: datetime = Field(default_factory=datetime.now)
+
+
+class GlossaryEntry(BaseModel):
+    """A term-definition pair for the EARS document glossary."""
+
+    term: str
+    definition: str
+    severity: int = 0
+    frequency: int = 0
+
+
+class EARSDocument(BaseModel):
+    """Complete EARS requirements document with glossary and traceability."""
+
+    id: UUID = Field(default_factory=uuid4)
+    title: str
+    agent_name: str
+    introduction: str = ""
+    glossary: list[GlossaryEntry] = Field(default_factory=list)
+    requirements: list[EARSRequirement] = Field(default_factory=list)
+    non_functional_requirements: list[str] = Field(default_factory=list)
+    session_stats: dict[str, int] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=datetime.now)
+    version: str = "1.0.0"
+
+    def sorted_requirements(self) -> list[EARSRequirement]:
+        """Return requirements sorted by priority score descending."""
+        return sorted(self.requirements, key=lambda r: r.priority_score, reverse=True)
+
+
+class QualityMetrics(BaseModel):
+    """Five quality dimensions for measuring requirement improvement."""
+
+    specificity: float = 0.0
+    testability: float = 0.0
+    traceability: float = 0.0
+    domain_coverage: float = 0.0
+    completeness: float = 0.0
+
+    def overall_score(self) -> float:
+        """Average of all five quality dimensions."""
+        return (
+            self.specificity
+            + self.testability
+            + self.traceability
+            + self.domain_coverage
+            + self.completeness
+        ) / 5.0
+
+
+class MetricComparison(BaseModel):
+    """Side-by-side comparison of a single metric between baseline and GEDD."""
+
+    metric_name: str
+    baseline_score: float
+    gedd_score: float
+    absolute_improvement: float = 0.0
+    percentage_improvement: float = 0.0
+
+
+class ImprovementReport(BaseModel):
+    """Full before/after quality comparison for a GEDD-enhanced agent."""
+
+    id: UUID = Field(default_factory=uuid4)
+    agent_name: str
+    baseline_metrics: QualityMetrics = Field(default_factory=QualityMetrics)
+    gedd_metrics: QualityMetrics = Field(default_factory=QualityMetrics)
+    comparisons: list[MetricComparison] = Field(default_factory=list)
+    overall_improvement: float = 0.0
+    qualitative_examples: list[dict[str, str]] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=datetime.now)

@@ -178,6 +178,32 @@ def export_error_analysis_md(storage: dict) -> str:
             lines.append(f"- {prefix}{text}")
         lines.append("")
 
+    # EARS Pattern Mapping
+    if codebook:
+        lines.append("## EARS Requirements Mapping\n")
+        lines.append(
+            "Use these EARS patterns (Mavin et al. 2009) when converting "
+            "failure codes to Kiro spec requirements:\n"
+        )
+        lines.append("| Failure Code | EARS Pattern | Requirement Template |")
+        lines.append("|-------------|--------------|---------------------|")
+        for code in codebook[:7]:
+            if not isinstance(code, dict):
+                continue
+            name = code.get("name", "")
+            lines.append(
+                f"| {name} | Unwanted Behaviour | "
+                f"IF {_cell(name.lower(), 40)} is detected, "
+                f"THEN the agent SHALL ... |"
+            )
+        lines.append("")
+        lines.append(
+            "> **EARS patterns:** Ubiquitous (always active), "
+            "Event-driven (WHEN trigger), State-driven (WHILE condition), "
+            "Unwanted Behaviour (IF fault THEN response), "
+            "Complex (WHILE + WHEN)\n"
+        )
+
     # Judge Prompt
     judge = storage.get("_generated_judge_prompt") or storage.get("_simple_judge_prompt") or ""
     if judge.strip():

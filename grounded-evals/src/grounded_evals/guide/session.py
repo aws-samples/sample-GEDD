@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -14,6 +15,9 @@ from grounded_evals.models.core import (
     GoldenPrompt,
     Memo,
 )
+
+if TYPE_CHECKING:
+    from grounded_evals.models.core import EARSDocument
 
 
 class Session(BaseModel):
@@ -77,3 +81,13 @@ class Session(BaseModel):
             codes=self.codes,
             memos=self.memos,
         )
+
+    def generate_ears_requirements(self) -> EARSDocument:
+        """Produce EARS requirements from current session state."""
+        from grounded_evals.ears.transformer import CodeMetrics, EARSTransformer
+
+        transformer = EARSTransformer()
+        code_metrics: dict[UUID, CodeMetrics] = {}
+        for code in self.codes:
+            code_metrics[code.id] = CodeMetrics(severity=3, frequency=1)
+        return transformer.transform(self, code_metrics, paradigm=None)
