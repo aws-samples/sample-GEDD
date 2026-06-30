@@ -287,11 +287,11 @@ def test_main_nav_keeps_ai_pm_flow_as_top_level_tabs():
     labels = [item["label"] for item in NAV_ITEMS]
     paths = [item["path"] for item in NAV_ITEMS]
 
-    assert labels == ["Home", "AI PM Coach", "PM Workbench", "Judge", "Report"]
-    assert paths == ["/", "/coach", "/coding", "/judge", "/report"]
+    assert labels == ["Home", "AI PM Coach", "PM Workbench", "Kiro Requirements", "Spec Quality", "Judge", "Report"]
+    assert paths == ["/", "/coach", "/coding", "/requirements", "/improvement", "/judge", "/report"]
     assert "Demos" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
-    assert next(item for item in NAV_ITEMS if item["label"] == "PM Workbench")["primary"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "Kiro Requirements")["primary"] is True
 
 
 def test_ai_pm_progress_rail_uses_coach_to_judge_flow():
@@ -307,10 +307,11 @@ def test_ai_pm_progress_rail_uses_coach_to_judge_flow():
     with patch.object(layout, "app", _make_mock_app(storage)):
         steps = layout._get_progress_state()
 
-    assert [step["path"] for step in steps] == ["/coach", "/coding", "/judge", "/report"]
+    assert [step["path"] for step in steps] == ["/coach", "/coding", "/requirements", "/judge", "/report"]
     assert [step["label"] for step in steps] == [
         "Coach",
         "PM Workbench",
+        "Requirements",
         "Judge",
         "Report",
     ]
@@ -459,7 +460,7 @@ def test_inductive_pm_demo_loads_50_query_localization_workbench():
     assert session["agent_spec"]["name"] == "LocaleGate PM Workbench"
     assert len(session["golden_prompts"]) == 50
     assert len(storage["annotations"]) == 50
-    assert len(storage["coding_annotations"]) == 50
+    assert len(storage["coding_annotations"]) == 40  # 10 left uncoded for user to try
     assert len(storage["codebook"]) == 10
     assert methodology["synthetic_query_count"] == 50
     assert methodology["open_code_count"] == 10
@@ -484,7 +485,7 @@ def test_gdpr_auditor_demo_loads_50_query_workbench():
     assert session["agent_spec"]["name"] == "AWS Cloud GDPR Auditor Workbench"
     assert len(session["golden_prompts"]) == 50
     assert len(storage["annotations"]) == 50
-    assert len(storage["coding_annotations"]) == 50
+    assert len(storage["coding_annotations"]) == 40  # 10 left uncoded for user to try
     assert len(storage["codebook"]) == 10
     assert methodology["synthetic_query_count"] == 50
     assert methodology["open_code_count"] == 10

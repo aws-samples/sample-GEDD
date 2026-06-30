@@ -1518,13 +1518,23 @@ GDPR_AUDITOR_SAMPLE_QUERIES = [
 
 
 def load_gdpr_auditor_demo(storage: dict) -> None:
-    """Populate storage with the 50-query AWS cloud GDPR auditor PM workbench demo."""
+    """Populate storage with the 50-query AWS cloud GDPR auditor PM workbench demo.
+
+    Loads all 50 responses for error analysis but only pre-annotates 40,
+    leaving 10 uncoded so the user can experience the annotation workflow.
+    """
+    all_annotations = copy.deepcopy(GDPR_AUDITOR_ANNOTATIONS)
+    all_coding = copy.deepcopy(GDPR_AUDITOR_CODING_ANNOTATIONS)
+
+    # Keep 40 pre-annotated, leave last 10 uncoded for user to try
+    coded_annotations = all_coding[:40]
+
     _clear_and_load(
         storage,
         copy.deepcopy(GDPR_AUDITOR_SESSION),
-        copy.deepcopy(GDPR_AUDITOR_ANNOTATIONS),
+        all_annotations,  # All 50 responses visible for error analysis
         copy.deepcopy(GDPR_AUDITOR_CODEBOOK),
-        copy.deepcopy(GDPR_AUDITOR_CODING_ANNOTATIONS),
+        coded_annotations,  # Only 40 pre-coded — 10 left for user
         copy.deepcopy(GDPR_AUDITOR_MEMOS),
         copy.deepcopy(GDPR_AUDITOR_PARADIGM_MODEL),
         copy.deepcopy(GDPR_AUDITOR_USER_NEEDS),
@@ -1538,3 +1548,4 @@ def load_gdpr_auditor_demo(storage: dict) -> None:
     storage["_generated_judge_prompt"] = GDPR_AUDITOR_JUDGE_PROMPT
     storage["_jb_generated_at"] = DEMO_GENERATED_AT
     storage["current_step"] = 5
+    storage["_demo_lifecycle_banner"] = True

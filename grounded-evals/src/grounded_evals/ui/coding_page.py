@@ -665,6 +665,33 @@ def coding_page():
                     )
         return
 
+    # ── Demo lifecycle banner ─────────────────────────────────────────────
+    if storage.get('_demo_lifecycle_banner'):
+        coded_count = len(storage.get('coding_annotations', []))
+        uncoded_count = len(responses) - coded_count
+        with ui.element("section").classes("coding-shell").style("padding-top: 0"):
+            with ui.element("div").style(
+                "background: linear-gradient(135deg, rgba(94,106,210,0.12), rgba(39,166,68,0.08)); "
+                "border: 1px solid rgba(94,106,210,0.25); border-radius: 12px; "
+                "padding: 16px 20px; margin-bottom: 12px"
+            ):
+                ui.html(
+                    '<div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); '
+                    'margin-bottom:6px">'
+                    '🔄 Continuous Learning Demo — Error Analysis → Annotations → Specs'
+                    '</div>'
+                )
+                ui.html(
+                    '<div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.6">'
+                    f'<strong>{len(responses)}</strong> agent responses loaded for error analysis. '
+                    f'<strong>{coded_count}</strong> are pre-annotated with failure codes. '
+                    f'<strong>{uncoded_count}</strong> are uncoded — try annotating them yourself.<br>'
+                    '<span style="color:var(--accent-bright)">The lifecycle:</span> '
+                    'Review failures → Name the pattern → Set severity → '
+                    'Export as error-analysis.md → Generate improved specs in Kiro'
+                    '</div>'
+                )
+
     current_idx: dict = {'value': 0}
     selected_codes: dict = {'value': []}
     kb_refs: dict = {'save': None}

@@ -823,13 +823,23 @@ INDUCTIVE_PM_SAMPLE_QUERIES = [
 
 
 def load_inductive_pm_demo(storage: dict) -> None:
-    """Populate storage with the 50-query localization PM workbench demo."""
+    """Populate storage with the 50-query localization PM workbench demo.
+
+    Loads all 50 responses for error analysis but only pre-annotates 40,
+    leaving 10 uncoded so the user can experience the annotation workflow.
+    """
+    all_annotations = copy.deepcopy(INDUCTIVE_PM_ANNOTATIONS)
+    all_coding = copy.deepcopy(INDUCTIVE_PM_CODING_ANNOTATIONS)
+
+    # Keep 40 pre-annotated, leave last 10 uncoded for user to try
+    coded_annotations = all_coding[:40]
+
     _clear_and_load(
         storage,
         copy.deepcopy(INDUCTIVE_PM_SESSION),
-        copy.deepcopy(INDUCTIVE_PM_ANNOTATIONS),
+        all_annotations,  # All 50 responses visible for error analysis
         copy.deepcopy(INDUCTIVE_PM_CODEBOOK),
-        copy.deepcopy(INDUCTIVE_PM_CODING_ANNOTATIONS),
+        coded_annotations,  # Only 40 pre-coded — 10 left for user
         copy.deepcopy(INDUCTIVE_PM_MEMOS),
         copy.deepcopy(INDUCTIVE_PM_PARADIGM_MODEL),
         copy.deepcopy(INDUCTIVE_PM_USER_NEEDS),
@@ -843,3 +853,4 @@ def load_inductive_pm_demo(storage: dict) -> None:
     storage["_generated_judge_prompt"] = INDUCTIVE_PM_JUDGE_PROMPT
     storage["_jb_generated_at"] = DEMO_GENERATED_AT
     storage["current_step"] = 5
+    storage["_demo_lifecycle_banner"] = True
