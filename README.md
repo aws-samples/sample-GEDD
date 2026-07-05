@@ -5,32 +5,46 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-GEDD is an SME Error Analysis → Annotations → Domain Driven Specs Development workflow that generates two AI-agent artifacts: Kiro `requirements.md` and an LLM-as-a-Judge prompt.
+GEDD is a Coach-first product for turning SME review of AI-agent failures into domain-driven specs.
 
-It turns domain-owner review of AI agent behavior into evidence-backed specs and release gates engineering can run.
+The product has one main path:
 
-The web app gives product managers, domain experts, and ML engineers one shared path to two generated outputs:
+```text
+Coach → SME Error Analysis → Annotations → Kiro requirements.md + LLM Judge
+```
 
-1. Run error analysis on representative queries and responses.
-2. Capture expert annotations: verdicts, failure codes, severity, and memos.
-3. Convert observed failures into `requirements.md` for Kiro and an LLM-as-a-Judge prompt.
+Start in `Coach`. Define the agent, generate or refine test cases, guide SME error analysis, and produce two concrete outputs:
 
-The main product surface is `Coach`: define the agent, generate or refine test cases, guide SME error analysis, and produce the two outputs for Kiro and release evaluation.
+| Output | File | Why it matters |
+|---|---|---|
+| Kiro Domain Spec | `requirements.md` | Converts observed failure modes into Kiro-ready user stories and EARS acceptance criteria |
+| LLM-as-a-Judge | `llm-judge.md` or judge prompt markdown | Converts the same failure modes into an automated release gate |
 
-![GEDD PM annotation walkthrough](grounded-evals/docs/GEDD_optimized.gif)
+GEDD is not a generic model leaderboard or demo gallery. It preserves domain expert judgment and makes it executable for Kiro, product, engineering, CI, and release review.
+
+![GEDD Coach and annotation workflow](grounded-evals/docs/GEDD_optimized.gif)
 
 The longer methodology essay is in [METHODOLOGY.md](METHODOLOGY.md). This README is the practical product and engineering guide.
 
-## What GEDD Produces
+## Product Shape
 
-| Output | Who creates it | Who uses it | Why it matters |
-|---|---|---|---|
-| Kiro `requirements.md` | GEDD from annotations | Kiro, product, engineering | Turns observed failure modes into EARS acceptance criteria |
-| LLM-as-a-Judge prompt | GEDD from annotations | CI, eval owner, release owner | Turns the same failure modes into an automated release gate |
+GEDD works in two places:
 
-Golden queries, human labels, failure codes, memos, and severity are inputs. They exist to make those two outputs precise, traceable, and testable.
+| Surface | Use it when | Output |
+|---|---|---|
+| Web UI Coach | SMEs need a guided product workflow for agent definition, test cases, error analysis, and annotations | Downloadable Kiro `requirements.md` and LLM Judge |
+| Kiro Power | You want the same GEDD methodology inside Kiro | `.kiro/specs/{agent-name}/requirements.md` and `.kiro/specs/{agent-name}/llm-judge.md` |
 
-GEDD is not a generic model leaderboard. It is a way to preserve expert judgment and make it executable.
+Both surfaces use the same evidence:
+
+- Agent purpose, target users, capabilities, and task boundary
+- Golden queries or imported traces
+- SME verdicts: correct, partial, incorrect
+- Failure codes in the SME's own domain vocabulary
+- Severity, confidence, and memos
+- Optional saturation and axial-coding evidence
+
+The core idea is simple: every important SME annotation should become either a Kiro requirement, a judge rule, or both.
 
 ## Quick Start
 
@@ -44,157 +58,134 @@ pip install -e ".[dev]"
 grounded-evals serve --host 127.0.0.1 --port 8080
 ```
 
-Open `http://127.0.0.1:8080`.
+Open:
 
-No Codex skill or plugin is required.
+```text
+http://127.0.0.1:8080/coach
+```
 
 Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment variables are configured. If port `8080` is busy, use `--port 8081`.
 
-For the product workflow:
+## Web UI Workflow
 
-1. Open `Coach`.
-2. Define the agent, users, task boundary, system prompt, and test-case plan.
-3. Continue to `Annotations` to capture verdicts, failure codes, severity, confidence, and memos.
-4. Open `Kiro requirements.md` to inspect or download the generated domain spec.
-5. Open `LLM Judge` or `Outputs` to inspect or download the judge prompt.
+| Step | Page | What happens | Output |
+|---|---|---|---|
+| 1 | `Coach` | Define the agent, users, capabilities, task boundary, system prompt, and test-case plan | Agent spec + query plan |
+| 2 | `Error Analysis` | Inspect representative queries, traces, and response evidence | Failure evidence |
+| 3 | `Annotations` | SMEs assign verdicts, failure codes, severity, confidence, and memos | Codebook + annotated failures |
+| 4 | `Kiro requirements.md` | Generate a Kiro-ready domain spec using EARS acceptance criteria | `requirements.md` |
+| 5 | `LLM Judge` | Generate a release-gate judge from the same failure modes | Judge prompt |
+| 6 | `Outputs` | Download the two artifacts | Output bundle |
 
-To reset a project, use the top-right refresh action. Confirm `Start Fresh` to clear loaded project data while keeping the current login session.
+The app navigation intentionally keeps this narrow. Demos are available separately at `/demos`, but they are reference seed sessions, not the product workflow.
 
-## Current Web App
+## Kiro requirements.md
 
-`grounded-evals serve` runs a NiceGUI app with a short primary navigation:
+The first GEDD output follows Kiro's requirements-first spec format:
 
-| Page | Purpose | Main actions |
+```markdown
+# Requirements Document
+
+## Introduction
+
+## Requirements
+
+### Requirement 1
+**User Story:** As a {target user}, I want {domain-safe behavior}, so that {risk is prevented}.
+
+#### Acceptance Criteria
+1. WHEN {trigger}, THE SYSTEM SHALL {expected behavior}.
+2. IF {unwanted condition}, THEN THE SYSTEM SHALL {safe response}.
+3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
+```
+
+GEDD uses EARS patterns so requirements stay testable:
+
+| Evidence | EARS pattern | Example shape |
 |---|---|---|
-| `Coach` | Product front door | Define the agent, generate test cases, guide SME error analysis, and route to the two outputs |
-| `Error Analysis` | Evidence view | Continue active work and inspect query/response evidence |
-| `Annotations` | Annotation surface | Review responses, assign verdicts, create failure codes, set severity, write memos, and monitor saturation |
-| `Kiro requirements.md` | Domain driven spec output | Generate Kiro-ready `requirements.md` from observed failure evidence |
-| `LLM Judge` | Judge output | Generate and edit an LLM-as-a-Judge prompt from the observed failure modes |
-| `Outputs` | Download surface | Download `requirements.md` and the LLM Judge prompt |
+| Always-active rule | Ubiquitous | `THE SYSTEM SHALL ...` |
+| Triggering user event | Event-driven | `WHEN ..., THE SYSTEM SHALL ...` |
+| Domain state | State-driven | `WHILE ..., THE SYSTEM SHALL ...` |
+| Observed failure | Unwanted behavior | `IF ..., THEN THE SYSTEM SHALL ...` |
+| State plus trigger | Complex | `WHILE ..., WHEN ..., THE SYSTEM SHALL ...` |
 
-Reference demos remain available at `/demos`. They are not the product workflow; they are seed sessions for teams that want example evidence before bringing their own traces.
+Most high-value requirements come from unwanted behavior: an SME saw the agent fail, named the failure, and GEDD turns that release risk into an acceptance criterion.
 
-## Reference Demo: 50-Query Localization
+## LLM Judge
 
-This reference seed is a synthetic but complete localization QA session for an AAA game agent called `LocaleGate`.
+The second GEDD output is an LLM-as-a-Judge prompt that enforces the same domain failures captured in `requirements.md`.
 
-It includes:
+The judge should return a structured release decision:
 
-| Asset | Contents |
-|---|---|
-| 50 golden queries | Runtime strings, storefront copy, subtitles, RTL input prompts, region rules, culturalization, paid-currency copy, live-event dates, and glossary consistency |
-| Synthetic responses | Baseline agent answers with realistic localization failures |
-| PM annotations | Correct, partial, and incorrect verdicts with severity and confidence |
-| Open codes | Localization-specific failure labels rather than generic quality tags |
-| Axial coding | Root causes, context, intervening conditions, action strategy, and consequence mapping |
-| Saturation evidence | Final-window evidence that new annotations repeat existing codes |
-| Kiro `requirements.md` | EARS requirements generated from the localization failure modes |
-| LLM Judge | A release-gate judge built from the same localization failure modes |
+```json
+{
+  "pass_fail": "pass | fail",
+  "failure_code": "domain failure label or null",
+  "severity": "low | medium | high | critical | catastrophic",
+  "rationale": "why the response passes or fails",
+  "evidence_references": ["query id", "requirement id"],
+  "recommended_action": "ship | revise | block release"
+}
+```
 
-Example failure codes in the reference seed include:
+The judge is intentionally domain-specific. It should not start with generic helpfulness; it should check the failure modes SMEs actually observed.
 
-| Code | What it catches |
-|---|---|
-| Placeholder And Markup Corruption | The response approves a translation that drops variables, tags, markup, or runtime-safe formatting |
-| Gameplay Meaning Reversal | The localized text reverses the gameplay instruction or player action |
-| Rating Or Disclosure Softening | Marketing or regional copy weakens required rating, privacy, paid-currency, or platform disclosures |
-| RTL Input Direction Drift | Right-to-left layout or controller input language changes the intended interaction |
-| Locale Format Ambiguity | Dates, times, numbers, or currencies remain ambiguous for the target locale |
-| Entitlement Copy Mistranslation | Storefront text changes what the buyer receives or what content is included |
-| Culturalization Risk Dismissal | The response treats regional content risk as a translation-only issue |
+## Kiro Power
 
-Those labels are the point of the workflow. The judge is not asked to score generic helpfulness first. It is asked to enforce the domain owner's observed release blockers.
+The repository includes a Kiro Power in [`power-gedd/`](power-gedd/). It brings the GEDD workflow into Kiro.
 
-## Reference Demo: 50-Query AWS Cloud GDPR
+Install it in Kiro:
 
-This reference seed is a synthetic AWS cloud GDPR audit session for `CloudAuditGate`.
+```text
+Powers panel → Add Custom Power → Import from folder → power-gedd/
+```
 
-It includes 50 golden queries covering S3 and CloudWatch retention, CloudTrail and centralized logging, Bedrock prompt reuse, Rekognition and high-risk review, DSAR and deletion handling across backups and data lakes, shared responsibility, cross-region transfers, and breach escalation from AWS security incidents. The outputs are the same as the localization seed: Kiro `requirements.md` and an audit-ready LLM Judge prompt.
+Use it when you want Kiro to generate or upgrade specs from GEDD evidence:
 
-The AWS Cloud GDPR seed uses plain-language tags on purpose, for example `Data Used For The Wrong Job`, `Collecting Or Keeping Too Much Data`, `EU Data Moved The Wrong Way`, and `Trying To Work Around GDPR`. The point is to make the GEDD loop easy to follow: annotate the failure in human language first, then turn that observed pattern into the judge gate.
+```text
+Use GEDD to turn this exported error analysis into Kiro requirements.md and an LLM Judge.
+```
+
+Power structure:
+
+```text
+power-gedd/
+├── POWER.md
+└── steering/
+    ├── annotation-workflow.md
+    ├── session-import.md
+    ├── pattern-discovery.md
+    ├── requirements-generation.md
+    └── judge-generation.md
+```
+
+Optional Kiro follow-ons such as `design.md` and `tasks.md` can come later, but they are not the core GEDD product. The core product is `requirements.md` plus the LLM Judge.
 
 ## Bring Your Own Agent
 
-Use the app when you have a real or proposed agent and need review evidence before you automate evaluation.
+Use GEDD when you have a real or proposed agent and need evidence-backed domain requirements before automating evaluation.
 
 | Step | What to do | Output |
 |---|---|---|
 | 1. Define | Describe the agent, user, task boundary, and system prompt in `Coach` | Agent spec and prompt |
-| 2. Build queries | Generate or paste golden queries that cover normal, edge, ambiguous, adversarial, multi-turn, and recovery cases | Query set |
+| 2. Build queries | Generate or paste queries that cover normal, edge, ambiguous, adversarial, multi-turn, and recovery cases | Query set |
 | 3. Get responses | Run the saved prompt against Bedrock, Anthropic, or a configured runtime, or paste existing traces | Response queue |
 | 4. Annotate | Review each response in `Annotations` and capture verdict, code, severity, confidence, and memo | Human labels and codebook |
-| 5. Pattern | Use open coding and axial coding to group repeated failures and root causes | Release-risk model |
-| 6. Specs | Generate Kiro-ready requirements with EARS acceptance criteria and judge gates | `requirements.md` |
-| 7. Judge | Generate the LLM-as-a-Judge prompt from the same failure modes | Judge prompt |
+| 5. Generate specs | Open `Kiro requirements.md` and generate EARS acceptance criteria from the evidence | `requirements.md` |
+| 6. Generate judge | Open `LLM Judge` and generate a release gate from the same failure modes | Judge prompt |
 
 If you already have production traces, use the app as an annotation surface rather than generating new responses. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).
 
-## Outputs
+## Reference Seeds
 
-The Outputs page is intentionally narrow:
+Reference seeds live at `/demos`. They exist to show what good evidence looks like before teams bring their own traces.
 
-| Output | File | Source |
-|---|---|---|
-| Domain driven spec | `requirements.md` | Error analysis, annotations, failure codebook, severity, and memos |
-| LLM-as-a-Judge | `judge_prompt.txt` or `<agent>_judge_prompt.md` | The same annotated failure modes and release gates |
+| Reference seed | What it demonstrates |
+|---|---|
+| AAA game localization | Runtime strings, storefront copy, subtitles, RTL input prompts, region rules, culturalization, paid-currency copy, live-event dates, and glossary consistency |
+| AWS Cloud GDPR auditor | S3 and CloudWatch retention, CloudTrail logging, Bedrock prompt reuse, Rekognition review, DSAR deletion, shared responsibility, transfer risk, and breach escalation |
 
-## GEDD Power for Kiro
-
-The repository includes a **Kiro Power** (`power-gedd/`) that converts GEDD annotations directly into structured engineering specs inside Kiro.
-
-### What it does
-
-The Power packages the GEDD methodology into an on-demand workflow. When activated, it guides domain experts from error analysis to a complete Kiro spec:
-
-```
-Agent Failures → Annotate → Codebook → requirements.md + LLM Judge
-```
-
-| GEDD Artifact | Becomes | Output |
-|---------------|---------|--------|
-| Failure codes + severity | User stories + acceptance criteria | requirements.md |
-| Golden queries + annotations | Verification test cases | requirements.md |
-| Judge output contract | Release-blocking criteria | LLM Judge prompt |
-| Memos and release gates | Judge rules and rationale | LLM Judge prompt |
-
-### Install
-
-In Kiro: **Powers panel → Add Custom Power → Import from folder** → select `power-gedd/`.
-
-The Power activates automatically when you mention keywords like "annotation", "failure codes", "error analysis", "codebook", or "agent evaluation".
-
-### Usage
-
-Two entry points:
-
-1. **Import existing session** — Load a `session.json` exported from the GEDD web app or CLI. The Power validates completeness and generates specs from the evidence.
-
-2. **Start fresh** — The Power guides you through: define agent → build golden queries → annotate responses → discover patterns → generate specs.
-
-### Quick test
-
-```
-You: "I want to analyze my agent's failure patterns and create requirements"
-Kiro: [activates GEDD Power, checks for session.json, walks through pipeline]
-```
-
-### Power structure
-
-```
-power-gedd/
-├── POWER.md                         # Lifecycle metadata, onboarding, steering
-└── steering/
-    ├── annotation-workflow.md       # Guide annotation from scratch
-    ├── session-import.md            # Import error-analysis.md
-    ├── pattern-discovery.md         # Open coding → axial coding
-    ├── requirements-generation.md   # EARS requirements (baseline + evidence-backed)
-    └── judge-generation.md          # Failure modes → LLM Judge
-```
-
-The Power uses **EARS notation** (Easy Approach to Requirements Syntax, Mavin et al. 2009) — the same constrained natural language format used by Kiro's spec-driven development. Failure codes map to EARS Unwanted Behaviour patterns; paradigm model conditions map to State-driven patterns; golden queries map to Event-driven patterns.
-
-For the full story behind the Power, see [blog-gedd-power.md](blog-gedd-power.md).
+They produce the same two outputs as any custom project: Kiro `requirements.md` and an LLM Judge. They are intentionally separate from the main Coach product path.
 
 ## License And Security
 
