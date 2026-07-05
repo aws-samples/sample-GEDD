@@ -363,10 +363,10 @@ def _build_domain_registry():
 
     domains = [
         {
-            "id": "inductive_pm_workbench", "name": "AAA Game Localization Workbench", "icon": "translate",
+            "id": "inductive_pm_workbench", "name": "AAA Game Localization Outputs", "icon": "translate",
             "operator": "Orion Forge Localization",
-            "tagline": "50 LQA traces → error analysis → annotations → failure codebook → improved specs + judge prompt",
-            "domain": "AAA Game Localization / PM Workbench", "risk_level": "critical",
+            "tagline": "50 LQA traces → annotations → Kiro requirements.md + LLM Judge",
+            "domain": "AAA Game Localization / Two outputs", "risk_level": "critical",
             "regulations": ["LQA", "Runtime tokens", "Regional compliance"],
             "loader": load_inductive_pm_demo,
             "codebook": INDUCTIVE_PM_CODEBOOK,
@@ -379,14 +379,14 @@ def _build_domain_registry():
         },
         {
             "id": "gdpr_auditor_workbench",
-            "name": "AWS Cloud GDPR Auditor Workbench",
+            "name": "AWS Cloud GDPR Auditor Outputs",
             "icon": "policy",
             "operator": "Northstar Cloud Privacy",
             "tagline": (
-                "50 AWS cloud GDPR traces → error analysis → annotations → "
-                "failure codebook → improved specs + judge prompt"
+                "50 AWS cloud GDPR traces → annotations → "
+                "Kiro requirements.md + LLM Judge"
             ),
-            "domain": "AWS Cloud GDPR / PM Workbench",
+            "domain": "AWS Cloud GDPR / Two outputs",
             "risk_level": "critical",
             "regulations": ["GDPR", "AWS data residency", "DSAR and breach duties"],
             "loader": load_gdpr_auditor_demo,
@@ -934,8 +934,8 @@ def _render_domain(domain: dict):
     judge_prompt = domain.get("judge_prompt", "").strip()
     judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
     workbench_labels = {
-        "inductive_pm_workbench": "Load 50-query localization demo",
-        "gdpr_auditor_workbench": "Load 50-query AWS Cloud GDPR demo",
+        "inductive_pm_workbench": "Load localization output demo",
+        "gdpr_auditor_workbench": "Load AWS GDPR output demo",
     }
     is_featured = domain.get("id") in {
         "inductive_pm_workbench",
@@ -949,7 +949,7 @@ def _render_domain(domain: dict):
     def make_loader(d=domain):
         def _load():
             d["loader"](app.storage.user)
-            ui.notify(f'{d["name"]} loaded.', type="positive")
+            ui.notify(f'{d["name"]} loaded for requirements.md and LLM Judge.', type="positive")
             ui.navigate.to("/coding")
         return _load
 
@@ -976,9 +976,9 @@ def _render_domain(domain: dict):
 
         with ui.element("div").classes("ds-chip-row"):
             if domain.get("id") in workbench_labels:
-                ui.html('<span class="ds-pill ds-feature-badge">Main 50-query demo</span>')
+                ui.html('<span class="ds-pill ds-feature-badge">Main two-output demo</span>')
             elif is_featured:
-                ui.html('<span class="ds-pill ds-feature-badge">Release quality gate</span>')
+                ui.html('<span class="ds-pill ds-feature-badge">Judge + requirements seed</span>')
             ui.html(
                 f'<span class="ds-pill {risk_class}">{_html.escape(risk.upper())} risk</span>'
             )
@@ -990,10 +990,10 @@ def _render_domain(domain: dict):
 
         with ui.element("div").classes("ds-release-gate"):
             with ui.element("div").classes("ds-gate-cell"):
-                ui.html('<div class="ds-section-title">Failure pattern</div>')
+                ui.html('<div class="ds-section-title">Input evidence</div>')
                 ui.label(domain["paradigm_phenomenon"]).classes("ds-gate-text")
             with ui.element("div").classes("ds-gate-cell"):
-                ui.html('<div class="ds-section-title">Release gate protects</div>')
+                ui.html('<div class="ds-section-title">Outputs protect</div>')
                 ui.label(domain["paradigm_consequence"]).classes("ds-gate-copy")
 
         with ui.element("div").classes("ds-evidence-grid"):
@@ -1034,7 +1034,7 @@ def _render_domain(domain: dict):
 
                 if judge_snippet:
                     with ui.element("div").classes("ds-judge-preview"):
-                        ui.html('<div class="ds-section-title">Judge prompt seed</div>')
+                        ui.html('<div class="ds-section-title">Output 2: LLM Judge seed</div>')
                         ui.label(judge_snippet).classes("ds-judge-text")
 
 
@@ -1055,11 +1055,11 @@ def demos_page():
         # Page header
         with ui.element("div").classes("ds-page-heading"):
             with ui.element("div"):
-                ui.html('<div class="ds-page-title">Demos and PM Workbench</div>')
+                ui.html('<div class="ds-page-title">Demos for requirements.md and LLM Judge</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
-                    'Load a 50-query PM workbench demo or a domain scenario. Each demo seeds '
-                    'golden queries, PM annotations, failure modes, and judge-prompt evidence.'
+                    'Load a 50-query annotation demo or a domain scenario. Each demo is organized '
+                    'around two generated outputs: Kiro requirements.md and an LLM Judge.'
                     '</div>'
                 )
             ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')
@@ -1101,7 +1101,7 @@ def demos_page():
                     if d.get("id") not in featured_ids and d.get("id") not in workbench_ids
                 ]
                 if workbench_indexes:
-                    ui.html('<div class="ds-picker-title">Main workbench</div>')
+                    ui.html('<div class="ds-picker-title">Main output demos</div>')
                     for i in workbench_indexes:
                         render_picker_button(i, domains[i])
                 if release_gate_indexes:

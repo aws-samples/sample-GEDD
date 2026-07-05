@@ -1,24 +1,21 @@
-# GEDD - A Systematic Evidence Driven LLM As a Judge + SPEC Framework for continuous learning
+# GEDD - SME Error Analysis → Annotations → Domain Driven Specs Development
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-GEDD is a Systematic Evidence Driven LLM As a Judge Framework for AI agents.
+GEDD is an SME Error Analysis → Annotations → Domain Driven Specs Development workflow that generates two AI-agent artifacts: Kiro `requirements.md` and an LLM-as-a-Judge prompt.
 
-It is an annotation-first workflow for turning domain-owner review of AI agent behavior into release gates engineering can run.
+It turns domain-owner review of AI agent behavior into evidence-backed specs and release gates engineering can run.
 
-The web app gives product managers, domain experts, and ML engineers one shared path:
+The web app gives product managers, domain experts, and ML engineers one shared path to two generated outputs:
 
-1. Define the agent and the work it is supposed to do.
-2. Collect or load representative queries and responses.
-3. Review the responses in a task-shaped workbench.
-4. Name failures in the domain owner's vocabulary.
-5. Convert the observed failures into an LLM-as-a-judge prompt.
-6. Export a validated handoff for CI, MLflow, and model regression work.
+1. Run error analysis on representative queries and responses.
+2. Capture expert annotations: verdicts, failure codes, severity, and memos.
+3. Convert observed failures into `requirements.md` for Kiro and an LLM-as-a-Judge prompt.
 
-The current first-run experience ships with two 50-query PM workbench demos: an AAA game localization session and an AWS cloud GDPR auditor session. They show how a domain owner can move from raw agent traces to open codes, root-cause patterns, saturation evidence, a judge prompt, and an ML engineer implementation queue.
+The main product surface is `Coach`: define the agent, generate or refine test cases, guide SME error analysis, and produce the two outputs for Kiro and release evaluation.
 
 ![GEDD PM annotation walkthrough](grounded-evals/docs/GEDD_optimized.gif)
 
@@ -28,14 +25,10 @@ The longer methodology essay is in [METHODOLOGY.md](METHODOLOGY.md). This README
 
 | Output | Who creates it | Who uses it | Why it matters |
 |---|---|---|---|
-| Golden queries | PM or domain expert | ML engineer, eval owner | Defines the user situations the agent must handle |
-| Human labels | PM or domain expert | Judge builder, release owner | Separates acceptable, partial, and failing behavior |
-| Failure codebook | PM or domain expert | ML engineer, prompt owner | Names the exact domain-specific failure modes to fix |
-| Memos and severity | PM or domain expert | ML engineer, reviewer | Explains why the failure matters and how bad it is |
-| Axial coding | PM or domain expert | Product and engineering leads | Groups repeated failures into root causes and consequences |
-| Judge prompt | PM plus ML engineer | CI and model evaluation | Converts observed failures into automated review criteria |
-| `session.json` handoff | App or CLI | ML engineer | Carries agent spec, prompt, queries, labels, and validation state |
-| MLflow artifacts | ML engineer | Release pipeline | Tracks datasets, judges, evaluation runs, and regression gates |
+| Kiro `requirements.md` | GEDD from annotations | Kiro, product, engineering | Turns observed failure modes into EARS acceptance criteria |
+| LLM-as-a-Judge prompt | GEDD from annotations | CI, eval owner, release owner | Turns the same failure modes into an automated release gate |
+
+Golden queries, human labels, failure codes, memos, and severity are inputs. They exist to make those two outputs precise, traceable, and testable.
 
 GEDD is not a generic model leaderboard. It is a way to preserve expert judgment and make it executable.
 
@@ -57,15 +50,15 @@ No Codex skill or plugin is required.
 
 Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment variables are configured. If port `8080` is busy, use `--port 8081`.
 
-For the fastest product tour, use one of the seeded 50-query demos. They do not require model calls:
+For the product workflow:
 
-1. Open `Home` or `Demos`.
-2. Click `Load 50-query localization demo` or `Load 50-query AWS Cloud GDPR demo`.
-3. Open `PM Workbench` to review the labeled traces, failure codes, memos, and saturation state.
-4. Open `Judge` to inspect or revise the generated judge prompt.
-5. Open `Report` to review release readiness and download the ML engineer handoff.
+1. Open `Coach`.
+2. Define the agent, users, task boundary, system prompt, and test-case plan.
+3. Continue to `Annotations` to capture verdicts, failure codes, severity, confidence, and memos.
+4. Open `Kiro requirements.md` to inspect or download the generated domain spec.
+5. Open `LLM Judge` or `Outputs` to inspect or download the judge prompt.
 
-To reset after loading a demo, use the top-right refresh action. Confirm `Start Fresh` to clear the loaded project data while keeping the current login session.
+To reset a project, use the top-right refresh action. Confirm `Start Fresh` to clear loaded project data while keeping the current login session.
 
 ## Current Web App
 
@@ -73,17 +66,18 @@ To reset after loading a demo, use the top-right refresh action. Confirm `Start 
 
 | Page | Purpose | Main actions |
 |---|---|---|
-| `Home` | Entry point | Load the 50-query localization or AWS Cloud GDPR demo, continue active work, or start a custom agent |
-| `AI PM Coach` | Guided setup | Capture agent definition, system prompt, runtime choice, and golden-query plan |
-| `PM Workbench` | Annotation surface | Review responses, assign verdicts, create failure codes, set severity, write memos, and monitor saturation |
-| `Judge` | Release gate builder | Generate and edit an LLM-as-a-judge prompt from the observed failure modes |
-| `Report` | Engineering handoff | Review quality signals, CI gates, artifact readiness, implementation queue, and export files |
+| `Coach` | Product front door | Define the agent, generate test cases, guide SME error analysis, and route to the two outputs |
+| `Error Analysis` | Evidence view | Continue active work and inspect query/response evidence |
+| `Annotations` | Annotation surface | Review responses, assign verdicts, create failure codes, set severity, write memos, and monitor saturation |
+| `Kiro requirements.md` | Domain driven spec output | Generate Kiro-ready `requirements.md` from observed failure evidence |
+| `LLM Judge` | Judge output | Generate and edit an LLM-as-a-Judge prompt from the observed failure modes |
+| `Outputs` | Download surface | Download `requirements.md` and the LLM Judge prompt |
 
-The Demos page remains available for starter data. It is not the main workflow. Demos are seed sessions that help teams understand the annotation loop before they bring their own traces.
+Reference demos remain available at `/demos`. They are not the product workflow; they are seed sessions for teams that want example evidence before bringing their own traces.
 
-## The 50-Query Localization Demo
+## Reference Demo: 50-Query Localization
 
-The main demo is a synthetic but complete localization QA session for an AAA game agent called `LocaleGate`.
+This reference seed is a synthetic but complete localization QA session for an AAA game agent called `LocaleGate`.
 
 It includes:
 
@@ -95,10 +89,10 @@ It includes:
 | Open codes | Localization-specific failure labels rather than generic quality tags |
 | Axial coding | Root causes, context, intervening conditions, action strategy, and consequence mapping |
 | Saturation evidence | Final-window evidence that new annotations repeat existing codes |
-| Judge prompt | A release-gate judge built from the localization failure modes |
-| Report handoff | CI gates, artifact status, implementation queue, and commands for an ML engineer |
+| Kiro `requirements.md` | EARS requirements generated from the localization failure modes |
+| LLM Judge | A release-gate judge built from the same localization failure modes |
 
-Example failure codes in the demo include:
+Example failure codes in the reference seed include:
 
 | Code | What it catches |
 |---|---|
@@ -112,13 +106,13 @@ Example failure codes in the demo include:
 
 Those labels are the point of the workflow. The judge is not asked to score generic helpfulness first. It is asked to enforce the domain owner's observed release blockers.
 
-## The 50-Query AWS Cloud GDPR Demo
+## Reference Demo: 50-Query AWS Cloud GDPR
 
-The second main workbench demo is a synthetic AWS cloud GDPR audit session for `CloudAuditGate`.
+This reference seed is a synthetic AWS cloud GDPR audit session for `CloudAuditGate`.
 
-It includes 50 golden queries covering S3 and CloudWatch retention, CloudTrail and centralized logging, Bedrock prompt reuse, Rekognition and high-risk review, DSAR and deletion handling across backups and data lakes, shared responsibility, cross-region transfers, and breach escalation from AWS security incidents. The output is the same PM-owned package as the localization demo: annotations, open codes, axial coding, saturation evidence, and an audit-ready judge prompt.
+It includes 50 golden queries covering S3 and CloudWatch retention, CloudTrail and centralized logging, Bedrock prompt reuse, Rekognition and high-risk review, DSAR and deletion handling across backups and data lakes, shared responsibility, cross-region transfers, and breach escalation from AWS security incidents. The outputs are the same as the localization seed: Kiro `requirements.md` and an audit-ready LLM Judge prompt.
 
-The AWS Cloud GDPR demo uses plain-language tags on purpose, for example `Data Used For The Wrong Job`, `Collecting Or Keeping Too Much Data`, `EU Data Moved The Wrong Way`, and `Trying To Work Around GDPR`. The point is to make the GEDD loop easy to follow: annotate the failure in human language first, then turn that observed pattern into the judge gate.
+The AWS Cloud GDPR seed uses plain-language tags on purpose, for example `Data Used For The Wrong Job`, `Collecting Or Keeping Too Much Data`, `EU Data Moved The Wrong Way`, and `Trying To Work Around GDPR`. The point is to make the GEDD loop easy to follow: annotate the failure in human language first, then turn that observed pattern into the judge gate.
 
 ## Bring Your Own Agent
 
@@ -126,29 +120,24 @@ Use the app when you have a real or proposed agent and need review evidence befo
 
 | Step | What to do | Output |
 |---|---|---|
-| 1. Define | Describe the agent, user, task boundary, and system prompt in `AI PM Coach` | Agent spec and prompt |
+| 1. Define | Describe the agent, user, task boundary, and system prompt in `Coach` | Agent spec and prompt |
 | 2. Build queries | Generate or paste golden queries that cover normal, edge, ambiguous, adversarial, multi-turn, and recovery cases | Query set |
 | 3. Get responses | Run the saved prompt against Bedrock, Anthropic, or a configured runtime, or paste existing traces | Response queue |
-| 4. Annotate | Review each response in `PM Workbench` and capture verdict, code, severity, confidence, and memo | Human labels and codebook |
+| 4. Annotate | Review each response in `Annotations` and capture verdict, code, severity, confidence, and memo | Human labels and codebook |
 | 5. Pattern | Use open coding and axial coding to group repeated failures and root causes | Release-risk model |
-| 6. Judge | Build the judge prompt from the observed codes and examples | LLM-as-a-judge prompt |
-| 7. Handoff | Export the session and ML handoff from `Report` | Engineering package |
+| 6. Specs | Generate Kiro-ready requirements with EARS acceptance criteria and judge gates | `requirements.md` |
+| 7. Judge | Generate the LLM-as-a-Judge prompt from the same failure modes | Judge prompt |
 
 If you already have production traces, use the app as an annotation surface rather than generating new responses. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).
 
-## ML Engineer Handoff
+## Outputs
 
-The Report page contains an `ML Engineer Handoff` section. It is designed to be actionable, not a narrative status update.
+The Outputs page is intentionally narrow:
 
-It gives engineering:
-
-| Handoff field | Why it exists |
-|---|---|
-| Engineering status | Indicates whether the session is blocked by P0 failures, missing a judge, needs calibration, or is ready for a CI pilot |
-| CI gates | Shows current and target values for P0 failures, regression pass rate, human coverage, and judge-human agreement |
-| Artifact status | Confirms whether session handoff, golden dataset, codebook, judge prompt, and calibration evidence are ready |
-| Implementation queue | Prioritizes failure codes by severity and count, with tagged examples and definitions of done |
-| Runbook | Gives commands the ML engineer can run immediately |
+| Output | File | Source |
+|---|---|---|
+| Domain driven spec | `requirements.md` | Error analysis, annotations, failure codebook, severity, and memos |
+| LLM-as-a-Judge | `judge_prompt.txt` or `<agent>_judge_prompt.md` | The same annotated failure modes and release gates |
 
 ## GEDD Power for Kiro
 
@@ -159,15 +148,15 @@ The repository includes a **Kiro Power** (`power-gedd/`) that converts GEDD anno
 The Power packages the GEDD methodology into an on-demand workflow. When activated, it guides domain experts from error analysis to a complete Kiro spec:
 
 ```
-Agent Failures → Annotate → Codebook → Paradigm Model → requirements.md → design.md → tasks.md
+Agent Failures → Annotate → Codebook → requirements.md + LLM Judge
 ```
 
 | GEDD Artifact | Becomes | Output |
 |---------------|---------|--------|
 | Failure codes + severity | User stories + acceptance criteria | requirements.md |
-| Paradigm model (root causes) | Architecture decisions + constraints | design.md |
 | Golden queries + annotations | Verification test cases | requirements.md |
-| Priority queue (severity × frequency × weight) | Ordered implementation tasks | tasks.md |
+| Judge output contract | Release-blocking criteria | LLM Judge prompt |
+| Memos and release gates | Judge rules and rationale | LLM Judge prompt |
 
 ### Install
 
@@ -190,8 +179,6 @@ You: "I want to analyze my agent's failure patterns and create requirements"
 Kiro: [activates GEDD Power, checks for session.json, walks through pipeline]
 ```
 
-Or load the built-in TravelBot demo to see the full pipeline produce a spec from 14 golden queries, 10 failure codes, and a paradigm model.
-
 ### Power structure
 
 ```
@@ -202,8 +189,7 @@ power-gedd/
     ├── session-import.md            # Import error-analysis.md
     ├── pattern-discovery.md         # Open coding → axial coding
     ├── requirements-generation.md   # EARS requirements (baseline + evidence-backed)
-    ├── design-generation.md         # Paradigm models → design.md
-    └── tasks-generation.md          # Priority queue → tasks.md
+    └── judge-generation.md          # Failure modes → LLM Judge
 ```
 
 The Power uses **EARS notation** (Easy Approach to Requirements Syntax, Mavin et al. 2009) — the same constrained natural language format used by Kiro's spec-driven development. Failure codes map to EARS Unwanted Behaviour patterns; paradigm model conditions map to State-driven patterns; golden queries map to Event-driven patterns.

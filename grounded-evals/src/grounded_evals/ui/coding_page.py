@@ -1,4 +1,4 @@
-"""Tag Failures (Open Coding) Annotation Workbench page."""
+"""Annotation page for evidence that generates requirements.md and an LLM Judge."""
 
 import asyncio
 import html as _html
@@ -577,17 +577,17 @@ CODING_CSS = """
 
 @ui.page('/coding')
 def coding_page():
-    page_layout("PM Annotation Workbench", current_path="/coding")
+    page_layout("Annotations", current_path="/coding")
     ui.add_head_html(f"<style>{CODING_CSS}</style>")
 
     with ui.element("section").classes("coding-shell coding-hero"):
         with ui.row().classes("items-start justify-between gap-4 flex-wrap"):
             with ui.column().style("gap:0; min-width:280px; flex:1"):
-                ui.html('<div class="coding-hero-title">PM Annotation Workbench</div>')
+                ui.html('<div class="coding-hero-title">Annotations</div>')
                 ui.html(
                     '<div class="coding-hero-copy">'
                     "Review the customer-facing answer, tag the product failure in PM/domain language, "
-                    "set severity, and turn repeated failure modes into the LLM-as-a-judge prompt."
+                    "set severity, then generate two outputs: Kiro requirements.md and an LLM Judge."
                     '</div>'
                 )
             with ui.row().classes("items-center gap-2 flex-wrap"):
@@ -595,7 +595,8 @@ def coding_page():
                     ("S save", "save"),
                     ("1/2/3 quick code", "keyboard"),
                     ("triage", "bolt"),
-                    ("judge prompt", "gavel"),
+                    ("requirements.md", "description"),
+                    ("LLM Judge", "gavel"),
                 ]:
                     ui.html(
                         f'<span class="coding-flow-pill"><span class="material-icons">{icon}</span>{label}</span>'
@@ -603,9 +604,8 @@ def coding_page():
         with ui.element("div").classes("coding-flow-strip"):
             for label, icon in [
                 ("Open coding", "label"),
-                ("Axial coding", "account_tree"),
-                ("Saturation check", "show_chart"),
-                ("Judge from evidence", "gavel"),
+                ("Kiro requirements.md", "description"),
+                ("LLM Judge", "gavel"),
             ]:
                 ui.html(
                     f'<span class="coding-flow-pill"><span class="material-icons">{icon}</span>{label}</span>'
@@ -640,13 +640,13 @@ def coding_page():
                 "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 480px"
             ):
                 ui.icon("bug_report").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("Error Analysis → Annotations → Specs").style(
+                ui.label("SME Error Analysis → Annotations → Domain Driven Specs Development").style(
                     "font-size: 1.1rem; font-weight: 700; color: var(--text-primary)"
                 )
                 ui.label(
-                    "Load a 50-query demo to see the full lifecycle: "
-                    "analyze agent errors, annotate failures with domain expertise, "
-                    "then generate improved specs and a judge prompt from the evidence."
+                    "Load a 50-query demo to see the full lifecycle: analyze agent errors, "
+                    "annotate failures with domain expertise, then generate Kiro requirements.md "
+                    "and an LLM Judge from the evidence."
                 ).style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
@@ -678,7 +678,7 @@ def coding_page():
                 ui.html(
                     '<div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); '
                     'margin-bottom:6px">'
-                    '🔄 Continuous Learning Demo — Error Analysis → Annotations → Specs'
+                    'Continuous Learning Demo - requirements.md + LLM Judge'
                     '</div>'
                 )
                 ui.html(
@@ -688,7 +688,7 @@ def coding_page():
                     f'<strong>{uncoded_count}</strong> are uncoded — try annotating them yourself.<br>'
                     '<span style="color:var(--accent-bright)">The lifecycle:</span> '
                     'Review failures → Name the pattern → Set severity → '
-                    'Export as error-analysis.md → Generate improved specs in Kiro'
+                    'Generate Kiro requirements.md + LLM Judge'
                     '</div>'
                 )
 
@@ -1214,8 +1214,8 @@ def coding_page():
 
             if not responses:
                 with ui.column().classes("items-start gap-2"):
-                    ui.label('No responses to code yet. Start with Coach or load the PM demo from Home.').style("color: var(--text-tertiary)")
-                    ui.button("Open AI PM Coach", icon="auto_awesome",
+                    ui.label('No responses to annotate yet. Start with Coach or load a demo from Error Analysis.').style("color: var(--text-tertiary)")
+                    ui.button("Open Coach", icon="auto_awesome",
                               on_click=lambda: ui.navigate.to("/coach")).props("size=sm color=primary")
                 return
 
@@ -1460,7 +1460,7 @@ def coding_page():
                             "font-size:0.86rem; font-weight:700; color:var(--text-primary)"
                         )
                         ui.label(
-                            "Generated directly from PM annotations and failure modes. No mapping step."
+                            "Generated directly from the same annotations that feed requirements.md."
                         ).style("font-size:0.72rem; color:var(--text-tertiary); line-height:1.45")
                     ui.badge(f"{len(ann_list)} annotations · {mode_count} modes").props("outline")
 
@@ -1559,7 +1559,7 @@ def coding_page():
                         ui.button("Download judge prompt", icon="download", on_click=download_judge_prompt).props(
                             "size=xs outline dark"
                         ).style("color:var(--accent-bright); border-color:var(--border-default)")
-                        ui.button("Report", icon="assessment", on_click=lambda: ui.navigate.to("/report")).props(
+                        ui.button("Outputs", icon="download", on_click=lambda: ui.navigate.to("/report")).props(
                             "size=xs flat"
                         ).style("color:var(--accent-bright)")
 

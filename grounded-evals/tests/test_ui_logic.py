@@ -4,8 +4,6 @@ from __future__ import annotations
 
 from unittest.mock import patch
 
-import pytest
-
 # ── _build_failure_patterns (report_page) ────────────────────────────────────
 
 
@@ -281,25 +279,34 @@ def test_is_similar_near_duplicate_codes():
 # ── _get_progress (home_page) ─────────────────────────────────────────────────
 
 
-def test_main_nav_keeps_ai_pm_flow_as_top_level_tabs():
+def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     from grounded_evals.ui.layout import NAV_ITEMS
 
     labels = [item["label"] for item in NAV_ITEMS]
     paths = [item["path"] for item in NAV_ITEMS]
 
-    assert labels == ["Home", "AI PM Coach", "PM Workbench", "Kiro Requirements", "Spec Quality", "Judge", "Report"]
-    assert paths == ["/", "/coach", "/coding", "/requirements", "/improvement", "/judge", "/report"]
+    assert labels == [
+        "Coach",
+        "Error Analysis",
+        "Annotations",
+        "Kiro requirements.md",
+        "LLM Judge",
+        "Outputs",
+    ]
+    assert paths == ["/coach", "/", "/coding", "/requirements", "/judge", "/report"]
     assert "Demos" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
-    assert next(item for item in NAV_ITEMS if item["label"] == "Kiro Requirements")["primary"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "Kiro requirements.md")["output"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "LLM Judge")["output"] is True
 
 
-def test_ai_pm_progress_rail_uses_coach_to_judge_flow():
+def test_progress_rail_uses_coach_to_output_flow():
     from grounded_evals.ui import layout
 
     storage = {
         "session_data": {
-            "agent_spec": {"name": "ProducerGate"},
+            "agent_spec": {"name": "ProducerGate", "system_prompt": "Stay grounded."},
             "golden_prompts": [{"prompt_text": "q1"}],
         },
         "coding_annotations": [{"codes": ["Feature Promise Hallucination"]}],
@@ -307,13 +314,21 @@ def test_ai_pm_progress_rail_uses_coach_to_judge_flow():
     with patch.object(layout, "app", _make_mock_app(storage)):
         steps = layout._get_progress_state()
 
-    assert [step["path"] for step in steps] == ["/coach", "/coding", "/requirements", "/judge", "/report"]
+    assert [step["path"] for step in steps] == [
+        "/coach",
+        "/",
+        "/coding",
+        "/requirements",
+        "/judge",
+        "/report",
+    ]
     assert [step["label"] for step in steps] == [
         "Coach",
-        "PM Workbench",
-        "Requirements",
-        "Judge",
-        "Report",
+        "Error Analysis",
+        "Annotations",
+        "Kiro requirements.md",
+        "LLM Judge",
+        "Outputs",
     ]
 
 
@@ -418,8 +433,8 @@ def test_domain_registry_includes_all_launch_demos():
 
     assert len(domains) >= 22
     assert {
-        "AWS Cloud GDPR Auditor Workbench",
-        "AAA Game Localization Workbench",
+        "AWS Cloud GDPR Auditor Outputs",
+        "AAA Game Localization Outputs",
         "AAA Game Producer",
         "AAA Game Localization",
         "AAA Game Operator",
@@ -448,7 +463,7 @@ def test_home_expert_discoveries_are_domain_specific():
     assert all(item["prompt"] and item["unsafe_answer"] and item["gate"] for item in featured)
 
 
-def test_inductive_pm_demo_loads_50_query_localization_workbench():
+def test_inductive_pm_demo_loads_50_query_localization_outputs():
     from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
 
     storage = {"authenticated": True, "email": "pm@example.com"}
@@ -457,7 +472,7 @@ def test_inductive_pm_demo_loads_50_query_localization_workbench():
     session = storage["session_data"]
     methodology = storage["demo_methodology"]
 
-    assert session["agent_spec"]["name"] == "LocaleGate PM Workbench"
+    assert session["agent_spec"]["name"] == "LocaleGate Outputs"
     assert len(session["golden_prompts"]) == 50
     assert len(storage["annotations"]) == 50
     assert len(storage["coding_annotations"]) == 40  # 10 left uncoded for user to try
@@ -470,10 +485,26 @@ def test_inductive_pm_demo_loads_50_query_localization_workbench():
         code["name"] for code in storage["codebook"]
     }
     assert "localization" in storage["_generated_judge_prompt"].lower()
+
+
+def test_requirements_page_hydrates_demo_codebook_into_kiro_requirements():
+    from grounded_evals.ui.ears_page import _build_requirements_markdown, _session_from_storage
+    from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
+
+    storage = {"authenticated": True, "email": "pm@example.com"}
+    load_inductive_pm_demo(storage)
+    session = _session_from_storage(storage)
+    markdown = _build_requirements_markdown(session, storage["codebook"])
+
+    assert len(session.codes) == 10
+    assert "# Requirements Document" in markdown
+    assert "Placeholder And Markup Corruption" in markdown
+    assert "LLM-as-Judge Release Gate" in markdown
+    assert "THE SYSTEM SHALL return pass_fail, failure_code, severity" in markdown
     assert "open coding" in storage["_generated_judge_prompt"].lower()
 
 
-def test_gdpr_auditor_demo_loads_50_query_workbench():
+def test_gdpr_auditor_demo_loads_50_query_outputs():
     from grounded_evals.ui.gdpr_auditor_demo import load_gdpr_auditor_demo
 
     storage = {"authenticated": True, "email": "dpo@example.com"}
@@ -482,7 +513,7 @@ def test_gdpr_auditor_demo_loads_50_query_workbench():
     session = storage["session_data"]
     methodology = storage["demo_methodology"]
 
-    assert session["agent_spec"]["name"] == "AWS Cloud GDPR Auditor Workbench"
+    assert session["agent_spec"]["name"] == "AWS Cloud GDPR Auditor Outputs"
     assert len(session["golden_prompts"]) == 50
     assert len(storage["annotations"]) == 50
     assert len(storage["coding_annotations"]) == 40  # 10 left uncoded for user to try
@@ -733,7 +764,7 @@ def test_get_all_labels_defaults_only():
     with patch.object(eval_tab, "app", _make_mock_app({})):
         labels = eval_tab._get_all_labels()
     assert len(labels) == len(eval_tab.DEFAULT_LABELS)
-    keys = {l["key"] for l in labels}
+    keys = {label["key"] for label in labels}
     assert "correct" in keys
     assert "partial" in keys
     assert "incorrect" in keys

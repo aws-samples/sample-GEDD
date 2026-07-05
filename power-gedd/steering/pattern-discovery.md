@@ -1,6 +1,7 @@
 # Pattern Discovery (Open Coding → Axial Coding)
 
 Transform raw annotations into structured failure patterns using grounded theory.
+The result feeds the two GEDD product outputs: Kiro `requirements.md` and the LLM Judge.
 
 ## Prerequisites
 - Completed annotations with failure codes, severity, and memos
@@ -158,4 +159,4 @@ After pattern discovery, you have:
 - **Paradigm models** — Causal analysis for each major failure
 - **Dimension weights** — Severity-informed priority ordering
 
-This feeds into Requirements Generation (`requirements-generation.md`).
+This feeds into Requirements Generation (`requirements-generation.md`) and Judge Generation (`judge-generation.md`).

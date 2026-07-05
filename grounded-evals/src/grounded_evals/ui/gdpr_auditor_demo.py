@@ -1,4 +1,4 @@
-"""AWS cloud GDPR compliance PM workbench demo with 50 synthetic traces."""
+"""AWS cloud GDPR demo that generates requirements.md and an LLM Judge."""
 
 from __future__ import annotations
 
@@ -1170,12 +1170,13 @@ GDPR_AUDITOR_TRACES = _iter_traces()
 
 GDPR_AUDITOR_SESSION = {
     "agent_spec": {
-        "name": "AWS Cloud GDPR Auditor Workbench",
+        "name": "AWS Cloud GDPR Auditor Outputs",
         "description": (
             "AWS cloud GDPR compliance assistant for platform, security, data, and privacy "
-            "teams. The 50-query PM workbench uses synthetic AWS scenarios across S3, "
+            "teams. The 50-query output demo uses synthetic AWS scenarios across S3, "
             "CloudWatch, CloudTrail, DynamoDB, Redshift, Rekognition, Bedrock, and "
-            "cross-region data flows to derive judge criteria from observed cloud privacy risk."
+            "cross-region data flows to generate Kiro requirements.md and an LLM Judge "
+            "from observed cloud privacy risk."
         ),
         "capabilities": [
             {"name": "AWS service-by-service GDPR review"},
@@ -1454,7 +1455,7 @@ def _build_gdpr_judge_prompt() -> str:
 GDPR_AUDITOR_JUDGE_PROMPT = _build_gdpr_judge_prompt()
 
 GDPR_AUDITOR_METHODOLOGY = {
-    "name": "50-Query AWS Cloud GDPR Auditor PM Workbench",
+    "name": "50-Query AWS Cloud GDPR Auditor Outputs",
     "synthetic_query_count": len(GDPR_AUDITOR_TRACES),
     "annotation_count": len(GDPR_AUDITOR_CODING_ANNOTATIONS),
     "open_code_count": len(GDPR_AUDITOR_CODEBOOK),
@@ -1469,7 +1470,8 @@ GDPR_AUDITOR_METHODOLOGY = {
         "Open Coding: PM/DPO reviews AWS cloud privacy traces and names the failure in human language.",
         "Axial Coding: PM/DPO groups those tags into legal basis, sensitive data, logging and minimization, rights, DPIA, responsibility split, transfers, incident response, and recordkeeping causes.",
         "Theoretical Saturation: final 8 traces repeat existing codes, adding 0 new categories.",
-        "Judge Outcome: the prompt uses the saturated AWS cloud GDPR codebook as audit gates.",
+        "Output 1: Kiro requirements.md turns the saturated AWS cloud GDPR codebook into EARS acceptance criteria.",
+        "Output 2: the LLM Judge prompt uses the saturated AWS cloud GDPR codebook as audit gates.",
     ],
     "axial_categories": {
         category: [
@@ -1518,7 +1520,7 @@ GDPR_AUDITOR_SAMPLE_QUERIES = [
 
 
 def load_gdpr_auditor_demo(storage: dict) -> None:
-    """Populate storage with the 50-query AWS cloud GDPR auditor PM workbench demo.
+    """Populate storage with the 50-query AWS cloud GDPR two-output demo.
 
     Loads all 50 responses for error analysis but only pre-annotates 40,
     leaving 10 uncoded so the user can experience the annotation workflow.

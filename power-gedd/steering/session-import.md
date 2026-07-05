@@ -1,6 +1,6 @@
 # Session Import Workflow
 
-Guide for importing a GEDD error-analysis markdown file into the spec generation pipeline.
+Guide for importing a GEDD error-analysis markdown file into the two-output generation pipeline.
 
 ## What is error-analysis.md?
 
@@ -8,7 +8,7 @@ The `error-analysis.md` file is the canonical handoff artifact from the GEDD web
 It contains structured annotation evidence in a human-readable, LLM-optimized markdown format.
 
 Export it from:
-- **Web app:** Report page → "Error Analysis (MD)" button
+- **Web app:** Outputs page or session export
 - **CLI:** `grounded-evals export-md --session session.json`
 
 ## Expected Structure
@@ -82,21 +82,20 @@ Extract each section and report status:
 
 | Section | Required For | Status |
 |---------|-------------|--------|
-| Agent Spec | All docs | ✓/✗ |
-| Golden Queries | Requirements | ✓/✗ |
-| Failure Codebook | Requirements, Design | ✓/✗ |
-| Annotated Failures | Requirements | ✓/✗ |
-| Paradigm Model | Design | ✓/✗ |
-| Saturation Evidence | All docs | ✓/✗ |
+| Agent Spec | Both outputs | ✓/✗ |
+| Golden Queries | Requirements, Judge | ✓/✗ |
+| Failure Codebook | Requirements, Judge | ✓/✗ |
+| Annotated Failures | Requirements, Judge | ✓/✗ |
+| Paradigm Model | Requirement rationale | ✓/✗ |
+| Saturation Evidence | Output confidence | ✓/✗ |
 | Memos | Context enrichment | ✓/✗ |
 
-### Step 3: Assess readiness for each document
+### Step 3: Assess readiness for each output
 
-| Document | Minimum Required |
-|----------|-----------------|
+| Output | Minimum Required |
+|--------|-----------------|
 | requirements.md | Agent Spec + Codebook + Annotated Failures (severity ≥ critical) |
-| design.md | Above + Paradigm Model with causal conditions |
-| tasks.md | Above + requirements.md + design.md already generated |
+| llm-judge.md | Agent Spec + Codebook + Annotated Failures + release-gate memos |
 
 ### Step 4: Report gaps
 
@@ -124,17 +123,17 @@ Parse the markdown sections and prepare data for spec generation:
 ### Step 6: Proceed to generation
 
 Once validated, proceed through:
-1. `requirements-generation.md` — Generate requirements from codebook + annotated failures
-2. `design-generation.md` — Generate design from paradigm model
-3. `tasks-generation.md` — Generate tasks from priority queue
+1. `requirements-generation.md` — Generate Kiro requirements from codebook + annotated failures
+2. `judge-generation.md` — Generate the LLM Judge from the same failure modes
+
+Only run `design-generation.md` or `tasks-generation.md` if the user explicitly asks for Kiro follow-on docs after the two GEDD outputs are complete.
 
 ---
 
 ## Handling Partial Files
 
 ### No paradigm model section
-Skip design.md generation. Generate requirements.md and tasks.md only.
-Flag that design requires root cause analysis first.
+Proceed with requirements.md and llm-judge.md. Flag that root-cause rationale is weaker without paradigm model evidence.
 
 ### No severity in codebook
 Default all codes to severity "functional". Warn the user that prioritization

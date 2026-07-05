@@ -1126,7 +1126,7 @@ def mlflow_export(session: str, results: str, experiment: str | None,
 @click.option("--output-dir", "-o", default=".", show_default=True,
               help="Directory to write output files to")
 def generate_ears(session: str, output_dir: str) -> None:
-    """Generate EARS requirements + baseline + improvement report from a GEDD session."""
+    """Generate Kiro requirements.md + baseline + improvement report from a GEDD session."""
     from uuid import UUID
 
     from grounded_evals.ears.baseline import BaselineGenerator
@@ -1182,7 +1182,7 @@ def generate_ears(session: str, output_dir: str) -> None:
 
     # Render outputs
     parser = EARSParser()
-    gedd_md = parser.pretty_print(gedd_doc)
+    gedd_md = parser.kiro_requirements_md(gedd_doc)
     baseline_md = parser.pretty_print(baseline_doc)
 
     # Format improvement report as markdown
@@ -1201,17 +1201,17 @@ def generate_ears(session: str, output_dir: str) -> None:
     report_path.write_text(report_md)
 
     # Print summary
-    click.echo(f"\nEARS Requirements Generated for: {gedd_doc.agent_name}")
-    click.echo(f"  Requirements : {len(gedd_doc.requirements)} (GEDD-driven)")
+    click.echo(f"\nKiro requirements.md generated for: {gedd_doc.agent_name}")
+    click.echo(f"  Requirements : {len(gedd_doc.requirements)} (domain-driven)")
     click.echo(f"  Baseline     : {len(baseline_doc.requirements)} (generic)")
     click.echo(f"  Improvement  : {report.overall_improvement:.1f}% overall")
-    click.echo(f"\n  Output files:")
+    click.echo("\n  Output files:")
     click.echo(f"    {reqs_path}")
     click.echo(f"    {baseline_path}")
     click.echo(f"    {report_path}")
 
     if report.warnings:
-        click.echo(f"\n  Warnings:")
+        click.echo("\n  Warnings:")
         for warning in report.warnings:
             click.echo(f"    ⚠ {warning}")
     click.echo()

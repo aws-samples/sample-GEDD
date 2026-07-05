@@ -1,8 +1,8 @@
 # Requirements Generation — EARS Notation
 
-Generate requirements using EARS (Easy Approach to Requirements Syntax) — the same notation
-used by Kiro's spec-driven development workflow. Requirements start as baseline assumptions
-from the agent spec, then get upgraded with evidence from domain expert annotations.
+Generate Kiro `requirements.md` using EARS (Easy Approach to Requirements Syntax).
+The requirements start from the agent spec and become domain-driven through SME error
+analysis, failure codes, severity, and annotation memos.
 
 ## EARS Overview
 
@@ -131,81 +131,36 @@ instead of escalating to human per system prompt rule.
 
 ## Requirements Document Structure
 
-Generate `.kiro/specs/{agent-name}/requirements.md`:
+Generate `.kiro/specs/{agent-name}/requirements.md` using Kiro's requirements-first structure:
 
 ```markdown
-# Requirements: {Agent Name}
+# Requirements Document
 
-**Iteration:** {N} | **Notation:** EARS (Mavin et al. 2009)
-**Evidence:** {X} annotations, {Y} failure codes, {Z}% saturation
+## Introduction
 
-## EARS Notation Reference
+{Agent purpose, target users, evidence summary, and annotation coverage.}
 
-| Keyword | Pattern | Meaning |
-|---------|---------|---------|
-| (none) | The system SHALL... | Always active (Ubiquitous) |
-| WHEN | WHEN trigger, the system SHALL... | Response to event |
-| WHILE | WHILE condition, the system SHALL... | Active during state |
-| IF...THEN | IF unwanted, THEN the system SHALL... | Fault/error handling |
-| WHILE+WHEN | WHILE cond, WHEN trigger, SHALL... | Complex behaviour |
+## Requirements
 
-## Improvement Summary (v{N} delta)
+### Requirement 1
 
-| What changed | EARS Pattern | Evidence |
-|-------------|--------------|----------|
-| Added: Price hallucination guard | Unwanted Behaviour | Code: Hallucinated Pricing ×7 |
-| Added: EU261 compliance | Event-driven | Annotation #9, severity: catastrophic |
-| Upgraded: Escalation rule | Complex | Code: Escalation Failure ×4 |
+**User Story:** As a {target user}, I want {domain-safe behavior}, so that {risk is prevented}.
 
-## Glossary
-| Term | Definition |
-|------|------------|
-| {failure code} | {definition from codebook} |
+#### Acceptance Criteria
 
-## Functional Requirements
+1. IF {unwanted failure condition}, THEN THE SYSTEM SHALL {required safe response}.
+2. WHEN {domain trigger}, THE SYSTEM SHALL {expected behavior}.
+3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
 
-### REQ-1: {Highest-priority failure code}
-**Pattern:** Unwanted Behaviour | **Priority:** {score}
-**Status:** ✓ Evidence-backed (iteration {N})
-
-IF {unwanted condition from observed failure},
-THEN the {agent name} SHALL {required response}.
-
-#### Evidence Chain
-- Failure code: {label} (severity {N}, frequency {N})
-- Golden queries: #{id}, #{id}
-- Paradigm model: {phenomenon} → {consequences}
-
-### REQ-2: {Next failure code}
-**Pattern:** Event-driven | **Priority:** {score}
-
-WHEN {trigger from golden query},
-the {agent name} SHALL {expected behaviour}.
-
-#### Evidence Chain
-- ...
-
-### REQ-3: {State-driven from paradigm model}
-**Pattern:** State-driven | **Priority:** {score}
-
-WHILE {causal condition from paradigm model},
-the {agent name} SHALL {preventive behaviour}.
-
-#### Evidence Chain
-- ...
-
-## Non-Functional Requirements
-
-### NFR-1: Coverage Confidence
-The evaluation suite SHALL demonstrate ≥{saturation}% category saturation.
-
-### NFR-2: Judge Agreement
-The automated LLM judge SHALL achieve Cohen's κ ≥ 0.80 against human annotations.
-
-### NFR-3: Regression Gate
-WHEN a code change is proposed, the CI pipeline SHALL verify all previously-passing
-golden queries continue to pass before merge.
+**Evidence:** Failure code `{code}`, severity `{severity}`, examples `{query ids}`.
 ```
+
+Add optional evidence sections after requirements only when they help Kiro or reviewers:
+
+- Evidence summary
+- Failure code glossary
+- Traceability table
+- Judge alignment notes
 
 ---
 

@@ -1,4 +1,4 @@
-"""Inductive localization PM annotation workbench demo with 50 synthetic traces."""
+"""Localization demo that generates requirements.md and an LLM Judge."""
 
 from __future__ import annotations
 
@@ -552,9 +552,9 @@ INDUCTIVE_PM_TRACES = _iter_traces()
 
 INDUCTIVE_PM_SESSION = {
     "agent_spec": {
-        "name": "LocaleGate PM Workbench",
+        "name": "LocaleGate Outputs",
         "description": (
-            "Localization QA assistant for Orion Forge Studios. The 50-query PM workbench uses "
+            "Localization QA assistant for Orion Forge Studios. The 50-query annotation set uses "
             "synthetic LQA, storefront, subtitle, RTL, and regional publishing failures to derive "
             "release-gate judge criteria from observed localization risk."
         ),
@@ -777,7 +777,7 @@ def _build_inductive_judge_prompt() -> str:
 INDUCTIVE_PM_JUDGE_PROMPT = _build_inductive_judge_prompt()
 
 INDUCTIVE_PM_METHODOLOGY = {
-    "name": "50-Query Localization PM Workbench",
+    "name": "50-Query Localization Outputs",
     "synthetic_query_count": len(INDUCTIVE_PM_TRACES),
     "annotation_count": len(INDUCTIVE_PM_CODING_ANNOTATIONS),
     "open_code_count": len(INDUCTIVE_PM_CODEBOOK),
@@ -790,7 +790,8 @@ INDUCTIVE_PM_METHODOLOGY = {
         "Open Coding: PM reviews localization traces and names failure modes from the data.",
         "Axial Coding: PM groups codes by runtime, semantic, compliance, locale UI/data, regional, terminology, subtitle, and morphology causes.",
         "Theoretical Saturation: final 8 traces repeat existing codes, adding 0 new categories.",
-        "Judge Outcome: the prompt uses the saturated localization codebook as hard release gates.",
+        "Output 1: Kiro requirements.md turns the saturated codebook into EARS acceptance criteria.",
+        "Output 2: the LLM Judge prompt uses the saturated localization codebook as hard release gates.",
     ],
     "axial_categories": {
         category: [code["name"] for code in INDUCTIVE_PM_CODEBOOK if code["axial_category"] == category]
@@ -823,7 +824,7 @@ INDUCTIVE_PM_SAMPLE_QUERIES = [
 
 
 def load_inductive_pm_demo(storage: dict) -> None:
-    """Populate storage with the 50-query localization PM workbench demo.
+    """Populate storage with the 50-query localization two-output demo.
 
     Loads all 50 responses for error analysis but only pre-annotates 40,
     leaving 10 uncoded so the user can experience the annotation workflow.

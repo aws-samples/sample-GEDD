@@ -5,20 +5,19 @@ import json
 from nicegui import app, ui
 
 NAV_ITEMS = [
-    {"path": "/", "label": "Home", "icon": "dashboard"},
-    {"path": "/coach", "label": "AI PM Coach", "icon": "auto_awesome"},
-    {"path": "/coding", "label": "PM Workbench", "icon": "rate_review"},
-    {"path": "/requirements", "label": "Kiro Requirements", "icon": "description", "primary": True},
-    {"path": "/improvement", "label": "Spec Quality", "icon": "trending_up", "core": True},
-    {"path": "/judge", "label": "Judge", "icon": "gavel"},
-    {"path": "/report", "label": "Report", "icon": "assessment"},
+    {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
+    {"path": "/", "label": "Error Analysis", "icon": "bug_report"},
+    {"path": "/coding", "label": "Annotations", "icon": "rate_review"},
+    {"path": "/requirements", "label": "Kiro requirements.md", "icon": "description", "output": True},
+    {"path": "/judge", "label": "LLM Judge", "icon": "gavel", "output": True},
+    {"path": "/report", "label": "Outputs", "icon": "download"},
 ]
 
 PROJECT_STATE_KEEP_KEYS = {"authenticated", "email", "oauth_tokens", "oauth_state"}
 
 
 def _clear_project_state(storage: dict) -> None:
-    """Clear the loaded demo/project while preserving the current login state."""
+    """Clear the loaded project while preserving the current login state."""
     for key in list(storage.keys()):
         if key not in PROJECT_STATE_KEEP_KEYS:
             storage.pop(key, None)
@@ -207,6 +206,11 @@ body {
 .core-nav-btn {
   color: var(--text-secondary) !important;
 }
+.output-nav-btn {
+  color: var(--accent-bright) !important;
+  border: 1px solid rgba(130,143,255,0.24) !important;
+  background: rgba(94,106,210,0.08) !important;
+}
 
 /* Active nav indicator */
 .nav-active {
@@ -270,9 +274,83 @@ body {
   .app-nav-row .q-btn {
     flex-shrink: 0;
   }
+  .coach-output-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Coach page ──────────────────────────────────────────────────────── */
+.coach-product-panel {
+  width: 100%;
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(130,143,255,0.28);
+  background: linear-gradient(180deg, rgba(94,106,210,0.13), var(--bg-surface-1));
+}
+.coach-product-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 99px;
+  border: 1px solid rgba(130,143,255,0.24);
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.coach-product-title {
+  margin-top: 12px;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  font-weight: 750;
+  color: var(--text-primary);
+}
+.coach-product-copy {
+  max-width: 760px;
+  margin-top: 7px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.coach-output-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.coach-output-card {
+  min-height: 118px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.coach-output-card .material-icons {
+  color: var(--accent-bright);
+  font-size: 1.05rem;
+}
+.coach-output-title {
+  margin-top: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.coach-output-copy {
+  margin-top: 4px;
+  font-size: 0.7rem;
+  line-height: 1.42;
+  color: var(--text-tertiary);
+}
+.coach-quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
 .chat-card { background: var(--bg-surface-2); border-radius: 12px; border: 1px solid var(--border-subtle); }
 .msg-user { background: var(--accent-tint); border: 1px solid rgba(94,106,210,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; color: var(--text-primary); }
 .msg-ai { background: var(--bg-surface-1); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--accent); color: var(--text-secondary); }
@@ -313,20 +391,27 @@ def _get_progress_state() -> list[dict]:
     """Compute progress rail steps from session state."""
     s = app.storage.user
     session_data = s.get("session_data", {})
+    agent_spec = session_data.get("agent_spec", {}) if isinstance(session_data, dict) else {}
     golden = session_data.get("golden_prompts", [])
     annotations = s.get("coding_annotations", [])
+    codebook = s.get("codebook", [])
     judge = s.get("_generated_judge_prompt", "")
+    has_agent = bool(agent_spec.get("name")) if isinstance(agent_spec, dict) else False
+    has_prompt = bool(agent_spec.get("system_prompt")) if isinstance(agent_spec, dict) else False
+    coach_done = has_agent and has_prompt and bool(golden)
+    has_domain_spec_source = bool(session_data.get("codes") or codebook)
 
     steps = [
-        {"label": "Coach", "path": "/coach", "done": bool(golden)},
-        {"label": "PM Workbench", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
-        {"label": "Requirements", "path": "/requirements", "done": bool(session_data.get("codes"))},
-        {"label": "Judge", "path": "/judge", "done": bool(judge)},
-        {"label": "Report", "path": "/report", "done": False},
+        {"label": "Coach", "path": "/coach", "done": coach_done},
+        {"label": "Error Analysis", "path": "/", "done": bool(golden)},
+        {"label": "Annotations", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
+        {"label": "Kiro requirements.md", "path": "/requirements", "done": has_domain_spec_source},
+        {"label": "LLM Judge", "path": "/judge", "done": bool(judge)},
+        {"label": "Outputs", "path": "/report", "done": bool(has_domain_spec_source and judge)},
     ]
-    # Mark the analysis step done if all queries have PM annotations.
+    # Mark the annotation step done if all queries have SME annotations.
     if golden and len(annotations) >= len(golden):
-        steps[1]["done"] = True
+        steps[2]["done"] = True
     return steps
 
 
@@ -335,7 +420,6 @@ def page_layout(title: str = "", current_path: str = ""):
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
 
     # Detect current path from title mapping if not provided
-    path_map = {item["label"]: item["path"] for item in NAV_ITEMS}
     if not current_path:
         for item in NAV_ITEMS:
             if item["label"].lower() in title.lower():
@@ -352,7 +436,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">LLM Judge + SPEC Framework</span>'
+                '<span class="brand-context">SME Error Analysis → Annotations → Domain Driven Specs Development</span>'
                 '</span>'
             )
 
@@ -366,7 +450,9 @@ def page_layout(title: str = "", current_path: str = ""):
                 if is_active:
                     button.classes("nav-active")
                 elif item.get("primary"):
-                    button.classes("coach-nav-btn").tooltip("Open the PM annotation workbench")
+                    button.classes("coach-nav-btn").tooltip("Open Coach")
+                elif item.get("output"):
+                    button.classes("output-nav-btn").tooltip("Open generated output")
                 elif item.get("core"):
                     button.classes("core-nav-btn")
                 button.style(
@@ -411,12 +497,13 @@ def page_layout(title: str = "", current_path: str = ""):
                     "min-width:380px; padding:1.5rem; background:var(--bg-surface-2); "
                     "border:1px solid var(--border-default); border-radius:12px"
                 ):
-                    ui.label("Report Handoff").style(
+                    ui.label("Output Bundle").style(
                         "font-size:1rem; font-weight:600; color:var(--text-primary); "
                         "margin-bottom:8px"
                     )
                     ui.label(
-                        "Export the evidence bundle behind the release report, or import a saved PM review session."
+                        "Export or import the evidence behind the two generated outputs: "
+                        "Kiro requirements.md and the LLM-as-Judge prompt."
                     ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
 
                     def export_session():
@@ -484,17 +571,17 @@ def page_layout(title: str = "", current_path: str = ""):
         with ui.row().classes("app-action-row items-center gap-xs"):
             ui.button(icon="refresh", on_click=confirm_new_project).props(
                 "flat round size=sm"
-            ).style("color: var(--text-muted)").tooltip("Reset demo / new project")
+            ).style("color: var(--text-muted)").tooltip("Reset project")
 
             ui.button(icon="ios_share", on_click=open_session_dialog).props(
                 "flat round size=sm"
-            ).style("color: var(--text-muted)").tooltip("Report handoff")
+            ).style("color: var(--text-muted)").tooltip("Output bundle")
 
             ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
                 "color: var(--text-muted)"
             ).tooltip("Logout")
 
-    # Evidence-driven requirements flow: coach -> annotate -> requirements -> judge -> report.
+    # Evidence-driven output flow: coach -> analyze -> annotate -> requirements.md -> judge -> outputs.
     workflow_paths = {"/coach", "/coding", "/requirements", "/improvement", "/judge", "/report"}
     if current_path in workflow_paths:
         steps = _get_progress_state()

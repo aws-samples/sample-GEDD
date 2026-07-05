@@ -1,194 +1,211 @@
 ---
 name: "gedd"
-displayName: "GEDD – Continuous Learning for Agent Specs"
-description: "A continuous learning lifecycle where Kiro-generated baseline requirements are improved through domain expert error analysis and annotations — turning observed agent failures into better specs, every iteration"
-keywords: ["gedd", "error analysis", "annotation", "failure codes", "codebook", "agent evaluation", "grounded theory", "open coding", "axial coding", "judge", "golden dataset", "saturation", "paradigm model", "llm judge", "eval", "requirements", "continuous improvement"]
+displayName: "GEDD - Kiro Domain Specs + LLM Judge"
+description: "A Kiro Power for turning SME error analysis and annotations into two evidence-backed outputs: Kiro requirements.md and an LLM-as-a-Judge release gate"
+keywords: ["gedd", "kiro", "requirements.md", "ears", "llm judge", "error analysis", "annotation", "failure codes", "codebook", "agent evaluation", "grounded theory", "open coding", "axial coding", "golden dataset", "saturation", "domain specs"]
 author: "GEDD Team"
 ---
 
-# GEDD Power – Continuous Learning for Agent Specs
+# GEDD Power - Kiro Domain Specs + LLM Judge
 
-Kiro generates baseline requirements. The agent runs. A domain expert reviews what went wrong. GEDD converts those observations into improved requirements. The cycle repeats.
+GEDD is the Coach-led workflow for converting domain expert review of AI agent failures into two concrete artifacts:
 
-This is not a one-shot spec generator — it's a **continuous learning lifecycle** where every annotation round makes the specs more precise, more grounded, and more defensible.
+1. `.kiro/specs/{agent-name}/requirements.md`
+2. `llm-judge.md`
 
-## The Lifecycle
+Use the GEDD web UI when SMEs need a guided annotation surface. Use this Kiro Power when the same workflow should run inside Kiro and write Kiro-ready specs directly into the workspace.
+
+## Product Workflow
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                 │
-│   ① Kiro Baseline ──→ ② Agent Runs ──→ ③ Domain Expert         │
-│        Specs              Queries           Annotates            │
-│         ↑                                      │                │
-│         │                                      ↓                │
-│   ⑤ Improved    ←── ④ GEDD Processes ←── Failure Codes,        │
-│      Specs            Evidence              Severity,           │
-│                                             Memos               │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
+Coach -> SME Error Analysis -> Annotations -> Kiro requirements.md + LLM Judge
 ```
 
 | Phase | Who | What Happens | Output |
-|-------|-----|-------------|--------|
-| ① Baseline | Kiro + engineer | Generate initial requirements from agent description | `requirements.md` v1 |
-| ② Run | Agent | Execute golden queries against the agent | Responses |
-| ③ Annotate | Domain expert | Review responses, name failures, set severity | `error-analysis.md` |
-| ④ Process | GEDD Power | Discover patterns, build paradigm models | Codebook + causal analysis |
-| ⑤ Improve | Kiro + GEDD | Upgrade specs with evidence-backed criteria | `requirements.md` v2+ |
+|-------|-----|--------------|--------|
+| Coach | SME + product owner | Define the agent, users, task boundary, risk posture, and query plan | Agent spec + golden queries |
+| Error Analysis | SME + evaluator | Review real or proposed agent responses and identify incorrect behavior | Evidence queue |
+| Annotations | SME | Capture verdict, failure code, severity, confidence, and memo | Codebook + annotated failures |
+| Domain Specs | GEDD Power + Kiro | Convert failures into EARS acceptance criteria in Kiro's requirements format | `requirements.md` |
+| Judge | GEDD Power + evaluator | Convert the same failure modes into an automated release gate | `llm-judge.md` |
 
-Each iteration adds precision. The first pass catches broad failures. The second sharpens severity. The third reaches saturation. By v3, you have requirements that no LLM could have generated from first principles — they come from observed reality.
+Kiro's feature-spec workflow is requirements-first. GEDD focuses that first document on evidence-backed domain behavior: user stories and EARS acceptance criteria that come from observed failures rather than generic assumptions.
 
-## What Gets Better Each Iteration
+## What GEDD Generates
 
-| Spec Element | Baseline (v1) | After Annotations (v2+) |
-|-------------|---------------|------------------------|
-| User stories | Generic capabilities | Grounded in observed failures |
-| Acceptance criteria | Assumed edge cases | Actual incorrect responses as test cases |
-| Correctness properties | Theoretical constraints | Evidence-backed invariants from paradigm model |
-| Priority ordering | Engineer's guess | severity × frequency × dimension_weight |
-| Coverage confidence | Unknown | Saturation metrics from annotation rounds |
-| Verification | Unit tests | Golden queries + LLM judge with κ ≥ 0.80 |
+### Primary Output 1: Kiro `requirements.md`
 
----
+Generated at:
 
-# Onboarding
+```text
+.kiro/specs/{agent-name}/requirements.md
+```
 
-## Step 1: Assess the current state
+The file uses Kiro's requirements structure and EARS notation:
 
-Check what exists in the workspace:
+```markdown
+# Requirements Document
 
-**Already have specs?** Look for existing Kiro specs:
-- `.kiro/specs/{agent-name}/requirements.md`
-- `.kiro/specs/{agent-name}/design.md`
+## Introduction
 
-**Already have annotations?** Look for GEDD output:
-- `./*_error_analysis.md`
-- `./error-analysis.md`
-- `./outputs/*_error_analysis.md`
-- `./session.json` (legacy — suggest `grounded-evals export-md`)
+## Requirements
 
-**Starting fresh?** No specs, no annotations — begin at Phase ①.
+### Requirement 1
+**User Story:** As a {user}, I want {capability}, so that {domain outcome}.
 
-Based on what's found, determine where in the lifecycle to start:
-- Specs exist, no annotations → "Let's run the agent and annotate what goes wrong"
-- Annotations exist, no specs → "Let's generate improved requirements from this evidence"
-- Both exist → "Let's compare the baseline to the annotations and upgrade the specs"
-- Neither exists → "Let's start with a baseline spec for your agent"
+#### Acceptance Criteria
+1. WHEN {trigger}, THE SYSTEM SHALL {expected behavior}.
+2. IF {unwanted condition}, THEN THE SYSTEM SHALL {safe response}.
+3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
+```
 
-## Step 2: Understand the evidence
+### Primary Output 2: LLM Judge
 
-When loading an error-analysis.md, check for:
-- **Agent spec** — name, description, capabilities, system prompt
-- **Golden queries** — test queries with category assignments
-- **Annotations** — verdicts (correct/partial/incorrect), failure codes, severity, memos
-- **Codebook** — failure labels with definitions
-- **Paradigm model** — causal analysis (conditions → phenomenon → consequences)
-- **Saturation status** — whether categories are fully covered
+Generated at:
 
-Report what's present and what's missing. Identify which lifecycle phase to enter.
+```text
+.kiro/specs/{agent-name}/llm-judge.md
+```
 
-## Step 3: Create workspace hook
-
-Create a hook at `.kiro/hooks/gedd-review.kiro.hook`:
+The judge prompt enforces the same failure codes and release gates used in `requirements.md`. It should return a structured decision with:
 
 ```json
 {
-  "name": "GEDD Learning Cycle",
+  "pass_fail": "pass | fail",
+  "failure_code": "domain failure label or null",
+  "severity": "low | medium | high | critical | catastrophic",
+  "rationale": "why the response passes or fails",
+  "evidence_references": ["query id", "requirement id"],
+  "recommended_action": "ship | revise | block release"
+}
+```
+
+## Source Evidence
+
+GEDD expects one of these inputs:
+
+- A GEDD web UI export containing session data, annotations, codebook, and judge prompt inputs
+- A markdown `error-analysis.md` handoff
+- Manually supplied agent description, golden queries, and SME annotations
+
+The minimum viable evidence for generation:
+
+| Evidence | Required For |
+|----------|--------------|
+| Agent name and task boundary | Both outputs |
+| Target users and capabilities | User stories |
+| Golden queries or traces | Acceptance criteria and judge examples |
+| SME verdicts | Failure-mode grounding |
+| Failure codes | Requirements and judge rules |
+| Severity and memos | Priority, release gates, rationale |
+
+## EARS Mapping
+
+Use EARS patterns from the domain evidence:
+
+| Evidence | EARS Pattern | Output |
+|----------|--------------|--------|
+| Always-active rule | Ubiquitous | `THE SYSTEM SHALL ...` |
+| Triggering user scenario | Event-driven | `WHEN ..., THE SYSTEM SHALL ...` |
+| Domain state or context | State-driven | `WHILE ..., THE SYSTEM SHALL ...` |
+| Observed unsafe failure | Unwanted behavior | `IF ..., THEN THE SYSTEM SHALL ...` |
+| State plus trigger | Complex | `WHILE ..., WHEN ..., THE SYSTEM SHALL ...` |
+
+Most GEDD failures map naturally to unwanted behavior because the SME has already named what must not happen again.
+
+## Onboarding
+
+### Step 1: Assess Workspace State
+
+Check for existing artifacts:
+
+- `.kiro/specs/{agent-name}/requirements.md`
+- `.kiro/specs/{agent-name}/llm-judge.md`
+- `./*_error_analysis.md`
+- `./error-analysis.md`
+- `./outputs/*_error_analysis.md`
+- `./session.json`
+
+Choose the entry point:
+
+| Found | Start Here |
+|-------|------------|
+| No evidence, no spec | Coach the agent definition and golden queries |
+| Evidence, no requirements | Generate Kiro `requirements.md` and LLM Judge |
+| Existing requirements, new annotations | Upgrade requirements and judge from the delta |
+| Requirements but no judge | Generate LLM Judge from the same failure modes |
+
+### Step 2: Validate Evidence
+
+Before generation, report what is present and missing:
+
+- Agent spec
+- System prompt or behavior contract
+- Golden queries or traces
+- SME annotations
+- Failure codebook
+- Severity labels
+- Memos or release-gate notes
+- Saturation evidence
+
+If failure codes or SME annotations are missing, do not fabricate domain requirements. Ask for annotation work first.
+
+### Step 3: Generate the Two Outputs
+
+Load steering files in this order:
+
+1. `steering/annotation-workflow.md` if evidence is missing or unclear
+2. `steering/pattern-discovery.md` if codes need consolidation
+3. `steering/requirements-generation.md` to write Kiro `requirements.md`
+4. `steering/judge-generation.md` to write `llm-judge.md`
+
+Optional Kiro follow-ons:
+
+- `steering/design-generation.md`
+- `steering/tasks-generation.md`
+
+These are not the core GEDD product. Generate them only when the user explicitly wants Kiro design/tasks after `requirements.md` and the LLM Judge are complete.
+
+## Workspace Hook
+
+Create `.kiro/hooks/gedd-review.kiro.hook` when the project uses ongoing annotation rounds:
+
+```json
+{
+  "name": "GEDD Domain Spec Review",
   "version": "1.0.0",
-  "description": "When annotation evidence changes, check if specs should be upgraded",
+  "description": "When GEDD annotation evidence changes, check whether requirements.md or the LLM Judge must be updated",
   "when": {
     "type": "fileEdited",
     "patterns": ["**/*_error_analysis.md", "**/error-analysis.md", "**/session.json"]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "The GEDD annotation evidence was updated. Compare against current specs: are there new failure codes not yet captured in requirements? Has severity changed? Are there new paradigm model insights that should become design constraints? Suggest specific upgrades."
+    "prompt": "GEDD annotation evidence changed. Compare the evidence to current requirements.md and llm-judge.md. Identify new failure codes, severity changes, missing EARS criteria, and judge rules that should be added."
   }
 }
 ```
 
----
+## Quality Bar
 
-# When to Load Steering Files
+Before calling the output complete:
 
-- Agent has no specs yet; generate baseline → `requirements-generation.md`
-- Starting fresh annotations on agent output → `annotation-workflow.md`
-- Building the failure codebook and paradigm model → `pattern-discovery.md`
-- Upgrading requirements from new annotation evidence → `requirements-generation.md`
-- Upgrading design from new root cause analysis → `design-generation.md`
-- Generating tasks from the improvement delta → `tasks-generation.md`
-- Importing an existing error-analysis.md or session.json → `session-import.md`
+- Every high-severity failure code maps to at least one EARS acceptance criterion.
+- Every generated requirement has a user story and traceable acceptance criteria.
+- The judge covers the same failure codes as `requirements.md`.
+- The judge output contract is structured enough for CI or release review.
+- The documents avoid generic "be accurate" requirements unless tied to domain evidence.
 
----
+## Example Command
 
-# Key Concepts
+```text
+Use GEDD to turn this exported error analysis into Kiro requirements.md and an LLM Judge.
+```
 
-## The Learning Delta
+Expected behavior:
 
-The most important output of each cycle isn't the spec itself — it's the **delta** between what the baseline predicted and what the domain expert observed:
-
-- Baseline said: "Agent should handle pricing questions"
-- Expert observed: "Agent fabricates prices with high confidence"
-- Delta: **New acceptance criterion** — "MUST refuse to quote prices without database access"
-
-Each delta is a lesson the agent (and its specs) couldn't have learned without human observation.
-
-## Failure Codes
-
-Named in the domain expert's own vocabulary:
-- "Hallucinated Pricing" (not "accuracy_error")
-- "Rating Disclosure Softening" (not "compliance_issue")
-- "RTL Input Direction Drift" (not "layout_bug")
-
-Codes come from observation, not assumption. They get more precise each iteration.
-
-## Saturation
-
-A category is saturated when:
-- ≥3 prompts cover it
-- No new failure patterns emerge from additional examples
-- The domain expert confirms coverage is sufficient
-
-Saturation is the signal that an annotation round is complete and specs can be upgraded.
-
-## Paradigm Model (Axial Coding)
-
-Maps failures causally — this is what turns observations into design constraints:
-- **Causal Conditions** — What triggers the failure? → becomes a guardrail
-- **Phenomenon** — The central failure pattern → becomes the requirement
-- **Context** — When/where it happens → becomes the test scope
-- **Intervening Conditions** — What makes it worse/better → becomes config
-- **Action Strategies** — How the agent should handle it → becomes the spec
-- **Consequences** — Impact if unfixed → becomes the priority
-
-## The 8 Evaluation Dimensions
-
-Failures map to standard dimensions with weights:
-1. Safety (2.0×)
-2. Accuracy (1.5×)
-3. Bias (1.5×)
-4. Instruction Following (1.3×)
-5. Completeness (1.2×)
-6. Quality (1.0×)
-7. Tone (0.8×)
-8. Brand Relevance (0.8×)
-
----
-
-# Spec Output Format
-
-The power generates and upgrades specs at `.kiro/specs/{agent-name}/`:
-
-### requirements.md
-- **Baseline (v1):** User stories from agent description and assumed capabilities
-- **Improved (v2+):** Evidence-backed acceptance criteria from annotations, correctness properties from paradigm models, priority from severity × frequency
-
-### design.md
-- Architecture constraints derived from paradigm model root causes
-- Guardrails addressing causal conditions
-- Monitoring hooks from consequence analysis
-
-### tasks.md
-- Implementation items prioritized by the learning delta
-- Each task traces to failure codes and golden queries
-- Completion = golden queries pass + judge agrees with human (κ ≥ 0.80)
+1. Validate evidence completeness.
+2. Consolidate failure codes.
+3. Generate `.kiro/specs/{agent-name}/requirements.md`.
+4. Generate `.kiro/specs/{agent-name}/llm-judge.md`.
+5. Report gaps that still need SME annotation.

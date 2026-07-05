@@ -1,4 +1,4 @@
-"""Home page — GEDD workflow with interactive product demo."""
+"""Coach-first GEDD homepage for Kiro Domain Specs and LLM Judge outputs."""
 
 from nicegui import app, ui
 
@@ -16,6 +16,7 @@ def _get_progress(storage: dict) -> dict[str, str]:
     has_prompt = bool(agent_spec.get("system_prompt"))
     has_queries = bool(session.get("golden_prompts") if isinstance(session, dict) else False)
     has_annotations = bool(storage.get("coding_annotations"))
+    has_requirements_source = bool(storage.get("codebook") or session.get("codes"))
     has_judge = bool(storage.get("_generated_judge_prompt"))
 
     coach_done = has_agent and has_prompt and has_queries
@@ -23,8 +24,9 @@ def _get_progress(storage: dict) -> dict[str, str]:
     return {
         "/coach": "done" if coach_done else ("current" if has_agent else "todo"),
         "/coding": "done" if has_annotations else ("current" if coach_done else "todo"),
+        "/requirements": "done" if has_requirements_source else ("current" if has_annotations else "todo"),
         "/judge": "done" if has_judge else ("current" if has_annotations else "todo"),
-        "/report": "current" if has_judge else ("todo" if not has_annotations else "current"),
+        "/report": "done" if has_requirements_source and has_judge else ("current" if has_annotations else "todo"),
     }
 
 
@@ -345,7 +347,7 @@ HOME_CSS = """
 }
 .core-flow-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -1153,56 +1155,26 @@ def home_page():
             return "/coding"
         return "/coach"
 
-    from grounded_evals.ui.demos_page import _build_domain_registry
-    domain_cards = _build_domain_registry()
-    domain_priority = {
-        "inductive_pm_workbench": 0,
-        "gdpr_auditor_workbench": 1,
-        "game_producer": 2,
-        "game_localization": 3,
-        "game_operator": 4,
-        "adtech": 5,
-    }
-    domain_cards = sorted(
-        domain_cards,
-        key=lambda domain: domain_priority.get(domain.get("id", ""), 99),
-    )
-    domain_by_id = {domain.get("id"): domain for domain in domain_cards}
-
-    def load_homepage_demo(demo_id: str) -> None:
-        domain = domain_by_id.get(demo_id)
-        if not domain:
-            ui.navigate.to("/coach")
-            return
-        domain["loader"](app.storage.user)
-        ui.notify(f'{domain["name"]} loaded into the annotation workbench.', type="positive")
-        ui.navigate.to("/coding")
-
     core_steps = [
         (
-            "① Error Analysis",
-            "Run your agent against golden queries. Load 50 pre-built traces or bring your own. See exactly where the agent fails.",
+            "① Coach",
+            "Define the agent, users, task boundary, risk posture, and test plan. Coach is the front door for custom Kiro Domain Specs.",
+            "Output: agent spec + golden query plan",
+        ),
+        (
+            "② Error Analysis",
+            "Run your agent against golden queries or imported traces. See exactly where the agent fails.",
             "Output: agent responses with failure evidence",
         ),
         (
-            "② Annotate",
+            "③ Annotations",
             "Domain expert reviews each response: correct, partial, or incorrect. Name the failure in your vocabulary. Set severity.",
             "Output: codebook + annotated failures",
         ),
         (
-            "③ Discover Patterns",
-            "Group repeated failures into root causes using grounded theory. Build the paradigm model: what causes failures and what are the consequences.",
-            "Output: paradigm model + saturation evidence",
-        ),
-        (
-            "④ Generate Specs",
-            "Convert observed failure patterns into evidence-backed requirements, design constraints, and prioritized implementation tasks.",
-            "Output: requirements.md + design.md + tasks.md",
-        ),
-        (
-            "⑤ Build Judge",
-            "Turn the codebook into an LLM-as-a-judge prompt that automates what the domain expert does — then loop back and improve.",
-            "Output: LLM judge + continuous learning cycle",
+            "④ Generate the two outputs",
+            "Convert observed failure patterns into a Kiro-ready domain spec and a judge prompt that enforces the same failure modes.",
+            "Outputs: Kiro requirements.md + LLM Judge",
         ),
     ]
 
@@ -1215,20 +1187,9 @@ def home_page():
     ]
 
     artifacts = [
-        ("bug_report", "Error analysis", "Agent responses that reveal where the system fails."),
-        ("rate_review", "Annotations", "Expert verdicts, failure codes, severity, and memos."),
-        ("account_tree", "Paradigm model", "Root causes, context, and consequences of failures."),
-        ("description", "Improved specs", "Evidence-backed requirements ready for Kiro."),
-        ("gavel", "LLM judge", "Automated release gate grounded in expert observations."),
-        ("loop", "Continuous learning", "Each iteration makes the specs more precise."),
-    ]
-
-    starter_demos = [
-        ("inductive_pm_workbench", "50-query Localization"),
-        ("gdpr_auditor_workbench", "50-query AWS Cloud GDPR"),
-        ("game_producer", "AAA Game Producer"),
-        ("game_localization", "AAA Game Localization"),
-        ("game_operator", "AAA Game Operator"),
+        ("description", "Kiro requirements.md", "A domain driven spec with EARS acceptance criteria grounded in expert annotations."),
+        ("gavel", "LLM Judge", "A release-gate prompt that detects the same domain failure modes."),
+        ("bolt", "Kiro Power", "A companion workflow that writes the same requirements.md evidence into Kiro."),
     ]
 
     with ui.column().classes("w-full").style(
@@ -1253,41 +1214,41 @@ def home_page():
         with ui.element("section").classes("simple-hero animate-in stagger-1"):
             ui.html(
                 '<div class="coach-kicker">'
-                '<span class="material-icons" style="font-size:0.95rem">loop</span>'
-                "Continuous Learning Lifecycle"
+                '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
+                "Coach-led Kiro Spec Builder"
                 "</div>"
             )
             ui.html(
                 '<h1 class="simple-headline">'
-                "Error Analysis → Annotations → Spec-Driven Development"
+                "SME Error Analysis → Annotations → Domain Driven Specs Development"
                 "</h1>"
             )
             ui.html(
                 '<div class="simple-subhead">'
-                "Domain experts annotate agent failures. GEDD converts those observations into "
-                "an LLM judge and improved engineering specs. Each iteration makes the system "
-                "more precise. Load a 50-query demo to see the full cycle."
+                "Start in Coach. The UI guides SMEs from agent intent to error analysis and "
+                "annotations, then generates two concrete outputs: a Kiro-ready requirements.md "
+                "file and an LLM-as-Judge prompt. The Kiro Power applies the same workflow inside Kiro."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
                 ui.button(
-                    "Localization Demo",
-                    icon="play_circle",
-                    on_click=lambda: load_homepage_demo("inductive_pm_workbench"),
+                    "Open Coach",
+                    icon="auto_awesome",
+                    on_click=lambda: ui.navigate.to("/coach"),
                 ).props("color=primary size=md unelevated no-caps").style(
                     "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                 )
                 ui.button(
-                    "AWS GDPR Demo",
-                    icon="policy",
-                    on_click=lambda: load_homepage_demo("gdpr_auditor_workbench"),
+                    "Kiro requirements.md",
+                    icon="description",
+                    on_click=lambda: ui.navigate.to("/requirements"),
                 ).props("outline size=md no-caps").style(
                     "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
                 ui.button(
-                    "Start with Coach",
-                    icon="auto_awesome",
-                    on_click=lambda: ui.navigate.to("/coach"),
+                    "LLM Judge",
+                    icon="gavel",
+                    on_click=lambda: ui.navigate.to("/judge"),
                 ).props("outline size=md no-caps").style(
                     "color: var(--accent-bright); border-color: var(--border-subtle)"
                 )
@@ -1298,16 +1259,17 @@ def home_page():
                 )
                 ui.html(
                     '<div class="hero-demo-caption">'
-                    'Query → Annotate → Codes emerge → Requirements for Kiro'
+                    'Coach → SME Error Analysis → Annotations → Kiro requirements.md + LLM Judge'
                     '</div>'
                 )
 
         with ui.element("div").classes("simple-panel animate-in stagger-2"):
-            ui.html('<div class="simple-panel-title">The PM annotation-to-requirements loop</div>')
+            ui.html('<div class="simple-panel-title">Coach-led path to two generated outputs</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "This is now the main product flow. Kiro requirements come from observed failures, PM annotations, "
-                "and saturation evidence, not from generic quality guesses."
+                "This is the main product flow. Coach frames the agent and test plan; SME "
+                "annotations provide the evidence; GEDD produces Kiro requirements.md and an "
+                "LLM Judge grounded in the same observed failures."
                 "</div>"
             )
             with ui.element("div").classes("core-flow-grid"):
@@ -1319,15 +1281,16 @@ def home_page():
                         ui.html(f'<div class="core-flow-output">{output}</div>')
 
         with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">The workbench keeps the PM in the product problem</div>')
+            ui.html('<div class="simple-panel-title">Annotations feed the two outputs</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "The review queue, codebook, memos, saturation curve, and generated requirements all stay connected to the same evidence."
+                "The review queue, codebook, memos, and saturation evidence stay connected "
+                "so the requirements.md file and the judge prompt explain the same domain risks."
                 "</div>"
             )
             with ui.element("div").classes("assistant-grid"):
                 with ui.element("div").classes("assistant-card"):
-                    ui.html('<div class="assistant-label">PM annotation prompts</div>')
+                    ui.html('<div class="assistant-label">Coach prompts</div>')
                     for question in coach_questions:
                         ui.html(f'<div class="coach-question">{question}</div>')
                 with ui.element("div").classes("assistant-card"):
@@ -1339,30 +1302,3 @@ def home_page():
                                 with ui.column().style("gap: 0"):
                                     ui.html(f'<div class="artifact-title">{title}</div>')
                                     ui.html(f'<div class="artifact-copy">{copy}</div>')
-
-        with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">Starter datasets for the AI PM flow</div>')
-            ui.html(
-                '<div class="simple-panel-copy">'
-                "Use these only as seed data. The product flow stays simple: Coach, PM Workbench, Requirements, Report."
-                "</div>"
-            )
-            with ui.element("div").classes("compact-example-row"):
-                for item in EXPERT_DISCOVERIES[:3]:
-                    with ui.element("div").classes("compact-example"):
-                        with ui.element("div").classes("compact-example-top"):
-                            ui.html(f'<div class="compact-example-domain">{item["domain"]}</div>')
-                            ui.html(f'<div class="compact-code">{item["error_code"]}</div>')
-                        ui.html(
-                            f'<div class="compact-example-text">{item["expert_signal"]}. '
-                            f'Judge gate: {item["gate"]}</div>'
-                        )
-            with ui.element("div").classes("starter-row"):
-                for demo_id, label in starter_demos:
-                    ui.button(
-                        label,
-                        icon="play_circle",
-                        on_click=lambda d=demo_id: load_homepage_demo(d),
-                    ).props("outline size=sm no-caps").style(
-                        "color: var(--accent-bright); border-color: var(--border-subtle)"
-                    )

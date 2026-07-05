@@ -389,7 +389,7 @@ def _render_inductive_chain(modes: list[dict]) -> None:
 
 @ui.page("/judge")
 def judge_builder_page() -> None:
-    page_layout("Judge", current_path="/judge")
+    page_layout("LLM Judge", current_path="/judge")
     ui.add_head_html(f"<style>{JUDGE_CSS}</style>")
 
     modes = _failure_modes()
@@ -404,17 +404,18 @@ def judge_builder_page() -> None:
                 "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 460px"
             ):
                 ui.icon("gavel").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("Create a simple judge prompt").style(
+                ui.label("Create the LLM Judge").style(
                     "font-size: 1.1rem; font-weight: 700; color: var(--text-primary)"
                 )
                 ui.label(
-                    "Analyze and annotate failures first. The judge prompt is created from those PM/domain-expert failure modes.",
+                    "Annotate failures first. The judge prompt is the second GEDD output and "
+                    "uses the same domain failure modes as requirements.md.",
                 ).style("font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5")
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
-                    ui.button("Open PM Annotations", icon="label", on_click=lambda: ui.navigate.to("/coding")).style(
+                    ui.button("Open Annotations", icon="label", on_click=lambda: ui.navigate.to("/coding")).style(
                         "background: var(--accent); color: white; border-radius: 6px"
                     )
-                    ui.button("AI PM Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
+                    ui.button("Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
                         "outline"
                     ).style("color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px")
         return
@@ -426,19 +427,19 @@ def judge_builder_page() -> None:
             ui.html(
                 '<div class="coach-kicker">'
                 '<span class="material-icons" style="font-size:0.95rem">gavel</span>'
-                "LLM-as-a-judge"
+                "Output 2: LLM Judge"
                 "</div>"
             )
             ui.html(
                 '<h1 style="max-width:760px;margin:14px 0 0;font-size:2rem;line-height:1.12;'
                 'letter-spacing:0;font-weight:740;color:var(--text-primary)">'
-                "Create a simple judge prompt from failure modes."
+                "Create the LLM-as-Judge from annotated failure modes."
                 "</h1>"
             )
             ui.html(
                 '<div style="max-width:760px;margin-top:10px;font-size:0.95rem;line-height:1.6;color:var(--text-secondary)">'
-                "No dimension mapping required. Review the PM-analyzed failure modes, generate a concise judge prompt, "
-                "edit if needed, then save it for reports and handoff."
+                "No dimension mapping required. Review the annotated failure modes, generate a concise judge prompt, "
+                "edit if needed, then save or download it alongside Kiro requirements.md."
                 "</div>"
             )
 

@@ -1,6 +1,6 @@
 # Annotation Workflow
 
-Guide the domain expert through systematic annotation of AI agent responses using GEDD's grounded theory approach.
+Guide the domain expert through systematic annotation of AI agent responses so GEDD can generate Kiro `requirements.md` and an LLM Judge.
 
 ## Prerequisites
 - An AI agent with a defined system prompt and task boundary
@@ -105,4 +105,7 @@ After annotation, you should have:
 - Annotations with verdicts, codes, severity, confidence, memos
 - Saturation status per category
 
-This feeds into the Pattern Discovery phase (`pattern-discovery.md`).
+This feeds into:
+- Pattern Discovery (`pattern-discovery.md`) when codes need consolidation
+- Requirements Generation (`requirements-generation.md`) for Kiro `requirements.md`
+- Judge Generation (`judge-generation.md`) for the LLM-as-a-Judge release gate

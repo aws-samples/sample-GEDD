@@ -1,4 +1,4 @@
-"""Release report page — summary, failure patterns, judge pipeline, calibration, exports."""
+"""Outputs page for Kiro requirements.md and the LLM Judge."""
 
 import asyncio
 import csv
@@ -11,6 +11,10 @@ from nicegui import app, ui
 
 from grounded_evals.feedback_loop import compute_eval_health
 
+from grounded_evals.ui.ears_page import (
+    _build_requirements_markdown,
+    _session_from_storage,
+)
 from grounded_evals.ui.layout import page_layout
 
 REPORT_CSS = """
@@ -734,7 +738,7 @@ def _build_html_report(
         output_contract = json.dumps(engineering_handoff.get("output_contract", {}), indent=2)
         commands = "\n".join(engineering_handoff.get("commands", []))
         handoff_html = f"""
-<h2>LLM Judge Builder Handoff</h2>
+<h2>LLM Judge Output Contract</h2>
 <p><strong>Status:</strong> {engineering_handoff.get('status_label', 'Unknown')}</p>
 {"<h2>Judge Strategy</h2><ul>" + strategy_items + "</ul>" if strategy_items else ""}
 {"<h2>Calibration Set</h2><ul>" + dataset_items + "</ul>" if dataset_items else ""}
@@ -750,7 +754,7 @@ def _build_html_report(
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>GEDD Release Readiness Report — {agent_name}</title>
+<title>GEDD Outputs — {agent_name}</title>
 <style>
   body{{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:960px;margin:0 auto;padding:2rem;color:#1a1a1a;line-height:1.6}}
   h1{{font-size:1.6rem;font-weight:700;border-bottom:2px solid #e2e8f0;padding-bottom:.5rem}}
@@ -773,7 +777,7 @@ def _build_html_report(
 </style>
 </head>
 <body>
-<h1>Release Readiness Report — {agent_name}</h1>
+<h1>GEDD Outputs — {agent_name}</h1>
 <p class="meta">Generated {date_str} &nbsp;·&nbsp; {total} total annotations</p>
 <h2>Readiness Snapshot</h2>
 <div class="stats">
@@ -803,7 +807,7 @@ def _build_html_report(
 
 @ui.page("/report")
 def report_page():
-    page_layout("Release Report", current_path="/report")
+    page_layout("Outputs", current_path="/report")
     ui.add_head_html(f"<style>{REPORT_CSS}</style>")
     storage = app.storage.user
 
@@ -813,9 +817,9 @@ def report_page():
                 "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
                 "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
             ):
-                ui.icon("assessment").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("Release Report").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Review release readiness and export evidence. Build a judge first to generate the report.").style(
+                ui.icon("download").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
+                ui.label("Generate both outputs").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
+                ui.label("Create the LLM Judge after annotations. The Kiro requirements.md output is available from its nav tab.").style(
                     "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
                 )
                 ui.button("Build a judge first", icon="gavel",
@@ -828,7 +832,6 @@ def report_page():
     annotations = storage.get("annotations", [])
     codebook = storage.get("codebook", [])
     coding_annotations = storage.get("coding_annotations", [])
-    paradigm = storage.get("paradigm_model", {})
 
     # Derive failure_patterns from actual coding data and persist
     patterns = _build_failure_patterns(codebook, coding_annotations)
@@ -839,6 +842,13 @@ def report_page():
     agent_description = agent_spec.get("description", "") if isinstance(agent_spec, dict) else ""
     system_prompt = agent_spec.get("system_prompt", "") if isinstance(agent_spec, dict) else ""
     golden_prompts = session.get("golden_prompts", []) if isinstance(session, dict) else []
+    requirements_markdown = ""
+    try:
+        requirements_session = _session_from_storage(storage)
+        if requirements_session.codes:
+            requirements_markdown = _build_requirements_markdown(requirements_session, codebook)
+    except Exception:
+        requirements_markdown = ""
     reference_examples = sum(
         1
         for prompt in golden_prompts
@@ -873,22 +883,15 @@ def report_page():
     if n_blockers:
         decision_label = "Do not ship"
         decision_color = "var(--red)"
-        next_action = (
-            f"Resolve {n_blockers} critical/catastrophic annotation"
-            f"{'s' if n_blockers != 1 else ''} before release."
-        )
     elif _health.total < 40 or not total:
         decision_label = "Not ready"
         decision_color = "var(--red)"
-        next_action = "Add enough annotated evidence to support a defensible launch decision."
     elif _health.total < 75 or pass_rate_pct < 80:
         decision_label = "Fix before GA"
         decision_color = "var(--yellow)"
-        next_action = "Use the top failure patterns below to prioritize fixes, then re-run the judge."
     else:
         decision_label = "Pilot ready"
         decision_color = "var(--green-bright)"
-        next_action = "Proceed with gated rollout and keep these judge criteria in CI."
 
     engineering_handoff = _build_engineering_handoff(
         agent_name=agent_name,
@@ -987,6 +990,12 @@ def report_page():
             return
         ui.download(prompt.encode(), "judge_prompt.txt")
 
+    def download_requirements_md():
+        if not requirements_markdown.strip():
+            ui.notify("Annotate failures before generating requirements.md", type="warning")
+            return
+        ui.download(requirements_markdown.encode(), "requirements.md")
+
     def download_error_analysis_md():
         from grounded_evals.guide.markdown_export import export_error_analysis_md
 
@@ -1017,11 +1026,12 @@ def report_page():
         with ui.element("div").classes("rr-hero"):
             with ui.row().classes("items-start justify-between gap-4 flex-wrap"):
                 with ui.column().style("gap: 0; flex: 1; min-width: 260px"):
-                    ui.html('<div class="rr-eyebrow">AI PM Release Readiness</div>')
+                    ui.html('<div class="rr-eyebrow">Generated Outputs</div>')
                     ui.html(f'<div class="rr-title">{agent_name}</div>')
                     ui.html(
                         '<div class="rr-subtitle">'
-                        'Decision, main failure modes, and the judge-builder handoff needed to turn PM evidence into an LLM-as-a-judge.'
+                        'Download the two GEDD outputs generated from the same annotations: '
+                        'Kiro requirements.md and the LLM Judge.'
                         '</div>'
                     )
                 with ui.element("div").classes("rr-decision").style(
@@ -1037,10 +1047,10 @@ def report_page():
 
             with ui.element("div").classes("rr-metric-grid").style("margin-top: 16px"):
                 for value, label, color in [
-                    (f"{_health.total}/100", "Readiness score", _total_color),
-                    (f"{pass_rate_pct:.0f}%", "Pass rate", "var(--green-bright)" if pass_rate_pct >= 80 else "var(--yellow)"),
+                    ("ready" if requirements_markdown else "missing", "requirements.md", "var(--green-bright)" if requirements_markdown else "var(--yellow)"),
+                    ("ready", "LLM Judge", "var(--green-bright)"),
                     (str(n_blockers), "Release blockers", "var(--red)" if n_blockers else "var(--green-bright)"),
-                    (str(n_codes), "Expert failure codes", "var(--accent-bright)"),
+                    (str(n_codes), "Failure codes", "var(--accent-bright)"),
                 ]:
                     with ui.element("div").classes("rr-metric"):
                         ui.html(f'<div class="rr-metric-value" style="color:{color}">{value}</div>')
@@ -1049,17 +1059,20 @@ def report_page():
             with ui.element("div").classes("rr-action-card").style("margin-top: 14px"):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:0; flex:1; min-width:260px"):
-                        ui.html('<div class="rr-action-title">Next release action</div>')
+                        ui.html('<div class="rr-action-title">Primary outputs</div>')
                         ui.html(
-                            f'<div class="rr-action-copy">{next_action} '
+                            f'<div class="rr-action-copy">Both files are generated from the annotation codebook. '
                             f'Top observed pattern: <strong>{top_pattern}</strong>.</div>'
                         )
                     with ui.row().classes("gap-2 flex-wrap"):
                         ui.button(
-                            "Export HTML", icon="download", on_click=download_html_report
+                            "Download requirements.md", icon="description", on_click=download_requirements_md
                         ).props("size=sm color=primary no-caps")
                         ui.button(
-                            "Open judge", icon="gavel", on_click=lambda: ui.navigate.to("/judge")
+                            "Download LLM Judge", icon="gavel", on_click=download_judge_prompt
+                        ).props("size=sm color=primary no-caps")
+                        ui.button(
+                            "Open requirements.md", icon="open_in_new", on_click=lambda: ui.navigate.to("/requirements")
                         ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
 
         with ui.element("div").classes("page-card"):
@@ -1176,9 +1189,9 @@ def report_page():
 
             with ui.row().classes("items-start justify-between gap-3 flex-wrap").style("margin-bottom: 10px"):
                 with ui.column().style("gap: 2px; flex: 1; min-width: 260px"):
-                    ui.label("LLM Judge Builder Handoff").classes("rr-section-title")
+                    ui.label("LLM Judge Output Contract").classes("rr-section-title")
                     ui.label(
-                        "This packet is for the engineer building and calibrating the judge, not patching the runtime."
+                        "This is the output contract the judge must return when enforcing the generated requirements."
                     ).style("font-size: 0.78rem; color: var(--text-muted); line-height: 1.5")
                 with ui.row().classes("gap-2 flex-wrap"):
                     ui.button(
@@ -1376,16 +1389,25 @@ def report_page():
         with ui.element("div").classes("page-card"):
             ui.label("Export").classes("rr-section-title")
             ui.label(
-                "Core artifacts only: report, error analysis, judge-builder packet, "
-                "dataset, codebook, and judge prompt."
+                "Primary outputs first. Supporting evidence exports remain available for traceability."
             ).style("font-size: 0.78rem; color: var(--text-muted); margin-top: 6px")
             with ui.row().classes("gap-2 flex-wrap").style("margin-top: 12px"):
                 ui.button(
-                    "Error Analysis (MD)",
-                    on_click=download_error_analysis_md, icon="description",
+                    "requirements.md",
+                    on_click=download_requirements_md, icon="description",
                 ).props("size=sm dark").style(
                     "background: var(--accent); color: white"
                 )
+                ui.button(
+                    "LLM Judge",
+                    on_click=download_judge_prompt, icon="gavel",
+                ).props("size=sm dark").style(
+                    "background: var(--accent); color: white"
+                )
+                ui.button(
+                    "Error Analysis (MD)",
+                    on_click=download_error_analysis_md, icon="description",
+                ).props("outline size=sm dark")
                 ui.button(
                     "HTML Report",
                     on_click=download_html_report, icon="download",
