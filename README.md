@@ -143,7 +143,7 @@ Powers panel → Add Custom Power → Import from folder → power-gedd/
 Use it when you want Kiro to generate or upgrade specs from GEDD's domain-expert-curated evidence:
 
 ```text
-Use GEDD to turn this exported error analysis into Kiro requirements.md and an LLM Judge.
+Use GEDD to turn this domain-expert-curated evidence into Kiro requirements.md and an LLM Judge.
 ```
 
 Power structure:
@@ -171,7 +171,7 @@ Use GEDD when you have a real or proposed agent and need domain-expert-curated e
 | 2. Build queries | Generate or paste queries that cover normal, edge, ambiguous, adversarial, multi-turn, and recovery cases | Query set |
 | 3. Get responses | Run the saved prompt against Bedrock, Anthropic, or a configured runtime, or paste existing traces | Response queue |
 | 4. Annotate | Review each response in `Annotations` and capture verdict, code, severity, confidence, and memo | Human labels and codebook |
-| 5. Generate specs | Open `Kiro requirements.md` and generate EARS acceptance criteria from the evidence | `requirements.md` |
+| 5. Generate specs | Open `Kiro requirements.md` and generate EARS acceptance criteria from curated evidence | `requirements.md` |
 | 6. Generate judge | Open `LLM Judge` and generate a release gate from the same failure modes | Judge prompt |
 
 If you already have production traces, use the app as an annotation surface rather than generating new responses. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).

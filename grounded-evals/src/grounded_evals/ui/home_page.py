@@ -1187,8 +1187,9 @@ def home_page():
     ]
 
     artifacts = [
-        ("description", "Kiro requirements.md", "A domain driven spec with EARS acceptance criteria grounded in expert annotations."),
-        ("gavel", "LLM Judge", "A release-gate prompt that detects the same domain failure modes."),
+        ("fact_check", "Curated Evidence", "SME-reviewed failures, codes, severity, confidence, and memos that Kiro can trust."),
+        ("description", "Kiro requirements.md", "A domain driven spec with EARS acceptance criteria grounded in curated evidence."),
+        ("gavel", "LLM Judge", "A release-gate prompt that detects the same curated domain failure modes."),
         ("bolt", "Kiro Power", "A companion workflow that consumes the same domain-expert-curated evidence inside Kiro."),
     ]
 
@@ -1294,7 +1295,7 @@ def home_page():
                     for question in coach_questions:
                         ui.html(f'<div class="coach-question">{question}</div>')
                 with ui.element("div").classes("assistant-card"):
-                    ui.html('<div class="assistant-label">What the user leaves with</div>')
+                    ui.html('<div class="assistant-label">What GEDD provides to Kiro</div>')
                     with ui.element("div").classes("artifact-list"):
                         for icon, title, copy in artifacts:
                             with ui.element("div").classes("artifact-item"):

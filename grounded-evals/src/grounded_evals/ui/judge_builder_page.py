@@ -170,7 +170,7 @@ def _highest_severity(values: list[str]) -> str:
 
 
 def _failure_modes() -> list[dict]:
-    """Return failure modes grounded in codebook entries and PM annotations."""
+    """Return failure modes grounded in codebook entries and SME-curated evidence."""
     codebook = _get("codebook", []) or []
     annotations = _get("coding_annotations", []) or []
     freq: Counter[str] = Counter()
@@ -287,7 +287,7 @@ def _judge_rule_for_mode(mode: dict) -> str:
     prefix = "Hard fail" if SEVERITY_RANK.get(severity, 2) >= 3 else "Fail"
     if definition:
         return f"{prefix} when the response exhibits {name}: {definition}"
-    return f"{prefix} when the response matches PM annotations labeled {name}."
+    return f"{prefix} when the response matches SME-curated evidence labeled {name}."
 
 
 def _build_simple_prompt(modes: list[dict]) -> str:
@@ -309,7 +309,7 @@ def _build_simple_prompt(modes: list[dict]) -> str:
         failure_lines.append(line)
 
     if not failure_lines:
-        failure_lines = ["1. No failure modes have been analyzed yet. Do not use this judge for release decisions until PM annotations exist."]
+        failure_lines = ["1. No failure modes have been analyzed yet. Do not use this judge for release decisions until SME-curated evidence exists."]
 
     context_block = "\n".join(paradigm) if paradigm else "- No root-cause summary recorded yet."
     failure_block = "\n".join(failure_lines)
@@ -351,7 +351,7 @@ Return only JSON:
 
 def _render_inductive_chain(modes: list[dict]) -> None:
     with ui.element("section").classes("judge-chain-panel"):
-        ui.html('<div class="judge-chain-title">Inductive path from PM annotations to judge rules</div>')
+        ui.html('<div class="judge-chain-title">Inductive path from SME-curated evidence to judge rules</div>')
         ui.html(
             '<div class="judge-chain-copy">'
             "The judge is not a generic helpfulness rubric. It is built from PM open-coded annotations, "
@@ -362,14 +362,14 @@ def _render_inductive_chain(modes: list[dict]) -> None:
             for mode in modes:
                 severity = mode.get("severity", "functional")
                 color = SEVERITY_COLOR.get(severity, "var(--yellow)")
-                evidence = _mode_evidence(mode) or "PM annotation evidence for this code."
+                evidence = _mode_evidence(mode) or "SME-curated evidence for this code."
                 evidence_short = evidence[:220] + ("..." if len(evidence) > 220 else "")
                 rule = _judge_rule_for_mode(mode)
                 rule_short = rule[:240] + ("..." if len(rule) > 240 else "")
                 axial = str(mode.get("axial_category") or "PM-derived failure mode")
                 with ui.element("div").classes("judge-chain-row"):
                     with ui.element("div"):
-                        ui.html('<div class="judge-chain-label">PM annotation evidence</div>')
+                        ui.html('<div class="judge-chain-label">SME-curated evidence</div>')
                         ui.html(f'<div class="judge-chain-text">{escape(evidence_short)}</div>')
                     with ui.element("div"):
                         ui.html('<div class="judge-chain-label">Error code</div>')
@@ -408,8 +408,8 @@ def judge_builder_page() -> None:
                     "font-size: 1.1rem; font-weight: 700; color: var(--text-primary)"
                 )
                 ui.label(
-                    "Annotate failures first. The judge prompt is the second GEDD output and "
-                    "uses the same domain failure modes as requirements.md.",
+                    "Curate failure evidence first. The judge prompt is the second GEDD output and "
+                    "uses the same domain-expert-curated failure modes as requirements.md.",
                 ).style("font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5")
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
                     ui.button("Open Annotations", icon="label", on_click=lambda: ui.navigate.to("/coding")).style(
@@ -438,14 +438,14 @@ def judge_builder_page() -> None:
             )
             ui.html(
                 '<div style="max-width:760px;margin-top:10px;font-size:0.95rem;line-height:1.6;color:var(--text-secondary)">'
-                "No dimension mapping required. Review the annotated failure modes, generate a concise judge prompt, "
+                "No dimension mapping required. Review the domain-expert-curated failure modes, generate a concise judge prompt, "
                 "edit if needed, then save or download it alongside Kiro requirements.md."
                 "</div>"
             )
 
         stats = [
             (str(len(modes)), "Failure modes", "var(--accent-bright)"),
-            (str(len(annotations)), "PM annotations", "var(--yellow)"),
+            (str(len(annotations)), "SME evidence items", "var(--yellow)"),
             (
                 str(sum(1 for mode in modes if SEVERITY_RANK.get(mode.get("severity", "functional"), 2) >= 3)),
                 "Release blockers",
@@ -466,7 +466,7 @@ def judge_builder_page() -> None:
                 ui.html('<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">Failure modes analyzed</div>')
                 ui.html(
                     '<div style="margin-top:4px;font-size:0.76rem;line-height:1.5;color:var(--text-tertiary)">'
-                    "These are the observed failures the judge will detect. They come from the codebook and PM annotations."
+                    "These are the observed failures the judge will detect. They come from the codebook and SME-curated evidence."
                     "</div>"
                 )
 

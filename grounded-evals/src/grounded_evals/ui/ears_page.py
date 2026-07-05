@@ -113,13 +113,13 @@ def ears_requirements_page() -> None:
         )
         ui.label(
             "The first GEDD output: a Kiro-ready domain driven spec generated from "
-            "error analysis, expert annotations, EARS criteria, and judge gates."
+            "domain-expert-curated evidence, EARS criteria, and judge gates."
         ).style("font-size:0.82rem; color:var(--text-tertiary)")
 
         if not session.codes:
             ui.label(
-                "No failure codes are available yet. Complete coach and PM "
-                "annotation work before generating requirements."
+                "No failure codes are available yet. Complete Coach and SME "
+                "evidence curation before generating requirements."
             ).style("margin-top:1rem; color:var(--text-secondary)")
             return
 

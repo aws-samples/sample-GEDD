@@ -318,7 +318,7 @@ body {
 }
 .coach-output-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
@@ -502,7 +502,7 @@ def page_layout(title: str = "", current_path: str = ""):
                         "margin-bottom:8px"
                     )
                     ui.label(
-                        "Export or import the evidence behind the two generated outputs: "
+                        "Export or import the curated evidence behind the two generated outputs: "
                         "Kiro requirements.md and the LLM-as-Judge prompt."
                     ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
 

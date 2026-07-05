@@ -375,6 +375,11 @@ def main_page() -> None:
             )
             output_cards = [
                 (
+                    "fact_check",
+                    "Curated Evidence",
+                    "SME-reviewed failures, codes, severity, confidence, and memos that become the source of truth.",
+                ),
+                (
                     "description",
                     "Kiro requirements.md",
                     "EARS acceptance criteria using WHEN, IF, WHILE, and SHALL, grounded in observed failure modes.",
@@ -496,7 +501,7 @@ def main_page() -> None:
                     else:
                         welcome = (
                             '<div class="msg-ai"><strong>Error modes are ready for judging.</strong><br><br>'
-                            'Open Kiro requirements.md and LLM Judge to generate the two product outputs from the latest SME annotations.</div>'
+                            'Open Kiro requirements.md and LLM Judge to generate the two product outputs from the latest curated evidence.</div>'
                         )
                     ui.html(welcome)
 

@@ -131,7 +131,7 @@ Choose the entry point:
 | Found | Start Here |
 |-------|------------|
 | No evidence, no spec | Coach the agent definition and golden queries |
-| Evidence, no requirements | Generate Kiro `requirements.md` and LLM Judge |
+| Curated evidence, no requirements | Generate Kiro `requirements.md` and LLM Judge |
 | Existing requirements, new annotations | Upgrade requirements and judge from the delta |
 | Requirements but no judge | Generate LLM Judge from the same failure modes |
 
@@ -174,14 +174,14 @@ Create `.kiro/hooks/gedd-review.kiro.hook` when the project uses ongoing annotat
 {
   "name": "GEDD Domain Spec Review",
   "version": "1.0.0",
-  "description": "When GEDD annotation evidence changes, check whether requirements.md or the LLM Judge must be updated",
+  "description": "When GEDD curated evidence changes, check whether requirements.md or the LLM Judge must be updated",
   "when": {
     "type": "fileEdited",
     "patterns": ["**/*_error_analysis.md", "**/error-analysis.md", "**/session.json"]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "GEDD annotation evidence changed. Compare the evidence to current requirements.md and llm-judge.md. Identify new failure codes, severity changes, missing EARS criteria, and judge rules that should be added."
+    "prompt": "GEDD curated evidence changed. Compare the evidence to current requirements.md and llm-judge.md. Identify new failure codes, severity changes, missing EARS criteria, and judge rules that should be added."
   }
 }
 ```
