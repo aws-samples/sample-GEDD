@@ -1158,13 +1158,13 @@ def home_page():
     core_steps = [
         (
             "① Coach",
-            "Define the agent, users, task boundary, risk posture, and test plan. Coach is the front door for custom Kiro Domain Specs.",
-            "Output: agent spec + golden query plan",
+            "Define the agent, users, task boundary, risk posture, and test plan. Coach is where SMEs curate the evidence for Kiro Domain Specs.",
+            "Output: agent spec + curated evidence plan",
         ),
         (
             "② Error Analysis",
             "Run your agent against golden queries or imported traces. See exactly where the agent fails.",
-            "Output: agent responses with failure evidence",
+            "Output: domain-expert-curated failure evidence",
         ),
         (
             "③ Annotations",
@@ -1189,7 +1189,7 @@ def home_page():
     artifacts = [
         ("description", "Kiro requirements.md", "A domain driven spec with EARS acceptance criteria grounded in expert annotations."),
         ("gavel", "LLM Judge", "A release-gate prompt that detects the same domain failure modes."),
-        ("bolt", "Kiro Power", "A companion workflow that writes the same requirements.md evidence into Kiro."),
+        ("bolt", "Kiro Power", "A companion workflow that consumes the same domain-expert-curated evidence inside Kiro."),
     ]
 
     with ui.column().classes("w-full").style(
@@ -1226,8 +1226,8 @@ def home_page():
             ui.html(
                 '<div class="simple-subhead">'
                 "Start in Coach. The UI guides SMEs from agent intent to error analysis and "
-                "annotations, then generates two concrete outputs: a Kiro-ready requirements.md "
-                "file and an LLM-as-Judge prompt. The Kiro Power applies the same workflow inside Kiro."
+                "annotations, curating the evidence GEDD provides to Kiro. That evidence generates "
+                "two concrete outputs: a Kiro-ready requirements.md file and an LLM-as-Judge prompt."
                 "</div>"
             )
             with ui.element("div").classes("simple-action-row"):
@@ -1267,9 +1267,9 @@ def home_page():
             ui.html('<div class="simple-panel-title">Coach-led path to two generated outputs</div>')
             ui.html(
                 '<div class="simple-panel-copy">'
-                "This is the main product flow. Coach frames the agent and test plan; SME "
-                "annotations provide the evidence; GEDD produces Kiro requirements.md and an "
-                "LLM Judge grounded in the same observed failures."
+                "This is the main product flow. Coach frames the agent and test plan; SMEs "
+                "curate the evidence through annotations; GEDD produces Kiro requirements.md "
+                "and an LLM Judge grounded in those observed failures."
                 "</div>"
             )
             with ui.element("div").classes("core-flow-grid"):

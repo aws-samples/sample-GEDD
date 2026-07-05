@@ -366,10 +366,11 @@ def main_page() -> None:
             ui.html('<div class="coach-product-title">Coach generates Kiro Domain Specs</div>')
             ui.html(
                 '<div class="coach-product-copy">'
-                "Use Coach to define the agent, generate or refine test cases, drive SME "
-                "error analysis, and turn annotations into two outputs: a Kiro-ready "
-                "requirements.md file and an LLM-as-a-Judge release gate. The companion "
-                "Kiro Power in power-gedd/ applies the same requirements-first workflow inside Kiro."
+                "Use Coach to define the agent, generate or refine test cases, and curate "
+                "domain-expert evidence through SME error analysis. GEDD turns that curated "
+                "evidence into two outputs: a Kiro-ready requirements.md file and an "
+                "LLM-as-a-Judge release gate. The companion Kiro Power in power-gedd/ "
+                "consumes the same evidence inside Kiro."
                 "</div>"
             )
             output_cards = [
@@ -386,7 +387,7 @@ def main_page() -> None:
                 (
                     "bolt",
                     "Kiro Power",
-                    "A Kiro companion flow for generating the domain spec from exported GEDD evidence.",
+                    "A Kiro companion flow for consuming domain-expert-curated GEDD evidence.",
                 ),
             ]
             with ui.element("div").classes("coach-output-grid"):
@@ -418,7 +419,7 @@ def main_page() -> None:
                 ui.button(
                     "Kiro Power",
                     icon="bolt",
-                    on_click=lambda: ui.notify("Kiro Power lives in power-gedd/ and writes Kiro specs from GEDD evidence.", type="info"),
+                    on_click=lambda: ui.notify("Kiro Power lives in power-gedd/ and consumes domain-expert-curated GEDD evidence.", type="info"),
                 ).props("flat size=sm no-caps").style("color: var(--text-secondary)")
 
         progress_container = ui.element("div").classes("w-full")
@@ -468,8 +469,8 @@ def main_page() -> None:
                             'I will guide the product workflow:<br>'
                             '1. <strong>Define your agent</strong> - name, users, capabilities, and task boundary<br>'
                             '2. <strong>Generate test cases</strong> - normal, edge, ambiguous, adversarial, and recovery queries<br>'
-                            '3. <strong>Drive SME error analysis</strong> - verdicts, failure codes, severity, confidence, and memos<br>'
-                            '4. <strong>Generate Kiro requirements.md</strong> - EARS acceptance criteria grounded in annotations<br>'
+                            '3. <strong>Curate evidence through SME error analysis</strong> - verdicts, failure codes, severity, confidence, and memos<br>'
+                            '4. <strong>Generate Kiro requirements.md</strong> - EARS acceptance criteria grounded in curated evidence<br>'
                             '5. <strong>Generate the LLM Judge</strong> - a release gate for the same failure modes<br><br>'
                             '<strong>What AI agent are you building?</strong></div>'
                         )

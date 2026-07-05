@@ -1,19 +1,19 @@
 ---
 name: "gedd"
 displayName: "GEDD - Kiro Domain Specs + LLM Judge"
-description: "A Kiro Power for turning SME error analysis and annotations into two evidence-backed outputs: Kiro requirements.md and an LLM-as-a-Judge release gate"
+description: "A Kiro Power for consuming GEDD's domain-expert-curated evidence and generating two outputs: Kiro requirements.md and an LLM-as-a-Judge release gate"
 keywords: ["gedd", "kiro", "requirements.md", "ears", "llm judge", "error analysis", "annotation", "failure codes", "codebook", "agent evaluation", "grounded theory", "open coding", "axial coding", "golden dataset", "saturation", "domain specs"]
 author: "GEDD Team"
 ---
 
 # GEDD Power - Kiro Domain Specs + LLM Judge
 
-GEDD is the Coach-led workflow for converting domain expert review of AI agent failures into two concrete artifacts:
+GEDD is the Coach-led workflow for converting domain expert review of AI agent failures into curated evidence. This Power consumes that evidence and generates two concrete artifacts:
 
 1. `.kiro/specs/{agent-name}/requirements.md`
 2. `llm-judge.md`
 
-Use the GEDD web UI when SMEs need a guided annotation surface. Use this Kiro Power when the same workflow should run inside Kiro and write Kiro-ready specs directly into the workspace.
+Use the GEDD web UI when SMEs need a guided annotation surface to curate evidence. Use this Kiro Power when Kiro should consume that evidence and write Kiro-ready specs directly into the workspace.
 
 ## Product Workflow
 
@@ -24,12 +24,12 @@ Coach -> SME Error Analysis -> Annotations -> Kiro requirements.md + LLM Judge
 | Phase | Who | What Happens | Output |
 |-------|-----|--------------|--------|
 | Coach | SME + product owner | Define the agent, users, task boundary, risk posture, and query plan | Agent spec + golden queries |
-| Error Analysis | SME + evaluator | Review real or proposed agent responses and identify incorrect behavior | Evidence queue |
-| Annotations | SME | Capture verdict, failure code, severity, confidence, and memo | Codebook + annotated failures |
-| Domain Specs | GEDD Power + Kiro | Convert failures into EARS acceptance criteria in Kiro's requirements format | `requirements.md` |
+| Error Analysis | SME + evaluator | Review real or proposed agent responses and identify incorrect behavior | Curated evidence queue |
+| Annotations | SME | Capture verdict, failure code, severity, confidence, and memo | Domain-expert-curated codebook + annotated failures |
+| Domain Specs | GEDD Power + Kiro | Convert curated evidence into EARS acceptance criteria in Kiro's requirements format | `requirements.md` |
 | Judge | GEDD Power + evaluator | Convert the same failure modes into an automated release gate | `llm-judge.md` |
 
-Kiro's feature-spec workflow is requirements-first. GEDD focuses that first document on evidence-backed domain behavior: user stories and EARS acceptance criteria that come from observed failures rather than generic assumptions.
+Kiro's feature-spec workflow is requirements-first. GEDD provides the domain evidence Kiro needs: user stories and EARS acceptance criteria that come from SME-curated failures rather than generic assumptions.
 
 ## What GEDD Generates
 
@@ -82,15 +82,15 @@ The judge prompt enforces the same failure codes and release gates used in `requ
 
 ## Source Evidence
 
-GEDD expects one of these inputs:
+GEDD provides the evidence layer. Treat these inputs as the domain-expert-curated source of truth:
 
 - A GEDD web UI export containing session data, annotations, codebook, and judge prompt inputs
 - A markdown `error-analysis.md` handoff
 - Manually supplied agent description, golden queries, and SME annotations
 
-The minimum viable evidence for generation:
+The minimum viable curated evidence for generation:
 
-| Evidence | Required For |
+| Curated Evidence | Required For |
 |----------|--------------|
 | Agent name and task boundary | Both outputs |
 | Target users and capabilities | User stories |
@@ -101,7 +101,7 @@ The minimum viable evidence for generation:
 
 ## EARS Mapping
 
-Use EARS patterns from the domain evidence:
+Use EARS patterns from the curated domain evidence:
 
 | Evidence | EARS Pattern | Output |
 |----------|--------------|--------|
@@ -148,7 +148,7 @@ Before generation, report what is present and missing:
 - Memos or release-gate notes
 - Saturation evidence
 
-If failure codes or SME annotations are missing, do not fabricate domain requirements. Ask for annotation work first.
+If failure codes or SME annotations are missing, do not fabricate domain requirements. Ask for GEDD evidence curation first.
 
 ### Step 3: Generate the Two Outputs
 
@@ -199,7 +199,7 @@ Before calling the output complete:
 ## Example Command
 
 ```text
-Use GEDD to turn this exported error analysis into Kiro requirements.md and an LLM Judge.
+Use GEDD to turn this domain-expert-curated evidence into Kiro requirements.md and an LLM Judge.
 ```
 
 Expected behavior:

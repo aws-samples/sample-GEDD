@@ -5,7 +5,7 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-GEDD is a Coach-first product for turning SME review of AI-agent failures into domain-driven specs.
+GEDD is a Coach-first product for creating domain-expert-curated evidence from AI-agent failures and turning that evidence into domain-driven specs.
 
 The product has one main path:
 
@@ -13,14 +13,14 @@ The product has one main path:
 Coach → SME Error Analysis → Annotations → Kiro requirements.md + LLM Judge
 ```
 
-Start in `Coach`. Define the agent, generate or refine test cases, guide SME error analysis, and produce two concrete outputs:
+Start in `Coach`. Define the agent, generate or refine test cases, guide SME error analysis, and curate the evidence that drives two concrete outputs:
 
 | Output | File | Why it matters |
 |---|---|---|
 | Kiro Domain Spec | `requirements.md` | Converts observed failure modes into Kiro-ready user stories and EARS acceptance criteria |
 | LLM-as-a-Judge | `llm-judge.md` or judge prompt markdown | Converts the same failure modes into an automated release gate |
 
-GEDD is not a generic model leaderboard or demo gallery. It preserves domain expert judgment and makes it executable for Kiro, product, engineering, CI, and release review.
+GEDD is not a generic model leaderboard or demo gallery. Its job is to capture the domain expert's evidence: what failed, why it matters, what severity it carries, and what requirement or judge rule should prevent it. Kiro then uses that curated evidence to generate executable specs.
 
 ![GEDD Coach and annotation workflow](grounded-evals/docs/GEDD_optimized.gif)
 
@@ -32,10 +32,10 @@ GEDD works in two places:
 
 | Surface | Use it when | Output |
 |---|---|---|
-| Web UI Coach | SMEs need a guided product workflow for agent definition, test cases, error analysis, and annotations | Downloadable Kiro `requirements.md` and LLM Judge |
-| Kiro Power | You want the same GEDD methodology inside Kiro | `.kiro/specs/{agent-name}/requirements.md` and `.kiro/specs/{agent-name}/llm-judge.md` |
+| Web UI Coach | SMEs need a guided product workflow for agent definition, test cases, error analysis, and annotations | Curated evidence plus downloadable Kiro `requirements.md` and LLM Judge |
+| Kiro Power | You want Kiro to consume GEDD's curated evidence inside the IDE | `.kiro/specs/{agent-name}/requirements.md` and `.kiro/specs/{agent-name}/llm-judge.md` |
 
-Both surfaces use the same evidence:
+GEDD provides the evidence layer. The domain expert curates that evidence through:
 
 - Agent purpose, target users, capabilities, and task boundary
 - Golden queries or imported traces
@@ -44,7 +44,7 @@ Both surfaces use the same evidence:
 - Severity, confidence, and memos
 - Optional saturation and axial-coding evidence
 
-The core idea is simple: every important SME annotation should become either a Kiro requirement, a judge rule, or both.
+The core idea is simple: Kiro should not invent domain requirements from generic assumptions. GEDD provides curated domain evidence, and every important SME annotation should become either a Kiro requirement, a judge rule, or both.
 
 ## Quick Start
 
@@ -71,7 +71,7 @@ Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment va
 | Step | Page | What happens | Output |
 |---|---|---|---|
 | 1 | `Coach` | Define the agent, users, capabilities, task boundary, system prompt, and test-case plan | Agent spec + query plan |
-| 2 | `Error Analysis` | Inspect representative queries, traces, and response evidence | Failure evidence |
+| 2 | `Error Analysis` | Inspect representative queries, traces, and response evidence | Domain-expert-curated failure evidence |
 | 3 | `Annotations` | SMEs assign verdicts, failure codes, severity, confidence, and memos | Codebook + annotated failures |
 | 4 | `Kiro requirements.md` | Generate a Kiro-ready domain spec using EARS acceptance criteria | `requirements.md` |
 | 5 | `LLM Judge` | Generate a release-gate judge from the same failure modes | Judge prompt |
@@ -81,7 +81,7 @@ The app navigation intentionally keeps this narrow. Demos are available separate
 
 ## Kiro requirements.md
 
-The first GEDD output follows Kiro's requirements-first spec format:
+The first GEDD output follows Kiro's requirements-first spec format and is generated from GEDD's domain-expert-curated evidence:
 
 ```markdown
 # Requirements Document
@@ -113,7 +113,7 @@ Most high-value requirements come from unwanted behavior: an SME saw the agent f
 
 ## LLM Judge
 
-The second GEDD output is an LLM-as-a-Judge prompt that enforces the same domain failures captured in `requirements.md`.
+The second GEDD output is an LLM-as-a-Judge prompt that enforces the same domain-expert-curated failures captured in `requirements.md`.
 
 The judge should return a structured release decision:
 
@@ -132,7 +132,7 @@ The judge is intentionally domain-specific. It should not start with generic hel
 
 ## Kiro Power
 
-The repository includes a Kiro Power in [`power-gedd/`](power-gedd/). It brings the GEDD workflow into Kiro.
+The repository includes a Kiro Power in [`power-gedd/`](power-gedd/). It brings the GEDD workflow into Kiro by treating GEDD evidence as the source of truth.
 
 Install it in Kiro:
 
@@ -140,7 +140,7 @@ Install it in Kiro:
 Powers panel → Add Custom Power → Import from folder → power-gedd/
 ```
 
-Use it when you want Kiro to generate or upgrade specs from GEDD evidence:
+Use it when you want Kiro to generate or upgrade specs from GEDD's domain-expert-curated evidence:
 
 ```text
 Use GEDD to turn this exported error analysis into Kiro requirements.md and an LLM Judge.
@@ -163,7 +163,7 @@ Optional Kiro follow-ons such as `design.md` and `tasks.md` can come later, but 
 
 ## Bring Your Own Agent
 
-Use GEDD when you have a real or proposed agent and need evidence-backed domain requirements before automating evaluation.
+Use GEDD when you have a real or proposed agent and need domain-expert-curated evidence before generating requirements or automating evaluation.
 
 | Step | What to do | Output |
 |---|---|---|
