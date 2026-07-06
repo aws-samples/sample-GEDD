@@ -103,7 +103,7 @@ TOOLS = [
             "properties": {
                 "step": {
                     "type": "integer",
-                    "description": "1=Domain Intake, 2=Query Curation, 3=Kiro Baseline Test, 4=SME Error Analysis, 5=Improve requirements.md and Judge",
+                    "description": "1=Domain Intake, 2=Baseline Kiro Requirements, 3=Query Curation, 4=Kiro Baseline Test, 5=SME Error Analysis, 6=Improve requirements.md and Judge",
                 },
             },
             "required": ["step"],
@@ -176,7 +176,7 @@ def handle_tool_call(tool_name: str, tool_input: dict, state: StateBundle) -> st
         return json.dumps({"saved": True, "total_annotations": len(state.annotations)})
 
     elif tool_name == "set_current_step":
-        state.current_step = max(1, min(5, tool_input.get("step", 1)))
+        state.current_step = max(1, min(6, tool_input.get("step", 1)))
         return json.dumps({"step": state.current_step})
 
     elif tool_name == "save_prompt_variant":

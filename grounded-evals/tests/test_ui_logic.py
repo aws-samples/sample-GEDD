@@ -301,50 +301,18 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
 
 
-def test_progress_rail_uses_coach_to_output_flow():
+def test_layout_does_not_render_global_progress_rail():
     from grounded_evals.ui import layout
 
-    storage = {
-        "session_data": {
-            "agent_spec": {"name": "ProducerGate", "system_prompt": "Stay grounded."},
-            "golden_prompts": [{"prompt_text": "q1"}],
-        },
-        "coding_annotations": [{"codes": ["Feature Promise Hallucination"]}],
-    }
-    with patch.object(layout, "app", _make_mock_app(storage)):
-        steps = layout._get_progress_state()
-
-    assert [step["path"] for step in steps] == [
-        "/coach",
-        "/coach",
-        "/",
-        "/coding",
-        "/report",
-    ]
-    assert [step["label"] for step in steps] == [
-        "Domain + Baseline",
-        "Queries",
-        "Baseline Test",
-        "Annotations",
-        "Outputs",
-    ]
+    assert not hasattr(layout, "_get_progress_state")
+    assert "progress-rail" not in layout.BRAND_CSS
 
 
-def test_progress_rail_marks_one_current_coach_step():
+def test_coach_step_styles_are_single_step_led():
     from grounded_evals.ui import layout
 
-    storage = {
-        "session_data": {
-            "agent_spec": {"domain_context": "finance"},
-            "golden_prompts": [],
-        },
-    }
-    with patch.object(layout, "app", _make_mock_app(storage)):
-        steps = layout._get_progress_state("/coach")
-
-    assert [step["label"] for step in steps if step.get("current")] == [
-        "Domain + Baseline"
-    ]
+    assert "coach-led-single" in layout.BRAND_CSS
+    assert "coach-action-note" in layout.BRAND_CSS
 
 
 def test_clear_project_state_preserves_login_and_removes_demo_state():
@@ -718,7 +686,7 @@ def test_store_judge_prompt_marks_core_flow_complete():
 
     assert storage["_simple_judge_prompt"] == "judge prompt"
     assert storage["_generated_judge_prompt"] == "judge prompt"
-    assert storage["current_step"] == 5
+    assert storage["current_step"] == 6
     assert storage["_jb_generated_at"]
 
 

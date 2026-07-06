@@ -438,21 +438,6 @@ body {
   border-radius: 6px 6px 0 0 !important;
 }
 
-/* Progress rail */
-.progress-rail {
-  display: flex; align-items: center; gap: 0; padding: 6px 1.5rem;
-  background: var(--bg-surface-1); border-bottom: 1px solid var(--border-subtle);
-  font-size: 0.7rem; overflow-x: auto; scrollbar-width: none;
-}
-.progress-rail::-webkit-scrollbar { display: none; }
-.progress-rail-step {
-  display: flex; align-items: center; gap: 4px; white-space: nowrap;
-  color: var(--text-muted); font-weight: 500;
-}
-.progress-rail-step.done { color: var(--green-bright); }
-.progress-rail-step.current { color: var(--accent-bright); font-weight: 600; }
-.progress-rail-arrow { color: var(--text-muted); margin: 0 6px; font-size: 0.6rem; }
-
 /* Animations */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(16px); }
@@ -503,8 +488,8 @@ body {
     grid-template-columns: 1fr;
     gap: 3px;
   }
-  .coach-mini-flow {
-    gap: 6px;
+  .coach-led-stage {
+    grid-template-columns: 1fr;
   }
   .dynamic-page {
     padding: 1rem 1rem 2rem;
@@ -603,92 +588,76 @@ body {
   line-height: 1.45;
   color: var(--text-tertiary);
 }
-.coach-mini-flow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
+.coach-led-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.34fr);
+  gap: 14px;
+  align-items: stretch;
+  margin-top: 14px;
 }
-.coach-mini-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  min-height: 30px;
-  padding: 5px 9px 5px 6px;
-  border-radius: 99px;
+.coach-led-stage.coach-led-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.coach-led-current,
+.coach-led-action {
   border: 1px solid var(--border-subtle);
-  color: var(--text-tertiary);
-  background: var(--bg-surface-1);
-  --step-color: var(--accent-bright);
-  --step-bg: var(--accent-tint);
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+  border-radius: var(--radius-lg);
+  background: rgba(9,11,15,0.42);
+  padding: 14px;
 }
-.coach-mini-step:hover {
-  transform: translateY(-1px);
-  border-color: var(--step-color);
+.coach-led-action {
+  border-color: rgba(94,224,210,0.20);
 }
-.coach-mini-step:nth-child(2) {
-  --step-color: var(--yellow);
-  --step-bg: var(--yellow-tint);
-}
-.coach-mini-step:nth-child(3) {
-  --step-color: var(--blue);
-  --step-bg: var(--blue-tint);
-}
-.coach-mini-step:nth-child(4) {
-  --step-color: var(--red);
-  --step-bg: var(--red-tint);
-}
-.coach-mini-step:nth-child(5) {
-  --step-color: var(--violet);
-  --step-bg: var(--violet-tint);
-}
-.coach-mini-step span {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 99px;
-  background: var(--step-bg);
-  color: var(--step-color);
+.coach-led-label {
   font-size: 0.62rem;
   font-weight: 760;
-}
-.coach-mini-step strong {
-  font-size: 0.72rem;
-  color: var(--text-secondary);
-}
-.coach-mini-step em {
-  font-style: normal;
-  font-size: 0.56rem;
-  font-weight: 760;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--accent-bright);
 }
-.coach-mini-step.current {
-  border-color: var(--step-color);
-  color: var(--step-color);
+.coach-led-title {
+  margin-top: 7px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 740;
 }
-.coach-mini-step.current span {
-  background: var(--step-color);
-  color: #071314;
+.coach-led-copy {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  line-height: 1.5;
 }
-.coach-mini-step.current em,
-.coach-mini-step.current strong {
-  color: var(--step-color);
-}
-.coach-mini-step.done {
-  border-color: rgba(74,222,128,0.2);
-}
-.coach-mini-step.done span {
+.coach-led-outcome {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 5px 8px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(66,189,115,0.18);
   background: var(--green-tint);
   color: var(--green-bright);
 }
-.coach-mini-step.done em,
-.coach-mini-step.done strong {
+.coach-led-outcome span {
+  font-size: 0.58rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--green-bright);
+}
+.coach-led-outcome strong {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.coach-led-prompt {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--yellow);
+  font-size: 0.76rem;
+  line-height: 1.45;
 }
 .coach-output-grid {
   display: grid;
@@ -812,6 +781,24 @@ body {
   gap: 8px;
   margin-top: 14px;
 }
+.coach-action-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(94,224,210,0.18);
+  background: rgba(31,182,166,0.10);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+.coach-action-note .material-icons {
+  color: var(--accent-bright);
+  font-size: 1rem;
+}
+.coach-action-note strong {
+  color: var(--text-primary);
+}
 .chat-card {
   position: relative;
   overflow: hidden;
@@ -860,11 +847,6 @@ body {
   border-radius: var(--radius-lg);
   background: var(--bg-surface-1);
 }
-.coach-download-rail {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border-subtle);
-}
 .msg-user { background: var(--accent-tint); border: 1px solid rgba(94,224,210,0.22); border-radius: var(--radius-lg); padding: 12px 16px; margin: 6px 0; color: var(--text-primary); }
 .msg-ai { background: var(--bg-surface-1); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--accent); color: var(--text-secondary); }
 .msg-ai strong { color: var(--text-primary); }
@@ -900,66 +882,8 @@ body {
 """
 
 
-def _get_progress_state(current_path: str = "") -> list[dict]:
-    """Compute progress rail steps from session state."""
-    s = app.storage.user
-    session_data = s.get("session_data", {})
-    agent_spec = session_data.get("agent_spec", {}) if isinstance(session_data, dict) else {}
-    golden = session_data.get("golden_prompts", [])
-    annotations = s.get("coding_annotations", [])
-    codebook = s.get("codebook", [])
-    judge = s.get("_generated_judge_prompt", "")
-    has_domain = bool(agent_spec.get("domain_context") or agent_spec.get("name")) if isinstance(agent_spec, dict) else False
-    has_prompt = bool(agent_spec.get("system_prompt")) if isinstance(agent_spec, dict) else False
-    has_baseline_spec = bool(s.get("baseline_requirements_md") or has_prompt)
-    baseline_tested = bool(s.get("eval_results") or annotations)
-    has_domain_spec_source = bool(session_data.get("codes") or codebook)
-
-    steps = [
-        {
-            "label": "Domain + Baseline",
-            "path": "/coach",
-            "done": bool(has_domain and has_baseline_spec),
-        },
-        {"label": "Queries", "path": "/coach", "done": bool(golden)},
-        {"label": "Baseline Test", "path": "/", "done": bool(golden and baseline_tested)},
-        {
-            "label": "Annotations",
-            "path": "/coding",
-            "done": False,
-            "count": f"{len(annotations)}/{max(len(golden), 1)}",
-        },
-        {
-            "label": "Outputs",
-            "path": "/report",
-            "done": bool(has_domain_spec_source and judge),
-        },
-    ]
-    # Mark the annotation step done if all queries have SME annotations.
-    if golden and len(annotations) >= len(golden):
-        steps[3]["done"] = True
-    if current_path == "/coach":
-        if not (has_domain and has_baseline_spec):
-            steps[0]["current"] = True
-        else:
-            steps[1]["current"] = True
-    elif current_path == "/coding":
-        steps[3]["current"] = True
-    elif current_path == "/requirements":
-        steps[4]["current"] = True
-    elif current_path == "/judge":
-        steps[4]["current"] = True
-    elif current_path == "/report":
-        steps[4]["current"] = True
-    elif current_path == "/":
-        steps[2]["current"] = True
-    elif current_path == "/improvement":
-        steps[4]["current"] = True
-    return steps
-
-
 def page_layout(title: str = "", current_path: str = ""):
-    """Apply shared page layout with navigation header and progress rail."""
+    """Apply shared page layout with the app header and progressive navigation."""
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
 
     # Detect current path from title mapping if not provided
@@ -983,8 +907,30 @@ def page_layout(title: str = "", current_path: str = ""):
                 '</span>'
             )
 
+        storage = app.storage.user
+        session_data = storage.get("session_data", {})
+        agent_spec = session_data.get("agent_spec", {}) if isinstance(session_data, dict) else {}
+        has_domain = bool(agent_spec.get("domain_context") or agent_spec.get("name")) if isinstance(agent_spec, dict) else False
+        has_queries = bool(session_data.get("golden_prompts")) if isinstance(session_data, dict) else False
+        has_baseline_evidence = bool(storage.get("eval_results") or storage.get("coding_annotations"))
+        has_annotations = bool(storage.get("coding_annotations"))
+        has_outputs = bool(storage.get("codebook") or storage.get("_generated_judge_prompt"))
+
+        def should_show_nav(path: str) -> bool:
+            if path in {"/", "/coach"}:
+                return True
+            if path == "/coding":
+                return current_path == path or has_queries or has_baseline_evidence
+            if path == "/report":
+                return current_path == path or has_annotations or has_outputs
+            if path in {"/requirements", "/judge"}:
+                return current_path == path or has_outputs
+            return current_path == path or has_domain
+
         with ui.row().classes("app-nav-row items-center gap-xs"):
             for item in NAV_ITEMS:
+                if not should_show_nav(item["path"]):
+                    continue
                 is_active = current_path == item["path"]
                 button = ui.button(
                     item["label"], icon=item["icon"],
@@ -1123,29 +1069,3 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.button(icon="logout", on_click=logout).props("flat round size=sm").style(
                 "color: var(--text-muted)"
             ).tooltip("Logout")
-
-    # Evidence-driven output flow: domain intake -> queries -> baseline test -> annotations -> specs -> judge.
-    workflow_paths = {"/coach", "/", "/coding", "/requirements", "/improvement", "/judge", "/report"}
-    if current_path in workflow_paths:
-        steps = _get_progress_state(current_path)
-        has_explicit_current = any(step.get("current") for step in steps)
-        with ui.element("div").classes("progress-rail"):
-            for i, step in enumerate(steps):
-                if i > 0:
-                    ui.html('<span class="progress-rail-arrow">→</span>')
-                cls = "progress-rail-step"
-                is_current = (
-                    bool(step.get("current"))
-                    if has_explicit_current
-                    else step["path"] == current_path
-                )
-                if step["done"]:
-                    cls += " done"
-                elif is_current:
-                    cls += " current"
-                label = step["label"]
-                prefix = "✓ " if step["done"] else ""
-                suffix = ""
-                if not step["done"] and step.get("count") and step["path"] == current_path:
-                    suffix = f" ({step['count']})"
-                ui.html(f'<span class="{cls}">{prefix}{label}{suffix}</span>')

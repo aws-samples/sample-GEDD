@@ -72,10 +72,10 @@ def main() -> None:
 
 STEP_NAMES = {
     1: "Domain Intake",
-    2: "Curated Queries",
-    3: "Kiro Baseline Test",
-    4: "SME Error Analysis",
-    5: "Improve Specs + Judge",
+    2: "Baseline Kiro Requirements",
+    3: "Curated Queries",
+    4: "Kiro Baseline Test",
+    5: "SME Error Analysis",
     6: "Output Handoff",
 }
 
@@ -292,11 +292,12 @@ def chat(session: str) -> None:
     Starts fresh or resumes from a saved session file. Type 'quit' to exit.
 
     Steps:\n
-      1. Define your agent (name, capabilities, users)\n
-      2. Write a system prompt collaboratively\n
-      3. Confirm runtime for test responses\n
-      4. Generate golden test queries via Open Coding\n
-      5. Run queries, annotate failures, and prepare the judge
+      1. Identify the SME domain\n
+      2. Capture baseline Kiro requirements.md\n
+      3. Curate domain queries\n
+      4. Test the Kiro baseline agent\n
+      5. Annotate failures with SME judgment\n
+      6. Export SME_error_analysis.md, requirements.md, and the judge
     """
     from grounded_evals.agent.handler import run_agent_turn
 
@@ -305,7 +306,7 @@ def chat(session: str) -> None:
     if messages:
         n_queries = len(state.session.golden_prompts)
         click.echo(f"Resumed session from {session}")
-        click.echo(f"  Step {state.current_step}/5: {STEP_NAMES.get(state.current_step, '')}  |  {n_queries} queries saved")
+        click.echo(f"  Step {state.current_step}/6: {STEP_NAMES.get(state.current_step, '')}  |  {n_queries} queries saved")
         click.echo("Type 'quit' to exit.\n")
     else:
         click.echo(f"New GEDD session. State will be saved to: {session}")

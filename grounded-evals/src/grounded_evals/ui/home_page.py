@@ -1,6 +1,6 @@
 """Coach-first GEDD homepage for Kiro Domain Specs and LLM Judge outputs."""
 
-from nicegui import app, ui
+from nicegui import ui
 
 from grounded_evals.ui.layout import BRAND_CSS
 
@@ -385,23 +385,26 @@ HOME_CSS = """
 }
 .clean-home {
   width: 100%;
-  max-width: 1120px;
+  min-height: 100vh;
+  max-width: 880px;
   margin: 0 auto;
   padding: 1.4rem 1.5rem 2.6rem;
+  justify-content: center;
 }
 .clean-hero {
   position: relative;
   overflow: hidden;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: 1fr;
   gap: 26px;
-  align-items: stretch;
-  padding: 26px;
+  align-items: center;
+  padding: 34px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   background:
     linear-gradient(135deg, rgba(31,182,166,0.12), rgba(244,184,96,0.06) 46%, rgba(177,140,255,0.08)),
     var(--bg-surface-1);
+  text-align: center;
 }
 .clean-hero::before {
   content: "";
@@ -414,6 +417,7 @@ HOME_CSS = """
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  margin: 0 auto;
   color: var(--accent-bright);
   font-size: 0.68rem;
   font-weight: 740;
@@ -422,7 +426,7 @@ HOME_CSS = """
 }
 .clean-headline {
   max-width: 760px;
-  margin: 14px 0 0;
+  margin: 14px auto 0;
   font-size: 2.65rem;
   line-height: 1.1;
   letter-spacing: 0;
@@ -430,8 +434,8 @@ HOME_CSS = """
   color: var(--text-primary);
 }
 .clean-subhead {
-  max-width: 720px;
-  margin-top: 14px;
+  max-width: 660px;
+  margin: 14px auto 0;
   font-size: 0.98rem;
   line-height: 1.65;
   color: var(--text-secondary);
@@ -439,6 +443,7 @@ HOME_CSS = """
 .clean-actions {
   display: flex;
   align-items: center;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 10px;
   margin-top: 22px;
@@ -474,154 +479,6 @@ HOME_CSS = """
   margin-top: 5px;
   font-size: 0.75rem;
   line-height: 1.5;
-  color: var(--text-tertiary);
-}
-.flow-section {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 22px;
-  padding-top: 1rem;
-}
-.flow-heading {
-  font-size: 0.78rem;
-  font-weight: 740;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text-tertiary);
-}
-.flow-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-.flow-row {
-  position: relative;
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: start;
-  padding: 13px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface-1);
-  --step-color: var(--accent-bright);
-  --step-bg: var(--accent-tint);
-  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
-}
-.flow-row:hover {
-  border-color: var(--border-default);
-  transform: translateX(2px);
-}
-.flow-row.current {
-  background: linear-gradient(90deg, var(--step-bg), var(--bg-surface-1) 42%);
-  border-color: var(--step-color);
-}
-.flow-row:nth-child(2) {
-  --step-color: var(--yellow);
-  --step-bg: var(--yellow-tint);
-}
-.flow-row:nth-child(3) {
-  --step-color: var(--blue);
-  --step-bg: var(--blue-tint);
-}
-.flow-row:nth-child(4) {
-  --step-color: var(--red);
-  --step-bg: var(--red-tint);
-}
-.flow-row:nth-child(5) {
-  --step-color: var(--violet);
-  --step-bg: var(--violet-tint);
-}
-.flow-row.current .flow-num {
-  background: var(--step-color);
-  color: #071314;
-}
-.flow-row.done .flow-num {
-  background: var(--green-tint);
-  color: var(--green-bright);
-}
-.flow-row.current .flow-title {
-  color: var(--step-color);
-}
-.flow-num {
-  width: 28px;
-  height: 28px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 99px;
-  background: var(--step-bg);
-  color: var(--step-color);
-  font-size: 0.72rem;
-  font-weight: 760;
-}
-.flow-title {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.flow-copy {
-  margin-top: 3px;
-  max-width: 620px;
-  font-size: 0.75rem;
-  line-height: 1.48;
-  color: var(--text-tertiary);
-}
-.flow-evidence {
-  margin-top: 6px;
-  font-size: 0.68rem;
-  color: var(--green-bright);
-}
-.flow-status {
-  padding-top: 3px;
-  color: var(--text-muted);
-  font-size: 0.62rem;
-  font-weight: 740;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.flow-row.current .flow-status { color: var(--step-color); }
-.flow-row.done .flow-status { color: var(--green-bright); }
-.outputs-panel {
-  padding-top: 1px;
-}
-.output-list {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-}
-.output-item {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface-1);
-  transition: border-color 160ms ease, transform 160ms ease;
-}
-.output-item:hover {
-  border-color: var(--border-default);
-  transform: translateY(-1px);
-}
-.output-item .material-icons {
-  color: var(--accent-bright);
-  font-size: 1rem;
-}
-.output-item:nth-child(1) .material-icons { color: var(--yellow); }
-.output-item:nth-child(2) .material-icons { color: var(--accent-bright); }
-.output-item:nth-child(3) .material-icons { color: var(--violet); }
-.output-item:nth-child(4) .material-icons { color: var(--blue); }
-.output-title {
-  font-size: 0.78rem;
-  font-weight: 680;
-  color: var(--text-primary);
-}
-.output-copy {
-  margin-top: 2px;
-  font-size: 0.7rem;
-  line-height: 1.42;
   color: var(--text-tertiary);
 }
 .sme-current-banner {
@@ -1430,13 +1287,10 @@ HOME_CSS = """
   .mkt-subhead { font-size: 0.9rem; }
   .mkt-cta-row { flex-direction: column; align-items: stretch; }
   .clean-home { padding: 1rem 1rem 2rem; }
-  .clean-hero,
-  .flow-section { grid-template-columns: 1fr; }
+  .clean-hero { grid-template-columns: 1fr; }
   .clean-headline { font-size: 1.85rem; }
   .clean-subhead { font-size: 0.9rem; }
   .clean-actions { align-items: stretch; flex-direction: column; }
-  .flow-row { grid-template-columns: 30px minmax(0, 1fr); }
-  .flow-status { grid-column: 2; padding-top: 0; }
   .simple-hero { padding-top: 2rem; text-align: center; }
   .simple-headline { font-size: 2.05rem; line-height: 1.12; }
   .simple-subhead { font-size: 0.92rem; }
@@ -1603,21 +1457,6 @@ def home_page():
     ui.add_head_html(f"<style>{BRAND_CSS}</style>")
     ui.add_head_html(f"<style>{HOME_CSS}</style>")
 
-    storage = app.storage.user
-
-    sme_flow_steps = _get_sme_flow_steps(storage)
-    current_flow_step = next(
-        (step for step in sme_flow_steps if step["status"] == "current"),
-        next((step for step in sme_flow_steps if step["status"] != "done"), sme_flow_steps[-1]),
-    )
-
-    artifacts = [
-        ("fact_check", "SME_error_analysis.md", "The SME-reviewed evidence handoff: queries, baseline failures, codes, severity, confidence, and memos."),
-        ("description", "Improved requirements.md", "A Kiro domain spec with EARS acceptance criteria grounded in SME_error_analysis.md."),
-        ("gavel", "LLM Judge", "A release-gate prompt generated from the same SME_error_analysis.md failure modes."),
-        ("monitoring", "Measurement", "Baseline-vs-GEDD comparison for specificity, testability, traceability, coverage, and accuracy."),
-    ]
-
     with ui.column().classes("clean-home"):
         with ui.element("section").classes("clean-hero animate-in stagger-1"):
             with ui.element("div"):
@@ -1634,9 +1473,8 @@ def home_page():
                 )
                 ui.html(
                     '<div class="clean-subhead">'
-                    "A simple loop for domain experts: define the domain, test the Kiro baseline, "
-                    "annotate what failed, then turn that evidence into a better requirements.md "
-                    "and an LLM Judge."
+                    "Coach leads the domain expert one step at a time from baseline evidence "
+                    "to SME_error_analysis.md, Kiro requirements.md, and an LLM Judge."
                     "</div>"
                 )
                 with ui.element("div").classes("clean-actions"):
@@ -1647,37 +1485,3 @@ def home_page():
                     ).props("color=primary size=md unelevated no-caps").style(
                         "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
                     )
-            with ui.element("aside").classes("next-panel"):
-                ui.html(
-                    '<div class="next-label">'
-                    '<span class="material-icons" style="font-size:0.9rem">near_me</span>'
-                    'Next action'
-                    '</div>'
-                )
-                ui.html(f'<div class="next-title">{current_flow_step["title"]}</div>')
-                ui.html(f'<div class="next-copy">{current_flow_step["action"]}</div>')
-
-        with ui.element("section").classes("flow-section animate-in stagger-2"):
-            with ui.element("div"):
-                ui.html('<div class="flow-heading">Workflow</div>')
-                with ui.element("div").classes("flow-list"):
-                    for step in sme_flow_steps:
-                        status_label = "done" if step["status"] == "done" else (
-                            "now" if step["status"] == "current" else "next"
-                        )
-                        with ui.element("div").classes(f'flow-row {step["status"]}'):
-                            ui.html(f'<span class="flow-num">{step["num"]}</span>')
-                            with ui.element("div"):
-                                ui.html(f'<div class="flow-title">{step["title"]}</div>')
-                                ui.html(f'<div class="flow-copy">{step["action"]}</div>')
-                                ui.html(f'<div class="flow-evidence">{step["evidence"]}</div>')
-                            ui.html(f'<div class="flow-status">{status_label}</div>')
-            with ui.element("aside").classes("outputs-panel"):
-                ui.html('<div class="flow-heading">Outputs</div>')
-                with ui.element("div").classes("output-list"):
-                    for icon, title, copy in artifacts:
-                        with ui.element("div").classes("output-item"):
-                            ui.icon(icon)
-                            with ui.element("div"):
-                                ui.html(f'<div class="output-title">{title}</div>')
-                                ui.html(f'<div class="output-copy">{copy}</div>')

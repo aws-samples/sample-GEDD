@@ -1549,5 +1549,5 @@ def load_gdpr_auditor_demo(storage: dict) -> None:
     storage["_simple_judge_prompt"] = GDPR_AUDITOR_JUDGE_PROMPT
     storage["_generated_judge_prompt"] = GDPR_AUDITOR_JUDGE_PROMPT
     storage["_jb_generated_at"] = DEMO_GENERATED_AT
-    storage["current_step"] = 5
+    storage["current_step"] = 6
     storage["_demo_lifecycle_banner"] = True

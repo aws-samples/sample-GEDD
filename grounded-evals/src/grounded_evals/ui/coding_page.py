@@ -128,9 +128,9 @@ def _store_judge_prompt(storage: dict, prompt: str) -> None:
     storage['_generated_judge_prompt'] = prompt
     storage['_jb_generated_at'] = datetime.now().isoformat()
     try:
-        storage['current_step'] = max(int(storage.get('current_step', 1) or 1), 5)
+        storage['current_step'] = max(int(storage.get('current_step', 1) or 1), 6)
     except (TypeError, ValueError):
-        storage['current_step'] = 5
+        storage['current_step'] = 6
 
 
 def _agent_export_slug(storage: dict) -> str:
@@ -641,20 +641,6 @@ def coding_page():
     responses = _build_responses(storage)
 
     if not responses:
-        def load_pm_workbench_demo() -> None:
-            from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
-
-            load_inductive_pm_demo(app.storage.user)
-            ui.notify("50-query localization demo loaded.", type="positive")
-            ui.navigate.to("/coding")
-
-        def load_gdpr_workbench_demo() -> None:
-            from grounded_evals.ui.gdpr_auditor_demo import load_gdpr_auditor_demo
-
-            load_gdpr_auditor_demo(app.storage.user)
-            ui.notify("50-query AWS Cloud GDPR demo loaded.", type="positive")
-            ui.navigate.to("/coding")
-
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
             with ui.element("div").classes("empty-state-panel"):
                 ui.icon("bug_report")
@@ -666,18 +652,11 @@ def coding_page():
                     "</div>"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):
-                    ui.button("Load 50-query localization demo", icon="play_circle",
-                              on_click=load_pm_workbench_demo).style(
-                        "background: var(--accent); color: white; border-radius: 6px"
-                    )
-                    ui.button("Load 50-query AWS Cloud GDPR demo", icon="policy",
-                              on_click=load_gdpr_workbench_demo).props("outline").style(
-                        "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
-                    )
-                    ui.button("Start with Coach", icon="auto_awesome",
-                              on_click=lambda: ui.navigate.to("/coach")).props("outline").style(
-                        "color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px"
-                    )
+                    ui.button(
+                        "Open Coach",
+                        icon="auto_awesome",
+                        on_click=lambda: ui.navigate.to("/coach"),
+                    ).props("color=primary no-caps")
         return
 
     # ── Demo lifecycle banner ─────────────────────────────────────────────
