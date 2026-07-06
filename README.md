@@ -24,6 +24,8 @@ Start in `Coach`. First identify the SME's domain, then upload or capture the ba
 
 GEDD is not a generic model leaderboard or demo gallery. Its first job is domain query curation. Its second job is SME-guided error analysis of the Kiro baseline agent. GEDD packages that work as `SME_error_analysis.md`; Kiro then uses the file to improve `requirements.md` and generate judge rules that can be measured against the baseline.
 
+The current UI is intentionally simple: the homepage has one action, `Open Coach`. The Coach is the product surface. Demos and reference seeds are secondary and live away from the main path.
+
 ![GEDD Coach and annotation workflow](grounded-evals/docs/GEDD_optimized.gif)
 
 The longer methodology essay is in [METHODOLOGY.md](METHODOLOGY.md). This README is the practical product and engineering guide.
@@ -63,12 +65,14 @@ grounded-evals serve --host 127.0.0.1 --port 8080
 Open:
 
 ```text
-http://127.0.0.1:8080/coach
+http://127.0.0.1:8080/
 ```
+
+The homepage intentionally shows only `Open Coach`. You can also go directly to `http://127.0.0.1:8080/coach`.
 
 Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment variables are configured. If port `8080` is busy, use `--port 8081`.
 
-To use an existing Kiro baseline, click `Upload baseline requirements.md` on the homepage or Coach page and select the current `.kiro/specs/{agent-name}/requirements.md` file. GEDD stores it as baseline evidence and embeds it in `SME_error_analysis.md` under `Baseline Kiro Requirements`.
+To use an existing Kiro baseline, click `Open Coach`, then click `Upload baseline requirements.md` in the Coach header and select the current `.kiro/specs/{agent-name}/requirements.md` file. GEDD stores it as baseline evidence and embeds it in `SME_error_analysis.md` under `Baseline Kiro Requirements`.
 
 ## First Run For A Domain Expert
 
@@ -88,17 +92,31 @@ The product rule is: no improved requirements before SME evidence. Kiro's requir
 
 ## Web UI Workflow
 
+The application is organized around the SME evidence flow, not demo browsing.
+
+| Route | UI label | Purpose |
+|---|---|---|
+| `/` | Home | Minimal entry screen with one action: `Open Coach` |
+| `/coach` | Coach | Domain intake, baseline `requirements.md` upload, query curation, and SME-guided evidence collection |
+| `/coding` | Annotations | Review baseline responses and label verdict, failure code, severity, confidence, missing rule, and memo |
+| `/report` | Evidence | Export `SME_error_analysis.md` and inspect the curated evidence handoff |
+| `/requirements` | `requirements.md` | Generate the Kiro domain spec from SME evidence using EARS-style acceptance criteria |
+| `/judge` | Judge | Generate the LLM-as-a-Judge release gate from the same failure modes |
+| `/improvement` | Measurement | Compare baseline requirements against the GEDD-improved requirements |
+| `/demos` | Reference seeds | Load example evidence sessions; not the primary product path |
+
 | Step | Page | What happens | Output |
 |---|---|---|---|
-| 1 | `Coach` | Capture the SME domain, target users, task boundary, risk posture, constraints, and known edge cases | Domain expert profile |
-| 2 | `Coach` | Upload the existing Kiro `.kiro/specs/{agent-name}/requirements.md`, or capture the baseline prompt/spec context | Baseline Kiro requirements evidence |
-| 3 | `Coach` | Curate happy path, edge, adversarial, ambiguous, multi-turn, recovery, persona, and domain-red-flag queries | Curated query set |
-| 4 | `Error Analysis` | Test the Kiro baseline agent created from the initial `requirements.md` against the curated queries | Baseline response evidence |
-| 5 | `Annotations` | SMEs assign verdicts, failure codes, severity, confidence, missing domain rules, and memos | Codebook + annotated failures |
-| 6 | `Outputs` | Export the shared SME evidence handoff used by both downstream generators | `SME_error_analysis.md` |
-| 7 | `Kiro requirements.md` | Improve the baseline spec using EARS acceptance criteria grounded in `SME_error_analysis.md` | Improved `requirements.md` |
-| 8 | `LLM Judge` | Generate a release-gate judge from the same SME evidence | Judge prompt |
-| 9 | `requirements.md Quality` | Compare baseline requirements against GEDD-improved requirements | Improvement measurement |
+| 1 | `Home` | Click `Open Coach` | Start the guided evidence workflow |
+| 2 | `Coach` | Capture the SME domain, target users, task boundary, risk posture, constraints, and known edge cases | Domain expert profile |
+| 3 | `Coach` | Upload the existing Kiro `.kiro/specs/{agent-name}/requirements.md`, or capture the baseline prompt/spec context | Baseline Kiro requirements evidence |
+| 4 | `Coach` | Curate happy path, edge, adversarial, ambiguous, multi-turn, recovery, persona, and domain-red-flag queries | Curated query set |
+| 5 | `Coach` / `Annotations` | Test the Kiro baseline agent created from the initial `requirements.md`, or paste baseline response traces | Baseline response evidence |
+| 6 | `Annotations` | SMEs assign verdicts, failure codes, severity, confidence, missing domain rules, and memos | Codebook + annotated failures |
+| 7 | `Evidence` | Export the shared SME evidence handoff used by both downstream generators | `SME_error_analysis.md` |
+| 8 | `requirements.md` | Improve the baseline spec using EARS acceptance criteria grounded in `SME_error_analysis.md` | Improved `requirements.md` |
+| 9 | `Judge` | Generate a release-gate judge from the same SME evidence | Judge prompt |
+| 10 | `Measurement` | Compare baseline requirements against GEDD-improved requirements | Improvement measurement |
 
 The app navigation intentionally keeps this narrow. Demos are available separately at `/demos`, but they are reference seed sessions, not the product workflow.
 
@@ -183,7 +201,9 @@ power-gedd/
     ├── session-import.md
     ├── pattern-discovery.md
     ├── requirements-generation.md
-    └── judge-generation.md
+    ├── judge-generation.md
+    ├── design-generation.md
+    └── tasks-generation.md
 ```
 
 Optional Kiro follow-ons such as `design.md` and `tasks.md` can come later, but they are not the core GEDD product. The core product is `SME_error_analysis.md` feeding `requirements.md` plus the LLM Judge.
@@ -202,7 +222,7 @@ Use GEDD when you have a real or proposed agent and need a domain expert to impr
 | 6. Export evidence | Download `SME_error_analysis.md` as the shared SME evidence handoff | `SME_error_analysis.md` |
 | 7. Improve specs | Open `Kiro requirements.md` and generate EARS acceptance criteria from `SME_error_analysis.md` | Improved `requirements.md` |
 | 8. Generate judge | Open `LLM Judge` and generate a release gate from the same SME evidence | Judge prompt |
-| 9. Measure | Open `requirements.md Quality` to compare the baseline requirements against the GEDD-improved spec | Improvement report |
+| 9. Measure | Open `Measurement` at `/improvement` to compare the baseline requirements against the GEDD-improved spec | Improvement report |
 
 If you already have production traces, use the app as an annotation surface rather than generating new responses. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).
 
