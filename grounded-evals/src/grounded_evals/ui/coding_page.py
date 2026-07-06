@@ -282,14 +282,25 @@ CODING_CSS = """
   margin-right: auto;
 }
 .coding-hero {
+  position: relative;
+  overflow: hidden;
   margin-bottom: 12px;
-  padding: 18px;
+  padding: 20px;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--bg-surface-1);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(249,112,102,0.10), rgba(31,182,166,0.08) 46%, rgba(177,140,255,0.08)),
+    var(--bg-surface-1);
+}
+.coding-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--red), var(--accent-bright), var(--violet));
 }
 .coding-hero-title {
-  font-size: 1.18rem;
+  font-size: 1.42rem;
   font-weight: 760;
   color: var(--text-primary);
   letter-spacing: 0;
@@ -319,6 +330,11 @@ CODING_CSS = """
   color: var(--text-tertiary);
   font-size: 0.7rem;
   font-weight: 600;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.coding-flow-pill:hover {
+  border-color: var(--accent-bright);
+  transform: translateY(-1px);
 }
 .coding-flow-pill .material-icons {
   color: var(--accent-bright);
@@ -382,8 +398,10 @@ CODING_CSS = """
 .coding-workbench-panel {
   min-width: 0;
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-xl);
-  background: var(--bg-surface-1);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(106,169,255,0.04), transparent 44%),
+    var(--bg-surface-1);
   padding: 14px;
 }
 .coding-workbench-right {
@@ -402,9 +420,11 @@ CODING_CSS = """
   gap: 14px;
   margin-bottom: 10px;
   padding: 12px 14px;
-  border: 1px solid rgba(94,106,210,0.28);
-  border-radius: var(--radius-xl);
-  background: linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1));
+  border: 1px solid rgba(94,224,210,0.24);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(31,182,166,0.10), rgba(244,184,96,0.06) 52%, rgba(249,112,102,0.06)),
+    var(--bg-surface-1);
 }
 .pm-evidence-headline {
   font-size: 0.98rem;
@@ -587,14 +607,14 @@ def coding_page():
                 ui.html(
                     '<div class="coding-hero-copy">'
                     "Review the customer-facing answer, tag the product failure in PM/domain language, "
-                    "set severity, then generate two outputs: Kiro requirements.md and an LLM Judge."
+                    "set severity, then export SME_error_analysis.md for Kiro requirements.md and the LLM Judge."
                     '</div>'
                 )
             with ui.row().classes("items-center gap-2 flex-wrap"):
                 for label, icon in [
-                    ("S save", "save"),
-                    ("1/2/3 quick code", "keyboard"),
-                    ("triage", "bolt"),
+                    ("Evidence", "fact_check"),
+                    ("Failure code", "label"),
+                    ("Severity", "priority_high"),
                     ("requirements.md", "description"),
                     ("LLM Judge", "gavel"),
                 ]:
@@ -603,7 +623,8 @@ def coding_page():
                     )
         with ui.element("div").classes("coding-flow-strip"):
             for label, icon in [
-                ("Open coding", "label"),
+                ("SME evidence", "fact_check"),
+                ("Annotations", "rate_review"),
                 ("Kiro requirements.md", "description"),
                 ("LLM Judge", "gavel"),
             ]:
@@ -635,20 +656,14 @@ def coding_page():
             ui.navigate.to("/coding")
 
         with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
-            with ui.element("div").style(
-                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 480px"
-            ):
-                ui.icon("bug_report").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("SME Error Analysis → Annotations → Domain Driven Specs Development").style(
-                    "font-size: 1.1rem; font-weight: 700; color: var(--text-primary)"
-                )
-                ui.label(
-                    "Load a 50-query demo to see the full lifecycle: analyze agent errors, "
-                    "annotate failures with domain expertise, then generate Kiro requirements.md "
-                    "and an LLM Judge from the evidence."
-                ).style(
-                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
+            with ui.element("div").classes("empty-state-panel"):
+                ui.icon("bug_report")
+                ui.html('<div class="empty-state-title">No baseline responses yet</div>')
+                ui.html(
+                    '<div class="empty-state-copy">'
+                    "Start with Coach to define the domain, upload the baseline requirements.md, "
+                    "curate queries, and bring responses here for SME annotation."
+                    "</div>"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem; flex-wrap: wrap"):
                     ui.button("Load 50-query localization demo", icon="play_circle",

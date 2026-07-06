@@ -29,27 +29,61 @@ def improvement_page() -> None:
     page_layout("requirements.md Quality", current_path="/improvement")
     session = _session_from_storage(app.storage.user)
 
-    with ui.column().classes("w-full").style(
-        "max-width: 900px; margin: 1rem auto; padding: 0 1rem"
-    ):
-        ui.label("requirements.md Quality").style(
-            "font-size:1.25rem; font-weight:700; color:var(--text-primary)"
-        )
-        ui.label(
-            "Compares generic baseline requirements against the Kiro-ready requirements.md output."
-        ).style("font-size:0.82rem; color:var(--text-tertiary)")
+    with ui.element("main").classes("dynamic-page"):
+        with ui.element("section").classes("dynamic-hero"):
+            with ui.element("div"):
+                ui.html(
+                    '<div class="dynamic-kicker">'
+                    '<span class="material-icons" style="font-size:0.95rem">monitoring</span>'
+                    "Measurement"
+                    "</div>"
+                )
+                ui.html('<div class="dynamic-title">requirements.md quality uplift</div>')
+                ui.html(
+                    '<div class="dynamic-copy">'
+                    "Compare the baseline Kiro requirements against the GEDD-improved spec "
+                    "created from SME-curated query results and annotations."
+                    "</div>"
+                )
+            with ui.element("aside").classes("dynamic-side-panel"):
+                ui.html('<div class="dynamic-side-label">Evidence drivers</div>')
+                ui.html(f'<div class="dynamic-side-value">{len(session.codes)}</div>')
+                ui.html('<div class="dynamic-side-copy">Failure modes available for measuring requirements quality.</div>')
 
         if not session.codes:
-            ui.label(
-                "No failure codes are available yet. Spec quality improves once "
-                "PM annotations create codes."
-            ).style("margin-top:1rem; color:var(--text-secondary)")
+            with ui.element("div").classes("empty-state-panel"):
+                ui.icon("monitoring")
+                ui.html('<div class="empty-state-title">No measurement evidence yet</div>')
+                ui.html(
+                    '<div class="empty-state-copy">'
+                    "Test the Kiro baseline agent with curated domain queries, then annotate "
+                    "failures before measuring requirements uplift."
+                    "</div>"
+                )
+                ui.button("Open Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
+                    "color=primary no-caps"
+                ).style("margin-top:16px")
             return
 
         report = _build_report(session)
-        with ui.card().classes("w-full").style("margin-top:1rem; padding:1rem"):
-            ui.label(f"Overall delta: {report.overall_improvement:.1f}%").style(
-                "font-size:1rem; font-weight:700; color:var(--text-primary)"
+        with ui.element("section").classes("metric-strip"):
+            for value, label in [
+                (f"{report.overall_improvement:+.1f}%", "Overall delta"),
+                (len(report.comparisons), "Quality metrics"),
+                (len(session.codes), "Failure modes"),
+                ("EARS", "Criteria style"),
+            ]:
+                with ui.element("div").classes("metric-tile"):
+                    ui.html(f'<div class="metric-tile-value">{value}</div>')
+                    ui.html(f'<div class="metric-tile-label">{label}</div>')
+
+        with ui.element("section").classes("dynamic-panel accent-blue").style("margin-top:16px"):
+            ui.html('<div class="dynamic-panel-title">Quality comparison</div>')
+            ui.html(
+                '<div class="dynamic-panel-copy">'
+                "Baseline vs GEDD-improved requirements across specificity, traceability, "
+                "testability, and domain coverage."
+                "</div>"
             )
             rows = [
                 {
@@ -69,4 +103,4 @@ def improvement_page() -> None:
                 ],
                 rows=rows,
                 row_key="metric",
-            ).classes("w-full")
+            ).classes("w-full").style("margin-top:12px")

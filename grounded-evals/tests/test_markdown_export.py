@@ -5,9 +5,11 @@ from grounded_evals.guide.markdown_export import export_error_analysis_md
 
 def test_empty_storage_produces_valid_md():
     md = export_error_analysis_md({})
-    assert md.startswith("# GEDD Error Analysis")
-    assert "## Agent Spec" in md
-    assert "## Golden Queries" in md
+    assert md.startswith("# SME Error Analysis")
+    assert "## Handoff Purpose" in md
+    assert "SME_error_analysis.md" in md
+    assert "## Domain Expert Profile" in md
+    assert "## Curated Domain Queries" in md
     assert "## Failure Codebook" in md
 
 
@@ -33,10 +35,10 @@ def test_full_demo_export():
     }
     md = export_error_analysis_md(storage)
 
-    assert "# GEDD Error Analysis — TravelBot" in md
-    assert "## Agent Spec" in md
+    assert "# SME Error Analysis — TravelBot" in md
+    assert "## Domain Expert Profile" in md
     assert "TravelBot" in md
-    assert "## Golden Queries (14 total" in md
+    assert "## Curated Domain Queries (14 total" in md
     assert "## Failure Codebook" in md
     assert "Policy Hallucination" in md
     assert "## Paradigm Model" in md
@@ -109,3 +111,18 @@ def test_table_cell_escaping():
     # Pipes and newlines should be escaped in table cells
     assert "\\|" in md
     assert "\n| 1 |" in md
+
+
+def test_export_includes_uploaded_baseline_requirements():
+    storage = {
+        "session_data": {"agent_spec": {"name": "KiroBot"}, "golden_prompts": []},
+        "baseline_requirements_md": "# Requirements Document\n\n## Requirements\n\n### Requirement 1",
+        "baseline_requirements_filename": "requirements.md",
+        "baseline_requirements_uploaded_at": "2026-07-05T19:30:00+00:00",
+    }
+    md = export_error_analysis_md(storage)
+
+    assert "## Baseline Kiro Requirements" in md
+    assert "- **Filename:** requirements.md" in md
+    assert "2026-07-05T19:30:00+00:00" in md
+    assert "# Requirements Document" in md

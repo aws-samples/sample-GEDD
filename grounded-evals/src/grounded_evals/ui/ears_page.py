@@ -104,38 +104,83 @@ def ears_requirements_page() -> None:
     page_layout("Kiro requirements.md", current_path="/requirements")
     storage = app.storage.user
     session = _session_from_storage(storage)
+    codebook = storage.get("codebook", []) or []
+    annotations = storage.get("coding_annotations", []) or []
+    golden = session.golden_prompts or []
 
-    with ui.column().classes("w-full").style(
-        "max-width: 980px; margin: 1rem auto; padding: 0 1rem"
-    ):
-        ui.label("Kiro requirements.md").style(
-            "font-size:1.25rem; font-weight:700; color:var(--text-primary)"
-        )
-        ui.label(
-            "The first GEDD output: a Kiro-ready domain driven spec generated from "
-            "domain-expert-curated evidence, EARS criteria, and judge gates."
-        ).style("font-size:0.82rem; color:var(--text-tertiary)")
+    with ui.element("main").classes("dynamic-page"):
+        with ui.element("section").classes("dynamic-hero"):
+            with ui.element("div"):
+                ui.html(
+                    '<div class="dynamic-kicker">'
+                    '<span class="material-icons" style="font-size:0.95rem">description</span>'
+                    "Kiro output"
+                    "</div>"
+                )
+                ui.html('<div class="dynamic-title">requirements.md built from SME evidence</div>')
+                ui.html(
+                    '<div class="dynamic-copy">'
+                    "GEDD converts annotated baseline failures into Kiro-ready user stories "
+                    "and EARS acceptance criteria. Every requirement should trace back to SME evidence."
+                    "</div>"
+                )
+            with ui.element("aside").classes("dynamic-side-panel"):
+                ui.html('<div class="dynamic-side-label">Requirement source</div>')
+                ui.html(f'<div class="dynamic-side-value">{len(session.codes)}</div>')
+                ui.html('<div class="dynamic-side-copy">SME-derived failure modes available for requirements generation.</div>')
+
+        with ui.element("section").classes("metric-strip"):
+            for value, label in [
+                (len(golden), "Curated queries"),
+                (len(annotations), "Annotated examples"),
+                (len(codebook), "Codebook entries"),
+                (len(session.codes), "Requirements drivers"),
+            ]:
+                with ui.element("div").classes("metric-tile"):
+                    ui.html(f'<div class="metric-tile-value">{value}</div>')
+                    ui.html(f'<div class="metric-tile-label">{label}</div>')
 
         if not session.codes:
-            ui.label(
-                "No failure codes are available yet. Complete Coach and SME "
-                "evidence curation before generating requirements."
-            ).style("margin-top:1rem; color:var(--text-secondary)")
+            with ui.element("div").classes("empty-state-panel"):
+                ui.icon("description")
+                ui.html('<div class="empty-state-title">No requirements evidence yet</div>')
+                ui.html(
+                    '<div class="empty-state-copy">'
+                    "Complete Coach and SME annotations first. The requirements file is generated "
+                    "from failure codes, severity, memos, and curated baseline evidence."
+                    "</div>"
+                )
+                ui.button("Open Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
+                    "color=primary no-caps"
+                ).style("margin-top:16px")
             return
 
-        markdown = _build_requirements_markdown(session, storage.get("codebook", []) or [])
-        with ui.row().classes("gap-2").style("margin-top:1rem"):
-            ui.button(
-                "Download requirements.md",
-                icon="download",
-                on_click=lambda: ui.download(markdown.encode(), "requirements.md"),
-            ).props("color=primary no-caps")
-            ui.button(
-                "Open LLM Judge",
-                icon="gavel",
-                on_click=lambda: ui.navigate.to("/judge"),
-            ).props("outline no-caps").style(
-                "color:var(--accent-bright); border-color:var(--border-subtle)"
-            )
-        with ui.card().classes("w-full").style("margin-top:1rem; padding:1rem"):
-            ui.markdown(markdown)
+        markdown = _build_requirements_markdown(session, codebook)
+        with ui.element("section").classes("dynamic-grid"):
+            with ui.element("div").classes("dynamic-panel accent-teal"):
+                with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
+                    with ui.column().style("gap:2px"):
+                        ui.html('<div class="dynamic-panel-title">Generated requirements.md</div>')
+                        ui.html('<div class="dynamic-panel-copy">Kiro-ready markdown preview.</div>')
+                    ui.button(
+                        "Download",
+                        icon="download",
+                        on_click=lambda: ui.download(markdown.encode(), "requirements.md"),
+                    ).props("color=primary no-caps")
+                with ui.element("div").classes("document-preview").style("margin-top:12px"):
+                    ui.markdown(markdown)
+
+            with ui.element("aside").classes("dynamic-panel accent-violet"):
+                ui.html('<div class="dynamic-panel-title">Next outputs</div>')
+                ui.html(
+                    '<div class="dynamic-panel-copy">'
+                    "Use the same SME evidence to generate the judge and measure the improved spec."
+                    "</div>"
+                )
+                with ui.column().style("gap:8px; margin-top:12px"):
+                    ui.button("Open LLM Judge", icon="gavel", on_click=lambda: ui.navigate.to("/judge")).props(
+                        "outline no-caps"
+                    ).style("color:var(--violet); border-color:rgba(177,140,255,0.35)")
+                    ui.button("Measure Improvement", icon="monitoring", on_click=lambda: ui.navigate.to("/improvement")).props(
+                        "outline no-caps"
+                    ).style("color:var(--blue); border-color:rgba(106,169,255,0.35)")

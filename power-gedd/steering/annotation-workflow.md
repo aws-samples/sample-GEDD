@@ -1,37 +1,43 @@
 # Annotation Workflow
 
-Guide the domain expert through systematic annotation of AI agent responses so GEDD can generate Kiro `requirements.md` and an LLM Judge.
+Guide the domain expert through domain intake, curated query generation, Kiro baseline testing, and systematic annotation so GEDD can improve Kiro `requirements.md` and generate an LLM Judge.
 
 ## Prerequisites
 - An AI agent with a defined system prompt and task boundary
-- Representative queries (golden prompts) or existing agent traces
+- A baseline Kiro `requirements.md` file or an initial behavior contract to test
+- Curated domain queries or existing baseline agent traces
 - The domain expert's time and vocabulary
 
-## Phase 1: Define the Agent
+## Phase 1: Domain Expert Intake
 
-Capture these fields before annotation begins:
+Start with the SME's domain before generic agent setup. Capture these fields before annotation begins:
 
 | Field | Description | Example |
 |-------|-------------|---------|
+| Domain Context | SME's domain, regulatory context, risk posture, and vocabulary | "AWS cloud GDPR audit for product teams" |
 | Agent Name | Short identifier | "CloudAuditGate" |
 | Description | What the agent does | "Reviews AWS configurations for GDPR compliance" |
 | Capabilities | What it can do | ["Analyze S3 policies", "Check retention rules"] |
 | Target Users | Who uses it | ["Security engineers", "Compliance officers"] |
+| Known Edge Cases | Domain exceptions and boundary scenarios | ["Cross-region transfer without DPA", "DSAR deletion blocked by backups"] |
 | Constraints | What it must NOT do | ["Never recommend disabling logging"] |
-| System Prompt | The agent's instruction set | (full prompt text) |
+| Baseline requirements.md | Initial Kiro requirements before GEDD evidence | (existing file or generated baseline) |
+| System Prompt | Baseline agent instruction set if available | (full prompt text) |
 
-## Phase 2: Build Golden Queries
+## Phase 2: Curate Domain Queries
 
-Create representative test cases that cover:
+This is the most important first product step. Create representative test cases that cover:
 
 | Category | Purpose | Count Target |
 |----------|---------|--------------|
 | Happy path | Normal successful interactions | 3-5 per capability |
 | Edge cases | Boundary conditions, unusual inputs | 2-3 per capability |
-| Adversarial | Attempts to break or confuse | 3-5 total |
+| Adversarial | Attempts to break, manipulate, or bypass rules | 3-5 total |
 | Multi-turn | Conversations requiring context | 2-3 total |
 | Recovery | Error handling and graceful degradation | 2-3 total |
 | Ambiguous | Unclear intent requiring clarification | 2-3 total |
+| Persona variation | Different roles, expertise levels, permissions, or incentives | 2-3 total |
+| Domain red flags | High-risk signals only an SME would know to test | 3-5 total |
 
 ### Constant Comparison
 For each new query, check:
@@ -41,11 +47,14 @@ For each new query, check:
 
 If redundant, revise or skip. If unique, add to dataset.
 
-## Phase 3: Collect Responses
+## Phase 3: Test the Kiro Baseline Agent
 
-Run the golden queries against the agent (or paste existing traces). For each response, record:
+Run the curated queries against the baseline Kiro agent created from the initial `requirements.md` file, or paste existing baseline traces. For each response, record:
+
+- Query category and expected behavior
 - The full response text
 - Model/version used
+- Baseline requirements version
 - Timestamp
 - Any system context provided
 
@@ -100,12 +109,13 @@ When all categories are saturated and no new codes emerge in the last annotation
 ## Output
 
 After annotation, you should have:
-- Agent spec (name, description, capabilities, constraints, system prompt)
-- Golden queries with category assignments
+- Domain expert profile (domain, agent, target users, constraints, edge cases)
+- Curated domain queries with category assignments
+- Baseline response evidence
 - Annotations with verdicts, codes, severity, confidence, memos
 - Saturation status per category
 
 This feeds into:
 - Pattern Discovery (`pattern-discovery.md`) when codes need consolidation
-- Requirements Generation (`requirements-generation.md`) for Kiro `requirements.md`
+- Requirements Generation (`requirements-generation.md`) for improved Kiro `requirements.md`
 - Judge Generation (`judge-generation.md`) for the LLM-as-a-Judge release gate

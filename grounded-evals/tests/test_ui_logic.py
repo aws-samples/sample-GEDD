@@ -286,19 +286,19 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     paths = [item["path"] for item in NAV_ITEMS]
 
     assert labels == [
+        "Home",
         "Coach",
-        "Error Analysis",
         "Annotations",
-        "Kiro requirements.md",
-        "LLM Judge",
-        "Outputs",
+        "Evidence",
+        "requirements.md",
+        "Judge",
     ]
-    assert paths == ["/coach", "/", "/coding", "/requirements", "/judge", "/report"]
+    assert paths == ["/", "/coach", "/coding", "/report", "/requirements", "/judge"]
     assert "Demos" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
     assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
-    assert next(item for item in NAV_ITEMS if item["label"] == "Kiro requirements.md")["output"] is True
-    assert next(item for item in NAV_ITEMS if item["label"] == "LLM Judge")["output"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "requirements.md")["output"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
 
 
 def test_progress_rail_uses_coach_to_output_flow():
@@ -316,19 +316,34 @@ def test_progress_rail_uses_coach_to_output_flow():
 
     assert [step["path"] for step in steps] == [
         "/coach",
+        "/coach",
         "/",
         "/coding",
-        "/requirements",
-        "/judge",
         "/report",
     ]
     assert [step["label"] for step in steps] == [
-        "Coach",
-        "Error Analysis",
+        "Domain + Baseline",
+        "Queries",
+        "Baseline Test",
         "Annotations",
-        "Kiro requirements.md",
-        "LLM Judge",
         "Outputs",
+    ]
+
+
+def test_progress_rail_marks_one_current_coach_step():
+    from grounded_evals.ui import layout
+
+    storage = {
+        "session_data": {
+            "agent_spec": {"domain_context": "finance"},
+            "golden_prompts": [],
+        },
+    }
+    with patch.object(layout, "app", _make_mock_app(storage)):
+        steps = layout._get_progress_state("/coach")
+
+    assert [step["label"] for step in steps if step.get("current")] == [
+        "Domain + Baseline"
     ]
 
 
@@ -423,6 +438,52 @@ def test_home_detects_loaded_session_content():
     assert (
         _has_session_content({"coding_annotations": [{"codes": ["dosage_unit_confusion"]}]}) is True
     )
+
+
+def test_sme_flow_starts_with_domain_then_baseline_upload():
+    from grounded_evals.ui.home_page import _get_sme_flow_steps
+
+    steps = _get_sme_flow_steps({})
+
+    assert [step["title"] for step in steps[:3]] == [
+        "Set the domain and baseline",
+        "Curate domain queries",
+        "Test the Kiro baseline",
+    ]
+    assert steps[0]["status"] == "current"
+    assert steps[1]["status"] == "todo"
+    assert steps[4]["title"] == "Generate outputs"
+
+
+def test_sme_flow_marks_uploaded_baseline_before_query_curation():
+    from grounded_evals.ui.home_page import _get_sme_flow_steps
+
+    storage = {
+        "session_data": {"agent_spec": {"domain_context": "healthcare revenue cycle"}},
+        "baseline_requirements_md": "# Requirements Document",
+    }
+
+    steps = _get_sme_flow_steps(storage)
+
+    assert steps[0]["status"] == "done"
+    assert steps[1]["status"] == "current"
+
+
+def test_save_baseline_requirements_persists_upload_metadata():
+    from grounded_evals.ui.baseline_requirements import save_baseline_requirements
+
+    storage = {}
+
+    count = save_baseline_requirements(
+        "# Requirements Document\n\n## Requirements",
+        filename="requirements.md",
+        storage=storage,
+    )
+
+    assert count == len("# Requirements Document\n\n## Requirements")
+    assert storage["baseline_requirements_md"].startswith("# Requirements Document")
+    assert storage["baseline_requirements_filename"] == "requirements.md"
+    assert storage["baseline_requirements_uploaded_at"]
 
 
 def test_domain_registry_includes_all_launch_demos():

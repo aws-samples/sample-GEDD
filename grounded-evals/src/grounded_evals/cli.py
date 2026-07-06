@@ -7,8 +7,12 @@ import json
 import os
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
+
+if TYPE_CHECKING:
+    from grounded_evals.models.core import ImprovementReport
 
 # ── Session persistence helpers ──────────────────────────────────────────────
 
@@ -67,12 +71,12 @@ def main() -> None:
 
 
 STEP_NAMES = {
-    1: "Define Agent",
-    2: "System Prompt",
-    3: "Runtime",
-    4: "Golden Queries",
-    5: "Annotate & Judge",
-    6: "MLflow Handoff",
+    1: "Domain Intake",
+    2: "Curated Queries",
+    3: "Kiro Baseline Test",
+    4: "SME Error Analysis",
+    5: "Improve Specs + Judge",
+    6: "Output Handoff",
 }
 
 
@@ -568,13 +572,13 @@ def export(session: str, fmt: str, output: str | None) -> None:
 @click.option("--session", "-s", default="session.json", show_default=True,
               help="Session file to export from")
 @click.option("--output", "-o", default=None,
-              help="Output file (default: <agent_name>_error_analysis.md)")
+              help="Output file (default: SME_error_analysis.md)")
 def export_md(session: str, output: str | None) -> None:
-    """Export error analysis as markdown for Kiro Power consumption.
+    """Export SME_error_analysis.md for Kiro Power consumption.
 
     \b
     Produces a human-readable, LLM-optimized handoff document containing:
-    agent spec, golden queries, failure codebook, paradigm model,
+    domain profile, curated queries, baseline evidence, failure codebook,
     annotated failures, saturation evidence, and judge prompt.
     """
     from grounded_evals.guide.markdown_export import export_error_analysis_md
@@ -595,10 +599,9 @@ def export_md(session: str, output: str | None) -> None:
     }
 
     md = export_error_analysis_md(storage)
-    agent_name = (state.session.agent_spec.name or "agent").lower().replace(" ", "_")
-    out_path = output or f"{agent_name}_error_analysis.md"
+    out_path = output or "SME_error_analysis.md"
     Path(out_path).write_text(md)
-    click.echo(f"Exported error analysis → {out_path}")
+    click.echo(f"Exported SME error analysis → {out_path}")
 
 
 @main.command("validate-session")
@@ -696,7 +699,7 @@ def status(session: str, results: str) -> None:
 
     if prompts:
         cats = Counter(p.get("rationale", "uncategorized") for p in prompts)
-        click.echo(f"  ── Golden Queries ({len(prompts)} total) ──\n")
+        click.echo(f"  ── Curated Domain Queries ({len(prompts)} total) ──\n")
         for cat, n in sorted(cats.items(), key=lambda x: -x[1]):
             bar = "█" * min(n, 5) + "░" * max(0, 5 - n)
             stat = "✓ saturated" if n >= 3 else ("~ approx." if n >= 2 else "✗ thin")

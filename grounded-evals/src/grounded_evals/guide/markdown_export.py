@@ -1,4 +1,4 @@
-"""Export GEDD session state as a markdown error-analysis handoff document."""
+"""Export GEDD session state as the SME error-analysis handoff document."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 
 def export_error_analysis_md(storage: dict) -> str:
-    """Convert user storage state into an error-analysis.md for Kiro Power consumption."""
+    """Convert user storage state into SME_error_analysis.md for Kiro Power consumption."""
     session = storage.get("session_data") or {}
     agent = session.get("agent_spec", {}) if isinstance(session, dict) else {}
     if not isinstance(agent, dict):
@@ -14,12 +14,17 @@ def export_error_analysis_md(storage: dict) -> str:
 
     agent_name = agent.get("name", "Agent")
     agent_desc = agent.get("description", "")
+    domain_context = agent.get("domain_context", "")
+    known_edge_cases = agent.get("known_edge_cases", [])
+    constraints = agent.get("constraints", [])
     system_prompt = agent.get("system_prompt", "")
     golden_prompts = session.get("golden_prompts", [])
     codebook = storage.get("codebook", [])
     coding_annotations = storage.get("coding_annotations", [])
     memos = storage.get("memos", [])
     paradigm_model = storage.get("paradigm_model", {})
+    baseline_requirements = storage.get("baseline_requirements_md", "")
+    baseline_filename = storage.get("baseline_requirements_filename", "requirements.md")
 
     # Compute stats
     total = len(coding_annotations)
@@ -36,11 +41,19 @@ def export_error_analysis_md(storage: dict) -> str:
     sat_pct = int(saturated / len(categories) * 100) if categories else 0
 
     lines: list[str] = []
-    lines.append(f"# GEDD Error Analysis — {agent_name}\n")
+    lines.append(f"# SME Error Analysis — {agent_name}\n")
     lines.append(f"Exported: {datetime.now(UTC).strftime('%Y-%m-%d %H:%M UTC')}\n")
+    lines.append("## Handoff Purpose\n")
+    lines.append(
+        "`SME_error_analysis.md` is the domain-expert-curated evidence file. "
+        "Use it to build or improve Kiro `requirements.md` and to generate the "
+        "LLM-as-a-Judge release gate from the same failure evidence.\n"
+    )
 
-    # Agent Spec
-    lines.append("## Agent Spec\n")
+    # Domain profile and agent spec
+    lines.append("## Domain Expert Profile\n")
+    if domain_context:
+        lines.append(f"- **Domain Context:** {domain_context}")
     lines.append(f"- **Name:** {agent_name}")
     lines.append(f"- **Description:** {agent_desc}")
     if agent.get("capabilities"):
@@ -55,12 +68,29 @@ def export_error_analysis_md(storage: dict) -> str:
             for u in agent["target_users"]
         )
         lines.append(f"- **Target Users:** {users}")
+    if known_edge_cases:
+        edge_cases = ", ".join(str(item) for item in known_edge_cases)
+        lines.append(f"- **Known Edge Cases:** {edge_cases}")
+    if constraints:
+        hard_rules = ", ".join(str(item) for item in constraints)
+        lines.append(f"- **Constraints:** {hard_rules}")
     if system_prompt:
         preview = system_prompt[:500] + ("..." if len(system_prompt) > 500 else "")
         lines.append(f"\n### System Prompt\n\n```\n{preview}\n```\n")
 
-    # Golden Queries
-    lines.append(f"## Golden Queries ({len(golden_prompts)} total, {sat_pct}% saturated)\n")
+    # Existing Kiro baseline requirements
+    if baseline_requirements.strip():
+        lines.append("## Baseline Kiro Requirements\n")
+        lines.append(f"- **Filename:** {baseline_filename}")
+        uploaded_at = storage.get("baseline_requirements_uploaded_at", "")
+        if uploaded_at:
+            lines.append(f"- **Uploaded At:** {uploaded_at}")
+        lines.append("\n````markdown")
+        lines.append(baseline_requirements.strip())
+        lines.append("````\n")
+
+    # Curated domain queries
+    lines.append(f"## Curated Domain Queries ({len(golden_prompts)} total, {sat_pct}% saturated)\n")
     if golden_prompts:
         lines.append("| # | Query | Category | Expected Behavior |")
         lines.append("|---|-------|----------|-------------------|")

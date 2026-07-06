@@ -12,17 +12,17 @@ def _get_progress(storage: dict) -> dict[str, str]:
     if not isinstance(agent_spec, dict):
         agent_spec = {}
 
-    has_agent = bool(agent_spec.get("name"))
+    has_domain = bool(agent_spec.get("domain_context") or agent_spec.get("name"))
     has_prompt = bool(agent_spec.get("system_prompt"))
     has_queries = bool(session.get("golden_prompts") if isinstance(session, dict) else False)
     has_annotations = bool(storage.get("coding_annotations"))
     has_requirements_source = bool(storage.get("codebook") or session.get("codes"))
     has_judge = bool(storage.get("_generated_judge_prompt"))
 
-    coach_done = has_agent and has_prompt and has_queries
+    coach_done = has_domain and has_prompt and has_queries
 
     return {
-        "/coach": "done" if coach_done else ("current" if has_agent else "todo"),
+        "/coach": "done" if coach_done else ("current" if has_domain else "todo"),
         "/coding": "done" if has_annotations else ("current" if coach_done else "todo"),
         "/requirements": "done" if has_requirements_source else ("current" if has_annotations else "todo"),
         "/judge": "done" if has_judge else ("current" if has_annotations else "todo"),
@@ -45,7 +45,84 @@ def _has_session_content(storage: dict) -> bool:
         or storage.get("eval_results")
         or storage.get("coding_annotations")
         or storage.get("codebook")
+        or storage.get("baseline_requirements_md")
     )
+
+
+def _get_sme_flow_steps(storage: dict) -> list[dict[str, str]]:
+    """Return the visible SME operating path with status for the homepage."""
+    session = storage.get("session_data") or {}
+    agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
+    if not isinstance(agent_spec, dict):
+        agent_spec = {}
+
+    has_domain = bool(agent_spec.get("domain_context") or agent_spec.get("name"))
+    has_prompt = bool(agent_spec.get("system_prompt"))
+    has_baseline_context = bool(storage.get("baseline_requirements_md") or has_prompt)
+    has_queries = bool(session.get("golden_prompts") if isinstance(session, dict) else False)
+    has_baseline_evidence = bool(storage.get("eval_results") or storage.get("coding_annotations"))
+    has_annotations = bool(storage.get("coding_annotations"))
+    has_requirements_source = bool(storage.get("codebook") or session.get("codes"))
+    has_judge = bool(storage.get("_generated_judge_prompt"))
+    outputs_ready = has_requirements_source and has_judge
+
+    def status(done: bool, current: bool) -> str:
+        if done:
+            return "done"
+        return "current" if current else "todo"
+
+    return [
+        {
+            "num": "1",
+            "title": "Set the domain and baseline",
+            "action": "Name the SME domain, then upload or capture the baseline Kiro requirements.md.",
+            "evidence": "Domain profile + baseline requirements evidence",
+            "path": "/coach",
+            "button": "Open Coach",
+            "icon": "badge",
+            "status": status(has_domain and has_baseline_context, not (has_domain and has_baseline_context)),
+        },
+        {
+            "num": "2",
+            "title": "Curate domain queries",
+            "action": "Build happy path, edge, adversarial, ambiguous, multi-turn, and red-flag prompts.",
+            "evidence": "Coverage-backed query set",
+            "path": "/coach",
+            "button": "Curate queries",
+            "icon": "rule",
+            "status": status(has_queries, has_domain and has_baseline_context and not has_queries),
+        },
+        {
+            "num": "3",
+            "title": "Test the Kiro baseline",
+            "action": "Run or paste baseline agent responses for the curated query set.",
+            "evidence": "Baseline response traces",
+            "path": "/",
+            "button": "Open Error Analysis",
+            "icon": "bug_report",
+            "status": status(has_baseline_evidence, has_queries and not has_baseline_evidence),
+        },
+        {
+            "num": "4",
+            "title": "Annotate failures",
+            "action": "Label verdict, failure code, severity, confidence, memo, and missing rule.",
+            "evidence": "Codebook + annotated failures",
+            "path": "/coding",
+            "button": "Open Annotations",
+            "icon": "rate_review",
+            "status": status(has_annotations, has_baseline_evidence and not has_annotations),
+        },
+        {
+            "num": "5",
+            "title": "Generate outputs",
+            "action": "Export SME_error_analysis.md, then generate requirements.md, the judge, and measurement.",
+            "evidence": "SME_error_analysis.md + requirements.md + LLM Judge",
+            "path": "/report",
+            "button": "Open Outputs",
+            "icon": "fact_check",
+            "status": status(outputs_ready, has_annotations and not outputs_ready),
+        },
+    ]
 
 
 PROBLEM_STEPS = [
@@ -186,7 +263,7 @@ HOME_CSS = """
 .home-hero { text-align: center; padding: 3rem 0 2rem; }
 .home-hero h1 {
   font-size: 2.2rem; font-weight: 700; color: var(--text-primary);
-  letter-spacing: -0.03em; line-height: 1.2; margin: 0;
+  letter-spacing: 0; line-height: 1.2; margin: 0;
 }
 .home-hero p { font-size: 0.95rem; color: var(--text-tertiary); margin-top: 0.5rem; }
 
@@ -277,7 +354,7 @@ HOME_CSS = """
 /* ── Simplified judge-rubric homepage ───────────────────────────────── */
 .simple-hero {
   width: 100%;
-  padding: 3rem 0 1.2rem;
+  padding: 2.2rem 0 1rem;
   text-align: center;
 }
 .simple-hero .coach-kicker {
@@ -286,7 +363,7 @@ HOME_CSS = """
 .simple-headline {
   max-width: 980px;
   margin: 0 auto;
-  font-size: 3.35rem;
+  font-size: 2.85rem;
   line-height: 1.08;
   letter-spacing: 0;
   font-weight: 740;
@@ -305,6 +382,278 @@ HOME_CSS = """
   justify-content: center;
   gap: 10px;
   margin-top: 24px;
+}
+.clean-home {
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 1.4rem 1.5rem 2.6rem;
+}
+.clean-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 26px;
+  align-items: stretch;
+  padding: 26px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(31,182,166,0.12), rgba(244,184,96,0.06) 46%, rgba(177,140,255,0.08)),
+    var(--bg-surface-1);
+}
+.clean-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-bright), var(--yellow), var(--blue), var(--violet));
+}
+.clean-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--accent-bright);
+  font-size: 0.68rem;
+  font-weight: 740;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.clean-headline {
+  max-width: 760px;
+  margin: 14px 0 0;
+  font-size: 2.65rem;
+  line-height: 1.1;
+  letter-spacing: 0;
+  font-weight: 740;
+  color: var(--text-primary);
+}
+.clean-subhead {
+  max-width: 720px;
+  margin-top: 14px;
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.clean-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.next-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(94,224,210,0.24);
+  background:
+    linear-gradient(180deg, rgba(31,182,166,0.10), rgba(106,169,255,0.05)),
+    rgba(9,11,15,0.36);
+}
+.next-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+.next-title {
+  margin-top: 9px;
+  font-size: 0.98rem;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.next-copy {
+  margin-top: 5px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.flow-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 22px;
+  padding-top: 1rem;
+}
+.flow-heading {
+  font-size: 0.78rem;
+  font-weight: 740;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.flow-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.flow-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  --step-color: var(--accent-bright);
+  --step-bg: var(--accent-tint);
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+.flow-row:hover {
+  border-color: var(--border-default);
+  transform: translateX(2px);
+}
+.flow-row.current {
+  background: linear-gradient(90deg, var(--step-bg), var(--bg-surface-1) 42%);
+  border-color: var(--step-color);
+}
+.flow-row:nth-child(2) {
+  --step-color: var(--yellow);
+  --step-bg: var(--yellow-tint);
+}
+.flow-row:nth-child(3) {
+  --step-color: var(--blue);
+  --step-bg: var(--blue-tint);
+}
+.flow-row:nth-child(4) {
+  --step-color: var(--red);
+  --step-bg: var(--red-tint);
+}
+.flow-row:nth-child(5) {
+  --step-color: var(--violet);
+  --step-bg: var(--violet-tint);
+}
+.flow-row.current .flow-num {
+  background: var(--step-color);
+  color: #071314;
+}
+.flow-row.done .flow-num {
+  background: var(--green-tint);
+  color: var(--green-bright);
+}
+.flow-row.current .flow-title {
+  color: var(--step-color);
+}
+.flow-num {
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--step-bg);
+  color: var(--step-color);
+  font-size: 0.72rem;
+  font-weight: 760;
+}
+.flow-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.flow-copy {
+  margin-top: 3px;
+  max-width: 620px;
+  font-size: 0.75rem;
+  line-height: 1.48;
+  color: var(--text-tertiary);
+}
+.flow-evidence {
+  margin-top: 6px;
+  font-size: 0.68rem;
+  color: var(--green-bright);
+}
+.flow-status {
+  padding-top: 3px;
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  font-weight: 740;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.flow-row.current .flow-status { color: var(--step-color); }
+.flow-row.done .flow-status { color: var(--green-bright); }
+.outputs-panel {
+  padding-top: 1px;
+}
+.output-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.output-item {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+.output-item:hover {
+  border-color: var(--border-default);
+  transform: translateY(-1px);
+}
+.output-item .material-icons {
+  color: var(--accent-bright);
+  font-size: 1rem;
+}
+.output-item:nth-child(1) .material-icons { color: var(--yellow); }
+.output-item:nth-child(2) .material-icons { color: var(--accent-bright); }
+.output-item:nth-child(3) .material-icons { color: var(--violet); }
+.output-item:nth-child(4) .material-icons { color: var(--blue); }
+.output-title {
+  font-size: 0.78rem;
+  font-weight: 680;
+  color: var(--text-primary);
+}
+.output-copy {
+  margin-top: 2px;
+  font-size: 0.7rem;
+  line-height: 1.42;
+  color: var(--text-tertiary);
+}
+.sme-current-banner {
+  width: min(850px, 100%);
+  margin: 22px auto 0;
+  padding: 13px 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(130,143,255,0.28);
+  background: linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1));
+  text-align: left;
+}
+.sme-current-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+.sme-current-title {
+  margin-top: 5px;
+  font-size: 0.98rem;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.sme-current-copy {
+  margin-top: 3px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 .hero-demo-frame {
   width: min(760px, 100%);
@@ -345,14 +694,120 @@ HOME_CSS = """
   line-height: 1.5;
   color: var(--text-tertiary);
 }
+.sme-path-section {
+  width: 100%;
+  margin-top: 1.2rem;
+}
+.sme-path-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+.sme-path-title {
+  font-size: 1rem;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.sme-path-copy {
+  margin-top: 4px;
+  max-width: 760px;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.sme-path-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.sme-path-card {
+  min-height: 214px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-1);
+}
+.sme-path-card.current {
+  border-color: rgba(130,143,255,0.48);
+  background: linear-gradient(180deg, rgba(94,106,210,0.12), var(--bg-surface-1));
+}
+.sme-path-card.done {
+  border-color: rgba(74,222,128,0.28);
+}
+.sme-path-card.todo {
+  opacity: 0.82;
+}
+.sme-path-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.sme-path-num {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.72rem;
+  font-weight: 780;
+}
+.sme-path-status {
+  padding: 3px 7px;
+  border-radius: 99px;
+  font-size: 0.58rem;
+  font-weight: 760;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-subtle);
+}
+.sme-path-card.done .sme-path-status { color: var(--green-bright); border-color: rgba(74,222,128,0.24); }
+.sme-path-card.current .sme-path-status { color: var(--accent-bright); border-color: rgba(130,143,255,0.34); }
+.sme-path-icon {
+  color: var(--accent-bright);
+  font-size: 1.05rem;
+}
+.sme-path-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+.sme-path-action {
+  font-size: 0.73rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.sme-path-evidence {
+  margin-top: auto;
+  padding-top: 9px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--green-bright);
+}
+.sme-path-footer {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
 .core-flow-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
   margin-top: 14px;
 }
 .core-flow-step {
-  min-height: 190px;
+  min-height: 220px;
   padding: 14px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-subtle);
@@ -503,7 +958,7 @@ HOME_CSS = """
 }
 .mkt-headline {
   font-size: 2.4rem; font-weight: 700; color: var(--text-primary);
-  letter-spacing: -0.03em; line-height: 1.15; margin: 0 0 0.6rem;
+  letter-spacing: 0; line-height: 1.15; margin: 0 0 0.6rem;
 }
 .mkt-headline em { font-style: italic; color: var(--accent-bright); font-weight: 700; }
 .mkt-subhead {
@@ -665,7 +1120,7 @@ HOME_CSS = """
 }
 .mkt-section-title {
   font-size: 1.05rem; font-weight: 600; color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 .mkt-section-sub { font-size: 0.78rem; color: var(--text-tertiary); }
 
@@ -810,7 +1265,7 @@ HOME_CSS = """
 }
 .evidence-title {
   margin-top: 4px; font-size: 1rem; font-weight: 650;
-  color: var(--text-primary); letter-spacing: -0.01em;
+  color: var(--text-primary); letter-spacing: 0;
 }
 .evidence-copy {
   margin-top: 6px; font-size: 0.78rem; line-height: 1.55;
@@ -974,6 +1429,14 @@ HOME_CSS = """
   .mkt-headline { font-size: 1.65rem; line-height: 1.2; }
   .mkt-subhead { font-size: 0.9rem; }
   .mkt-cta-row { flex-direction: column; align-items: stretch; }
+  .clean-home { padding: 1rem 1rem 2rem; }
+  .clean-hero,
+  .flow-section { grid-template-columns: 1fr; }
+  .clean-headline { font-size: 1.85rem; }
+  .clean-subhead { font-size: 0.9rem; }
+  .clean-actions { align-items: stretch; flex-direction: column; }
+  .flow-row { grid-template-columns: 30px minmax(0, 1fr); }
+  .flow-status { grid-column: 2; padding-top: 0; }
   .simple-hero { padding-top: 2rem; text-align: center; }
   .simple-headline { font-size: 2.05rem; line-height: 1.12; }
   .simple-subhead { font-size: 0.92rem; }
@@ -983,6 +1446,8 @@ HOME_CSS = """
   .core-flow-step { min-height: auto; }
   .assistant-grid { grid-template-columns: 1fr; }
   .compact-example-row { grid-template-columns: 1fr; }
+  .sme-path-header { align-items: flex-start; flex-direction: column; }
+  .sme-path-grid { grid-template-columns: 1fr; }
   .starter-row { flex-direction: column; align-items: stretch; }
   .coach-first-hero { grid-template-columns: 1fr; }
   .coach-main-panel { padding: 18px; min-height: auto; }
@@ -1139,167 +1604,80 @@ def home_page():
     ui.add_head_html(f"<style>{HOME_CSS}</style>")
 
     storage = app.storage.user
-    session = storage.get("session_data") or {}
-    agent_spec = session.get("agent_spec", {}) if isinstance(session, dict) else {}
-    agent_name_home = agent_spec.get("name", "") if isinstance(agent_spec, dict) else ""
-    n_queries = len(session.get("golden_prompts", []) if isinstance(session, dict) else [])
-    n_annotations = len(storage.get("coding_annotations", []))
 
-    def next_annotation_path() -> str:
-        if storage.get("coding_annotations") or storage.get("codebook"):
-            return "/coding"
-        if storage.get("eval_results"):
-            return "/coding"
-        session_obj = storage.get("session_data") or {}
-        if isinstance(session_obj, dict) and session_obj.get("golden_prompts"):
-            return "/coding"
-        return "/coach"
-
-    core_steps = [
-        (
-            "① Coach",
-            "Define the agent, users, task boundary, risk posture, and test plan. Coach is where SMEs curate the evidence for Kiro Domain Specs.",
-            "Output: agent spec + curated evidence plan",
-        ),
-        (
-            "② Error Analysis",
-            "Run your agent against golden queries or imported traces. See exactly where the agent fails.",
-            "Output: domain-expert-curated failure evidence",
-        ),
-        (
-            "③ Annotations",
-            "Domain expert reviews each response: correct, partial, or incorrect. Name the failure in your vocabulary. Set severity.",
-            "Output: codebook + annotated failures",
-        ),
-        (
-            "④ Generate the two outputs",
-            "Convert observed failure patterns into a Kiro-ready domain spec and a judge prompt that enforces the same failure modes.",
-            "Outputs: Kiro requirements.md + LLM Judge",
-        ),
-    ]
-
-    coach_questions = [
-        "What did the agent get wrong that a domain expert would catch?",
-        "Is this a one-off error or a repeating failure pattern?",
-        "What severity should block release vs. wait for a future fix?",
-        "What requirement would have prevented this failure?",
-        "Can this failure be detected automatically by an LLM judge?",
-    ]
+    sme_flow_steps = _get_sme_flow_steps(storage)
+    current_flow_step = next(
+        (step for step in sme_flow_steps if step["status"] == "current"),
+        next((step for step in sme_flow_steps if step["status"] != "done"), sme_flow_steps[-1]),
+    )
 
     artifacts = [
-        ("fact_check", "Curated Evidence", "SME-reviewed failures, codes, severity, confidence, and memos that Kiro can trust."),
-        ("description", "Kiro requirements.md", "A domain driven spec with EARS acceptance criteria grounded in curated evidence."),
-        ("gavel", "LLM Judge", "A release-gate prompt that detects the same curated domain failure modes."),
-        ("bolt", "Kiro Power", "A companion workflow that consumes the same domain-expert-curated evidence inside Kiro."),
+        ("fact_check", "SME_error_analysis.md", "The SME-reviewed evidence handoff: queries, baseline failures, codes, severity, confidence, and memos."),
+        ("description", "Improved requirements.md", "A Kiro domain spec with EARS acceptance criteria grounded in SME_error_analysis.md."),
+        ("gavel", "LLM Judge", "A release-gate prompt generated from the same SME_error_analysis.md failure modes."),
+        ("monitoring", "Measurement", "Baseline-vs-GEDD comparison for specificity, testability, traceability, coverage, and accuracy."),
     ]
 
-    with ui.column().classes("w-full").style(
-        "max-width: 1180px; margin: 0 auto; padding: 1.25rem 1.5rem 2.75rem"
-    ):
-        if _has_session_content(storage):
-            display_name = agent_name_home or "Untitled agent"
-            with ui.element("div").classes("continue-card animate-in stagger-1"):
-                with ui.row().classes("items-center justify-between w-full"):
-                    with ui.column().style("gap: 2px"):
-                        ui.label(f"Continuing: {display_name}").style(
-                            "font-size: 0.88rem; font-weight: 600; color: var(--text-primary)"
-                        )
-                        ui.label(
-                            f"{n_queries} golden queries · {n_annotations} annotated examples"
-                        ).style("font-size: 0.74rem; color: var(--text-tertiary)")
+    with ui.column().classes("clean-home"):
+        with ui.element("section").classes("clean-hero animate-in stagger-1"):
+            with ui.element("div"):
+                ui.html(
+                    '<div class="clean-kicker">'
+                    '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
+                    "GEDD Coach"
+                    "</div>"
+                )
+                ui.html(
+                    '<h1 class="clean-headline">'
+                    "SME Error Analysis → Annotations → Domain Driven Specs Development"
+                    "</h1>"
+                )
+                ui.html(
+                    '<div class="clean-subhead">'
+                    "A simple loop for domain experts: define the domain, test the Kiro baseline, "
+                    "annotate what failed, then turn that evidence into a better requirements.md "
+                    "and an LLM Judge."
+                    "</div>"
+                )
+                with ui.element("div").classes("clean-actions"):
                     ui.button(
-                        "Continue", icon="arrow_forward",
-                        on_click=lambda: ui.navigate.to(next_annotation_path()),
-                    ).props("size=sm color=primary")
-
-        with ui.element("section").classes("simple-hero animate-in stagger-1"):
-            ui.html(
-                '<div class="coach-kicker">'
-                '<span class="material-icons" style="font-size:0.95rem">auto_awesome</span>'
-                "Coach-led Kiro Spec Builder"
-                "</div>"
-            )
-            ui.html(
-                '<h1 class="simple-headline">'
-                "SME Error Analysis → Annotations → Domain Driven Specs Development"
-                "</h1>"
-            )
-            ui.html(
-                '<div class="simple-subhead">'
-                "Start in Coach. The UI guides SMEs from agent intent to error analysis and "
-                "annotations, curating the evidence GEDD provides to Kiro. That evidence generates "
-                "two concrete outputs: a Kiro-ready requirements.md file and an LLM-as-Judge prompt."
-                "</div>"
-            )
-            with ui.element("div").classes("simple-action-row"):
-                ui.button(
-                    "Open Coach",
-                    icon="auto_awesome",
-                    on_click=lambda: ui.navigate.to("/coach"),
-                ).props("color=primary size=md unelevated no-caps").style(
-                    "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
-                )
-                ui.button(
-                    "Kiro requirements.md",
-                    icon="description",
-                    on_click=lambda: ui.navigate.to("/requirements"),
-                ).props("outline size=md no-caps").style(
-                    "color: var(--accent-bright); border-color: var(--border-subtle)"
-                )
-                ui.button(
-                    "LLM Judge",
-                    icon="gavel",
-                    on_click=lambda: ui.navigate.to("/judge"),
-                ).props("outline size=md no-caps").style(
-                    "color: var(--accent-bright); border-color: var(--border-subtle)"
-                )
-            with ui.element("div").classes("hero-demo-frame"):
+                        "Open Coach",
+                        icon="auto_awesome",
+                        on_click=lambda: ui.navigate.to("/coach"),
+                    ).props("color=primary size=md unelevated no-caps").style(
+                        "font-weight: 650; letter-spacing: 0; padding: 8px 22px"
+                    )
+            with ui.element("aside").classes("next-panel"):
                 ui.html(
-                    '<img class="hero-demo-media" src="/docs/GEDD_optimized.gif" '
-                    'alt="GEDD error analysis and annotation workflow">'
-                )
-                ui.html(
-                    '<div class="hero-demo-caption">'
-                    'Coach → SME Error Analysis → Annotations → Kiro requirements.md + LLM Judge'
+                    '<div class="next-label">'
+                    '<span class="material-icons" style="font-size:0.9rem">near_me</span>'
+                    'Next action'
                     '</div>'
                 )
+                ui.html(f'<div class="next-title">{current_flow_step["title"]}</div>')
+                ui.html(f'<div class="next-copy">{current_flow_step["action"]}</div>')
 
-        with ui.element("div").classes("simple-panel animate-in stagger-2"):
-            ui.html('<div class="simple-panel-title">Coach-led path to two generated outputs</div>')
-            ui.html(
-                '<div class="simple-panel-copy">'
-                "This is the main product flow. Coach frames the agent and test plan; SMEs "
-                "curate the evidence through annotations; GEDD produces Kiro requirements.md "
-                "and an LLM Judge grounded in those observed failures."
-                "</div>"
-            )
-            with ui.element("div").classes("core-flow-grid"):
-                for index, (title, copy, output) in enumerate(core_steps, start=1):
-                    with ui.element("div").classes("core-flow-step"):
-                        ui.html(f'<div class="core-flow-num">{index}</div>')
-                        ui.html(f'<div class="core-flow-title">{title}</div>')
-                        ui.html(f'<div class="core-flow-copy">{copy}</div>')
-                        ui.html(f'<div class="core-flow-output">{output}</div>')
-
-        with ui.element("div").classes("simple-panel animate-in stagger-3"):
-            ui.html('<div class="simple-panel-title">Annotations feed the two outputs</div>')
-            ui.html(
-                '<div class="simple-panel-copy">'
-                "The review queue, codebook, memos, and saturation evidence stay connected "
-                "so the requirements.md file and the judge prompt explain the same domain risks."
-                "</div>"
-            )
-            with ui.element("div").classes("assistant-grid"):
-                with ui.element("div").classes("assistant-card"):
-                    ui.html('<div class="assistant-label">Coach prompts</div>')
-                    for question in coach_questions:
-                        ui.html(f'<div class="coach-question">{question}</div>')
-                with ui.element("div").classes("assistant-card"):
-                    ui.html('<div class="assistant-label">What GEDD provides to Kiro</div>')
-                    with ui.element("div").classes("artifact-list"):
-                        for icon, title, copy in artifacts:
-                            with ui.element("div").classes("artifact-item"):
-                                ui.icon(icon)
-                                with ui.column().style("gap: 0"):
-                                    ui.html(f'<div class="artifact-title">{title}</div>')
-                                    ui.html(f'<div class="artifact-copy">{copy}</div>')
+        with ui.element("section").classes("flow-section animate-in stagger-2"):
+            with ui.element("div"):
+                ui.html('<div class="flow-heading">Workflow</div>')
+                with ui.element("div").classes("flow-list"):
+                    for step in sme_flow_steps:
+                        status_label = "done" if step["status"] == "done" else (
+                            "now" if step["status"] == "current" else "next"
+                        )
+                        with ui.element("div").classes(f'flow-row {step["status"]}'):
+                            ui.html(f'<span class="flow-num">{step["num"]}</span>')
+                            with ui.element("div"):
+                                ui.html(f'<div class="flow-title">{step["title"]}</div>')
+                                ui.html(f'<div class="flow-copy">{step["action"]}</div>')
+                                ui.html(f'<div class="flow-evidence">{step["evidence"]}</div>')
+                            ui.html(f'<div class="flow-status">{status_label}</div>')
+            with ui.element("aside").classes("outputs-panel"):
+                ui.html('<div class="flow-heading">Outputs</div>')
+                with ui.element("div").classes("output-list"):
+                    for icon, title, copy in artifacts:
+                        with ui.element("div").classes("output-item"):
+                            ui.icon(icon)
+                            with ui.element("div"):
+                                ui.html(f'<div class="output-title">{title}</div>')
+                                ui.html(f'<div class="output-copy">{copy}</div>')

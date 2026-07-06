@@ -5,12 +5,12 @@ import json
 from nicegui import app, ui
 
 NAV_ITEMS = [
+    {"path": "/", "label": "Home", "icon": "home"},
     {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
-    {"path": "/", "label": "Error Analysis", "icon": "bug_report"},
     {"path": "/coding", "label": "Annotations", "icon": "rate_review"},
-    {"path": "/requirements", "label": "Kiro requirements.md", "icon": "description", "output": True},
-    {"path": "/judge", "label": "LLM Judge", "icon": "gavel", "output": True},
-    {"path": "/report", "label": "Outputs", "icon": "download"},
+    {"path": "/report", "label": "Evidence", "icon": "fact_check", "output": True},
+    {"path": "/requirements", "label": "requirements.md", "icon": "description", "output": True},
+    {"path": "/judge", "label": "Judge", "icon": "gavel", "output": True},
 ]
 
 PROJECT_STATE_KEEP_KEYS = {"authenticated", "email", "oauth_tokens", "oauth_state"}
@@ -27,29 +27,34 @@ BRAND_CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-base: #08090a;
-  --bg-surface-1: #0f1011;
-  --bg-surface-2: #141516;
-  --bg-surface-3: #191a1b;
-  --bg-hover: #232326;
-  --border-subtle: rgba(255,255,255,0.06);
-  --border-default: rgba(255,255,255,0.09);
-  --border-strong: rgba(255,255,255,0.14);
-  --text-primary: #f7f8f8;
-  --text-secondary: #b4b8c0;
-  --text-tertiary: #6e737b;
-  --text-muted: #4a4e55;
-  --accent: #5e6ad2;
-  --accent-bright: #828fff;
-  --accent-tint: rgba(94,106,210,0.12);
-  --green: #27a644;
-  --green-tint: rgba(39,166,68,0.12);
-  --green-bright: #4ade80;
-  --yellow: #f0bf00;
-  --yellow-tint: rgba(240,191,0,0.1);
-  --red: #eb5757;
-  --red-tint: rgba(235,87,87,0.1);
-  --blue: #4ea7fc;
+  --bg-base: #090b0f;
+  --bg-surface-1: #101419;
+  --bg-surface-2: #151a20;
+  --bg-surface-3: #1b222a;
+  --bg-hover: #202934;
+  --border-subtle: rgba(204,219,226,0.07);
+  --border-default: rgba(204,219,226,0.11);
+  --border-strong: rgba(204,219,226,0.18);
+  --text-primary: #f5f7f8;
+  --text-secondary: #bac5ca;
+  --text-tertiary: #7f8b92;
+  --text-muted: #53616a;
+  --accent: #1fb6a6;
+  --accent-bright: #5ee0d2;
+  --accent-tint: rgba(31,182,166,0.13);
+  --green: #42bd73;
+  --green-tint: rgba(66,189,115,0.13);
+  --green-bright: #7ee59d;
+  --yellow: #f4b860;
+  --yellow-tint: rgba(244,184,96,0.13);
+  --red: #f97066;
+  --red-tint: rgba(249,112,102,0.12);
+  --blue: #6aa9ff;
+  --blue-tint: rgba(106,169,255,0.13);
+  --violet: #b18cff;
+  --violet-tint: rgba(177,140,255,0.13);
+  --orange: #ff9f43;
+  --orange-tint: rgba(255,159,67,0.13);
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
@@ -63,7 +68,7 @@ body {
   background: var(--bg-base) !important;
   color: var(--text-primary) !important;
   font-size: 0.875rem;
-  letter-spacing: -0.011em;
+  letter-spacing: 0;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -105,7 +110,7 @@ body {
 /* Brand */
 .brand-title {
   font-size: 0.9rem; font-weight: 600; color: var(--text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 .brand-subtitle { font-size: 0.75rem; color: var(--text-tertiary); }
 .brand-stack { display: flex; flex-direction: column; gap: 0; line-height: 1.05; }
@@ -123,6 +128,209 @@ body {
   transition: border-color 150ms ease;
 }
 .page-card:hover { border-color: var(--border-default); }
+
+/* Dynamic product pages */
+.dynamic-page {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2.75rem;
+}
+.dynamic-hero {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.34fr);
+  gap: 18px;
+  align-items: stretch;
+  padding: 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(31,182,166,0.13), rgba(106,169,255,0.08) 48%, rgba(177,140,255,0.08)),
+    var(--bg-surface-1);
+}
+.dynamic-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-bright), var(--yellow), var(--blue), var(--violet));
+}
+.dynamic-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  padding: 4px 9px;
+  border-radius: 99px;
+  border: 1px solid rgba(94,224,210,0.24);
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.64rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.dynamic-title {
+  margin-top: 12px;
+  max-width: 780px;
+  font-size: 2rem;
+  line-height: 1.12;
+  font-weight: 760;
+  color: var(--text-primary);
+}
+.dynamic-copy {
+  margin-top: 9px;
+  max-width: 760px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+.dynamic-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 16px;
+}
+.dynamic-side-panel {
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background:
+    linear-gradient(180deg, rgba(106,169,255,0.10), rgba(177,140,255,0.04)),
+    var(--bg-surface-1);
+}
+.dynamic-side-label {
+  font-size: 0.62rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.dynamic-side-value {
+  margin-top: 8px;
+  font-size: 1.7rem;
+  line-height: 1;
+  font-weight: 780;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.dynamic-side-copy {
+  margin-top: 7px;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.dynamic-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.68fr) minmax(260px, 0.32fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 16px;
+}
+.dynamic-panel {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+  padding: 15px;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+.dynamic-panel:hover {
+  border-color: var(--border-default);
+  transform: translateY(-1px);
+}
+.dynamic-panel.accent-teal { border-top: 3px solid var(--accent-bright); }
+.dynamic-panel.accent-amber { border-top: 3px solid var(--yellow); }
+.dynamic-panel.accent-blue { border-top: 3px solid var(--blue); }
+.dynamic-panel.accent-coral { border-top: 3px solid var(--red); }
+.dynamic-panel.accent-violet { border-top: 3px solid var(--violet); }
+.dynamic-panel-title {
+  font-size: 0.92rem;
+  font-weight: 720;
+  color: var(--text-primary);
+}
+.dynamic-panel-copy {
+  margin-top: 4px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+}
+.metric-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.metric-tile {
+  position: relative;
+  overflow: hidden;
+  min-height: 82px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-1);
+  --tile-color: var(--accent-bright);
+}
+.metric-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: var(--tile-color);
+}
+.metric-tile:nth-child(2) { --tile-color: var(--yellow); }
+.metric-tile:nth-child(3) { --tile-color: var(--blue); }
+.metric-tile:nth-child(4) { --tile-color: var(--violet); }
+.metric-tile-value {
+  color: var(--tile-color);
+  font-size: 1.4rem;
+  font-weight: 780;
+  font-variant-numeric: tabular-nums;
+}
+.metric-tile-label {
+  margin-top: 3px;
+  color: var(--text-tertiary);
+  font-size: 0.64rem;
+  font-weight: 720;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.document-preview {
+  max-height: 72vh;
+  overflow: auto;
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: #0c1015;
+}
+.empty-state-panel {
+  max-width: 560px;
+  margin: 8vh auto 0;
+  padding: 28px;
+  text-align: center;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-default);
+  background:
+    linear-gradient(180deg, rgba(31,182,166,0.09), rgba(244,184,96,0.04)),
+    var(--bg-surface-1);
+}
+.empty-state-panel .material-icons {
+  color: var(--accent-bright);
+  font-size: 2.4rem;
+}
+.empty-state-title {
+  margin-top: 12px;
+  font-size: 1.05rem;
+  font-weight: 740;
+  color: var(--text-primary);
+}
+.empty-state-copy {
+  margin-top: 7px;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
 
 /* Section titles */
 .section-title {
@@ -177,7 +385,17 @@ body {
 .stat-label { font-size: 0.65rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.03em; margin-top: 2px; }
 
 /* Buttons */
-.q-btn { letter-spacing: -0.01em !important; }
+.q-btn { letter-spacing: 0 !important; }
+.q-btn.bg-primary {
+  background: var(--accent) !important;
+  color: #071314 !important;
+}
+.q-btn.bg-primary:hover {
+  background: var(--accent-bright) !important;
+}
+.q-btn.text-primary {
+  color: var(--accent-bright) !important;
+}
 
 .app-header {
   min-height: 48px;
@@ -194,28 +412,29 @@ body {
   flex-shrink: 0;
 }
 .coach-nav-btn {
-  color: var(--text-primary) !important;
-  background: linear-gradient(135deg, rgba(94,106,210,0.28), rgba(78,167,252,0.16)) !important;
-  border: 1px solid rgba(130,143,255,0.45) !important;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 18px rgba(94,106,210,0.18) !important;
+  color: #061314 !important;
+  background: linear-gradient(135deg, rgba(94,224,210,0.95), rgba(244,184,96,0.72)) !important;
+  border: 1px solid rgba(94,224,210,0.48) !important;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 18px rgba(31,182,166,0.18) !important;
 }
 .coach-nav-btn:hover {
-  background: linear-gradient(135deg, rgba(94,106,210,0.36), rgba(78,167,252,0.22)) !important;
+  background: linear-gradient(135deg, rgba(94,224,210,1), rgba(255,207,119,0.86)) !important;
   border-color: var(--accent-bright) !important;
 }
 .core-nav-btn {
   color: var(--text-secondary) !important;
 }
 .output-nav-btn {
-  color: var(--accent-bright) !important;
-  border: 1px solid rgba(130,143,255,0.24) !important;
-  background: rgba(94,106,210,0.08) !important;
+  color: var(--blue) !important;
+  border: 1px solid rgba(106,169,255,0.22) !important;
+  background: rgba(106,169,255,0.07) !important;
 }
 
 /* Active nav indicator */
 .nav-active {
   border-bottom: 2px solid var(--accent-bright) !important;
   color: var(--text-primary) !important;
+  background: rgba(31,182,166,0.08) !important;
   border-radius: 6px 6px 0 0 !important;
 }
 
@@ -277,15 +496,55 @@ body {
   .coach-output-grid {
     grid-template-columns: 1fr;
   }
+  .coach-step-grid {
+    grid-template-columns: 1fr;
+  }
+  .coach-next-line {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+  .coach-mini-flow {
+    gap: 6px;
+  }
+  .dynamic-page {
+    padding: 1rem 1rem 2rem;
+  }
+  .dynamic-hero,
+  .dynamic-grid {
+    grid-template-columns: 1fr;
+  }
+  .dynamic-title {
+    font-size: 1.55rem;
+  }
+  .metric-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .metric-strip {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── Coach page ──────────────────────────────────────────────────────── */
 .coach-product-panel {
+  position: relative;
+  overflow: hidden;
   width: 100%;
-  padding: 18px;
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(130,143,255,0.28);
-  background: linear-gradient(180deg, rgba(94,106,210,0.13), var(--bg-surface-1));
+  padding: 20px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(135deg, rgba(31,182,166,0.12), rgba(244,184,96,0.07) 48%, rgba(106,169,255,0.08)),
+    var(--bg-surface-1);
+}
+.coach-product-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-bright), var(--yellow), var(--blue), var(--violet));
 }
 .coach-product-kicker {
   display: inline-flex;
@@ -294,7 +553,7 @@ body {
   width: fit-content;
   padding: 4px 9px;
   border-radius: 99px;
-  border: 1px solid rgba(130,143,255,0.24);
+  border: 1px solid rgba(94,224,210,0.24);
   background: var(--accent-tint);
   color: var(--accent-bright);
   font-size: 0.62rem;
@@ -303,18 +562,133 @@ body {
   text-transform: uppercase;
 }
 .coach-product-title {
-  margin-top: 12px;
-  font-size: 1.35rem;
+  margin-top: 10px;
+  font-size: 1.45rem;
   line-height: 1.2;
   font-weight: 750;
   color: var(--text-primary);
 }
 .coach-product-copy {
-  max-width: 760px;
+  max-width: 820px;
   margin-top: 7px;
-  font-size: 0.82rem;
+  font-size: 0.88rem;
   line-height: 1.55;
   color: var(--text-secondary);
+}
+.coach-next-line {
+  display: grid;
+  grid-template-columns: 48px minmax(120px, 0.28fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: rgba(9,11,15,0.42);
+}
+.coach-next-line span {
+  font-size: 0.62rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+}
+.coach-next-line strong {
+  font-size: 0.84rem;
+  color: var(--text-primary);
+}
+.coach-next-line em {
+  font-style: normal;
+  font-size: 0.74rem;
+  line-height: 1.45;
+  color: var(--text-tertiary);
+}
+.coach-mini-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.coach-mini-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 5px 9px 5px 6px;
+  border-radius: 99px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  background: var(--bg-surface-1);
+  --step-color: var(--accent-bright);
+  --step-bg: var(--accent-tint);
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.coach-mini-step:hover {
+  transform: translateY(-1px);
+  border-color: var(--step-color);
+}
+.coach-mini-step:nth-child(2) {
+  --step-color: var(--yellow);
+  --step-bg: var(--yellow-tint);
+}
+.coach-mini-step:nth-child(3) {
+  --step-color: var(--blue);
+  --step-bg: var(--blue-tint);
+}
+.coach-mini-step:nth-child(4) {
+  --step-color: var(--red);
+  --step-bg: var(--red-tint);
+}
+.coach-mini-step:nth-child(5) {
+  --step-color: var(--violet);
+  --step-bg: var(--violet-tint);
+}
+.coach-mini-step span {
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--step-bg);
+  color: var(--step-color);
+  font-size: 0.62rem;
+  font-weight: 760;
+}
+.coach-mini-step strong {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+.coach-mini-step em {
+  font-style: normal;
+  font-size: 0.56rem;
+  font-weight: 760;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.coach-mini-step.current {
+  border-color: var(--step-color);
+  color: var(--step-color);
+}
+.coach-mini-step.current span {
+  background: var(--step-color);
+  color: #071314;
+}
+.coach-mini-step.current em,
+.coach-mini-step.current strong {
+  color: var(--step-color);
+}
+.coach-mini-step.done {
+  border-color: rgba(74,222,128,0.2);
+}
+.coach-mini-step.done span {
+  background: var(--green-tint);
+  color: var(--green-bright);
+}
+.coach-mini-step.done em,
+.coach-mini-step.done strong {
+  color: var(--green-bright);
 }
 .coach-output-grid {
   display: grid;
@@ -345,17 +719,156 @@ body {
   line-height: 1.42;
   color: var(--text-tertiary);
 }
+.coach-workbench-label {
+  margin-top: 16px;
+  font-size: 0.66rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.coach-step-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 9px;
+  margin-top: 9px;
+}
+.coach-step-card {
+  min-height: 154px;
+  padding: 11px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface-2);
+}
+.coach-step-card.current {
+  border-color: rgba(130,143,255,0.48);
+  background: linear-gradient(180deg, rgba(94,106,210,0.13), var(--bg-surface-2));
+}
+.coach-step-card.done {
+  border-color: rgba(74,222,128,0.26);
+}
+.coach-step-card.next {
+  opacity: 0.82;
+}
+.coach-step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+.coach-step-num {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 99px;
+  background: var(--accent-tint);
+  color: var(--accent-bright);
+  font-size: 0.66rem;
+  font-weight: 760;
+}
+.coach-step-status {
+  padding: 2px 6px;
+  border-radius: 99px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  font-size: 0.54rem;
+  font-weight: 760;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.coach-step-card.done .coach-step-status {
+  color: var(--green-bright);
+  border-color: rgba(74,222,128,0.22);
+}
+.coach-step-card.current .coach-step-status {
+  color: var(--accent-bright);
+  border-color: rgba(130,143,255,0.34);
+}
+.coach-step-title {
+  margin-top: 10px;
+  font-size: 0.77rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.coach-step-copy {
+  margin-top: 5px;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-tertiary);
+}
+.coach-step-output {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--green-bright);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
 .coach-quick-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
 }
-.chat-card { background: var(--bg-surface-2); border-radius: 12px; border: 1px solid var(--border-subtle); }
-.msg-user { background: var(--accent-tint); border: 1px solid rgba(94,106,210,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; color: var(--text-primary); }
-.msg-ai { background: var(--bg-surface-1); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--accent); color: var(--text-secondary); }
+.chat-card {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(106,169,255,0.06), rgba(31,182,166,0.03)),
+    var(--bg-surface-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-subtle);
+}
+.chat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--blue), var(--accent-bright), var(--yellow));
+}
+.coach-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.coach-chat-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-size: 0.94rem;
+  font-weight: 730;
+}
+.coach-chat-title .material-icons {
+  color: var(--accent-bright);
+  font-size: 1.05rem;
+}
+.coach-chat-copy {
+  color: var(--text-tertiary);
+  font-size: 0.73rem;
+  line-height: 1.42;
+}
+.coach-input-row {
+  padding: 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-1);
+}
+.coach-download-rail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+}
+.msg-user { background: var(--accent-tint); border: 1px solid rgba(94,224,210,0.22); border-radius: var(--radius-lg); padding: 12px 16px; margin: 6px 0; color: var(--text-primary); }
+.msg-ai { background: var(--bg-surface-1); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--accent); color: var(--text-secondary); }
 .msg-ai strong { color: var(--text-primary); }
-.msg-error { background: var(--red-tint); border: 1px solid rgba(235,87,87,0.2); border-radius: 10px; padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--red); color: var(--text-secondary); }
+.msg-error { background: var(--red-tint); border: 1px solid rgba(235,87,87,0.2); border-radius: var(--radius-lg); padding: 12px 16px; margin: 6px 0; border-left: 3px solid var(--red); color: var(--text-secondary); }
 .input-box { border-radius: 10px !important; background: var(--bg-surface-1) !important; border: 1px solid var(--border-default) !important; font-size: 0.88rem !important; color: var(--text-primary) !important; transition: border-color 150ms ease !important; }
 .input-box:focus-within { border-color: var(--accent) !important; }
 .send-btn { background: var(--accent) !important; color: white !important; transition: opacity 150ms ease !important; }
@@ -387,7 +900,7 @@ body {
 """
 
 
-def _get_progress_state() -> list[dict]:
+def _get_progress_state(current_path: str = "") -> list[dict]:
     """Compute progress rail steps from session state."""
     s = app.storage.user
     session_data = s.get("session_data", {})
@@ -396,22 +909,52 @@ def _get_progress_state() -> list[dict]:
     annotations = s.get("coding_annotations", [])
     codebook = s.get("codebook", [])
     judge = s.get("_generated_judge_prompt", "")
-    has_agent = bool(agent_spec.get("name")) if isinstance(agent_spec, dict) else False
+    has_domain = bool(agent_spec.get("domain_context") or agent_spec.get("name")) if isinstance(agent_spec, dict) else False
     has_prompt = bool(agent_spec.get("system_prompt")) if isinstance(agent_spec, dict) else False
-    coach_done = has_agent and has_prompt and bool(golden)
+    has_baseline_spec = bool(s.get("baseline_requirements_md") or has_prompt)
+    baseline_tested = bool(s.get("eval_results") or annotations)
     has_domain_spec_source = bool(session_data.get("codes") or codebook)
 
     steps = [
-        {"label": "Coach", "path": "/coach", "done": coach_done},
-        {"label": "Error Analysis", "path": "/", "done": bool(golden)},
-        {"label": "Annotations", "path": "/coding", "done": False, "count": f"{len(annotations)}/{max(len(golden), 1)}"},
-        {"label": "Kiro requirements.md", "path": "/requirements", "done": has_domain_spec_source},
-        {"label": "LLM Judge", "path": "/judge", "done": bool(judge)},
-        {"label": "Outputs", "path": "/report", "done": bool(has_domain_spec_source and judge)},
+        {
+            "label": "Domain + Baseline",
+            "path": "/coach",
+            "done": bool(has_domain and has_baseline_spec),
+        },
+        {"label": "Queries", "path": "/coach", "done": bool(golden)},
+        {"label": "Baseline Test", "path": "/", "done": bool(golden and baseline_tested)},
+        {
+            "label": "Annotations",
+            "path": "/coding",
+            "done": False,
+            "count": f"{len(annotations)}/{max(len(golden), 1)}",
+        },
+        {
+            "label": "Outputs",
+            "path": "/report",
+            "done": bool(has_domain_spec_source and judge),
+        },
     ]
     # Mark the annotation step done if all queries have SME annotations.
     if golden and len(annotations) >= len(golden):
-        steps[2]["done"] = True
+        steps[3]["done"] = True
+    if current_path == "/coach":
+        if not (has_domain and has_baseline_spec):
+            steps[0]["current"] = True
+        else:
+            steps[1]["current"] = True
+    elif current_path == "/coding":
+        steps[3]["current"] = True
+    elif current_path == "/requirements":
+        steps[4]["current"] = True
+    elif current_path == "/judge":
+        steps[4]["current"] = True
+    elif current_path == "/report":
+        steps[4]["current"] = True
+    elif current_path == "/":
+        steps[2]["current"] = True
+    elif current_path == "/improvement":
+        steps[4]["current"] = True
     return steps
 
 
@@ -475,7 +1018,7 @@ def page_layout(title: str = "", current_path: str = ""):
                         "font-size:1rem; font-weight:600; color:var(--text-primary); margin-bottom:8px"
                     )
                     ui.label(
-                        "This will clear your current session — agent definition, golden queries, "
+                        "This will clear your current session - domain profile, curated queries, "
                         "annotations, codebook, and all analysis. This cannot be undone."
                     ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
                     with ui.row().classes("gap-2 justify-end"):
@@ -502,8 +1045,8 @@ def page_layout(title: str = "", current_path: str = ""):
                         "margin-bottom:8px"
                     )
                     ui.label(
-                        "Export or import the curated evidence behind the two generated outputs: "
-                        "Kiro requirements.md and the LLM-as-Judge prompt."
+                        "Export or import SME_error_analysis.md, the curated evidence handoff "
+                        "behind Kiro requirements.md and the LLM-as-Judge prompt."
                     ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
 
                     def export_session():
@@ -581,18 +1124,24 @@ def page_layout(title: str = "", current_path: str = ""):
                 "color: var(--text-muted)"
             ).tooltip("Logout")
 
-    # Evidence-driven output flow: coach -> analyze -> annotate -> requirements.md -> judge -> outputs.
-    workflow_paths = {"/coach", "/coding", "/requirements", "/improvement", "/judge", "/report"}
+    # Evidence-driven output flow: domain intake -> queries -> baseline test -> annotations -> specs -> judge.
+    workflow_paths = {"/coach", "/", "/coding", "/requirements", "/improvement", "/judge", "/report"}
     if current_path in workflow_paths:
-        steps = _get_progress_state()
+        steps = _get_progress_state(current_path)
+        has_explicit_current = any(step.get("current") for step in steps)
         with ui.element("div").classes("progress-rail"):
             for i, step in enumerate(steps):
                 if i > 0:
                     ui.html('<span class="progress-rail-arrow">→</span>')
                 cls = "progress-rail-step"
+                is_current = (
+                    bool(step.get("current"))
+                    if has_explicit_current
+                    else step["path"] == current_path
+                )
                 if step["done"]:
                     cls += " done"
-                elif step["path"] == current_path:
+                elif is_current:
                     cls += " current"
                 label = step["label"]
                 prefix = "✓ " if step["done"] else ""

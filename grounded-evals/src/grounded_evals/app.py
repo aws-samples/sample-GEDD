@@ -29,6 +29,7 @@ import grounded_evals.ui.report_page  # noqa: F401
 from grounded_evals.agent import StateBundle, run_agent_turn
 from grounded_evals.agentcore_client import get_agentcore_client
 from grounded_evals.guide.session import Session
+from grounded_evals.ui.baseline_requirements import render_baseline_requirements_upload
 from grounded_evals.ui.layout import BRAND_CSS, page_layout
 
 # --- Authentication via Cognito ---
@@ -316,6 +317,12 @@ def _apply_agentcore_state(updated_state: dict) -> None:
     if agent_data.get("target_users"):
         from grounded_evals.ingest.models import Persona
         session.agent_spec.target_users = [Persona(name=u["name"] if isinstance(u, dict) else u) for u in agent_data["target_users"]]
+    if agent_data.get("domain_context"):
+        session.agent_spec.domain_context = agent_data["domain_context"]
+    if agent_data.get("known_edge_cases"):
+        session.agent_spec.known_edge_cases = agent_data["known_edge_cases"]
+    if agent_data.get("constraints"):
+        session.agent_spec.constraints = agent_data["constraints"]
     if agent_data.get("system_prompt"):
         session.agent_spec.system_prompt = agent_data["system_prompt"]
 
@@ -353,91 +360,137 @@ def main_page() -> None:
     s = _user_state()
     session = _user_session()
     messages = s["messages"]
+    has_domain = bool(session.agent_spec.domain_context or session.agent_spec.name)
+    has_baseline_spec = bool(s.get("baseline_requirements_md") or session.agent_spec.system_prompt)
+    has_queries = bool(session.golden_prompts)
+    has_baseline_evidence = bool(s.get("eval_results") or s.get("coding_annotations"))
+    has_annotations = bool(s.get("coding_annotations"))
+    has_evidence_handoff = bool(s.get("codebook") or has_annotations)
 
-    # Progress: the PM flow ends with requirements.md and a judge prompt.
-    with ui.column().classes("w-full items-center").style("max-width: 980px; margin: 0.75rem auto 0; padding: 0 1rem"):
+    def coach_status(done: bool, current: bool) -> str:
+        if done:
+            return "done"
+        return "current" if current else "next"
+
+    coach_workbench_steps = [
+        (
+            "1",
+            "Domain + baseline",
+            "Name the SME domain and upload or capture the baseline requirements.md.",
+            "Domain profile + baseline requirements",
+            coach_status(has_domain, not has_domain),
+        ),
+        (
+            "2",
+            "Queries",
+            "Approve happy path, edge, adversarial, ambiguous, multi-turn, recovery, persona, and red-flag queries.",
+            "Coverage-backed query set",
+            coach_status(has_queries, has_domain and has_baseline_spec and not has_queries),
+        ),
+        (
+            "3",
+            "Baseline test",
+            "Run or paste responses from the Kiro baseline agent created from the initial requirements.md.",
+            "Baseline response traces",
+            coach_status(has_baseline_evidence, has_queries and not has_baseline_evidence),
+        ),
+        (
+            "4",
+            "Annotations",
+            "Label verdict, failure code, severity, confidence, missing rule, and memo.",
+            "SME error analysis",
+            coach_status(has_evidence_handoff, has_baseline_evidence and not has_evidence_handoff),
+        ),
+        (
+            "5",
+            "Outputs",
+            "Export SME_error_analysis.md, then generate requirements.md and the LLM Judge.",
+            "Specs + judge + measurement",
+            coach_status(bool(s.get("_generated_judge_prompt")), has_evidence_handoff),
+        ),
+    ]
+    current_coach_step = next(
+        (step for step in coach_workbench_steps if step[4] == "current"),
+        next((step for step in coach_workbench_steps if step[4] != "done"), coach_workbench_steps[-1]),
+    )
+
+    with ui.column().classes("w-full items-center").style("max-width: 1120px; margin: 0.75rem auto 0; padding: 0 1rem"):
         with ui.element("div").classes("coach-product-panel"):
             ui.html(
                 '<div class="coach-product-kicker">'
                 '<span class="material-icons" style="font-size:0.9rem">auto_awesome</span>'
-                "Coach Product"
+                "Coach"
                 "</div>"
             )
-            ui.html('<div class="coach-product-title">Coach generates Kiro Domain Specs</div>')
+            ui.html('<div class="coach-product-title">Curate evidence for Kiro specs</div>')
             ui.html(
                 '<div class="coach-product-copy">'
-                "Use Coach to define the agent, generate or refine test cases, and curate "
-                "domain-expert evidence through SME error analysis. GEDD turns that curated "
-                "evidence into two outputs: a Kiro-ready requirements.md file and an "
-                "LLM-as-a-Judge release gate. The companion Kiro Power in power-gedd/ "
-                "consumes the same evidence inside Kiro."
+                "Use the conversation below to move one step at a time from domain context to "
+                "SME_error_analysis.md, requirements.md, and the LLM Judge."
                 "</div>"
             )
-            output_cards = [
-                (
-                    "fact_check",
-                    "Curated Evidence",
-                    "SME-reviewed failures, codes, severity, confidence, and memos that become the source of truth.",
-                ),
-                (
-                    "description",
-                    "Kiro requirements.md",
-                    "EARS acceptance criteria using WHEN, IF, WHILE, and SHALL, grounded in observed failure modes.",
-                ),
-                (
-                    "gavel",
-                    "LLM Judge",
-                    "A prompt and output contract that judge the same domain failures before release.",
-                ),
-                (
-                    "bolt",
-                    "Kiro Power",
-                    "A Kiro companion flow for consuming domain-expert-curated GEDD evidence.",
-                ),
-            ]
-            with ui.element("div").classes("coach-output-grid"):
-                for icon, title, copy in output_cards:
-                    with ui.element("div").classes("coach-output-card"):
-                        ui.icon(icon)
-                        ui.html(f'<div class="coach-output-title">{title}</div>')
-                        ui.html(f'<div class="coach-output-copy">{copy}</div>')
+            ui.html(
+                f'<div class="coach-next-line"><span>Next</span>'
+                f'<strong>{current_coach_step[1]}</strong>'
+                f'<em>{current_coach_step[2]}</em></div>'
+            )
+            with ui.element("div").classes("coach-mini-flow"):
+                for num, title, _copy, _output, status in coach_workbench_steps:
+                    status_label = "done" if status == "done" else ("now" if status == "current" else "next")
+                    ui.html(
+                        f'<div class="coach-mini-step {status}">'
+                        f'<span>{num}</span><strong>{title}</strong><em>{status_label}</em>'
+                        f'</div>'
+                    )
             with ui.element("div").classes("coach-quick-actions"):
+                render_baseline_requirements_upload()
                 ui.button(
-                    "Open Annotations",
+                    "Annotations",
                     icon="rate_review",
                     on_click=lambda: ui.navigate.to("/coding"),
-                ).props("outline size=sm no-caps").style(
-                    "color: var(--accent-bright); border-color: var(--border-subtle)"
-                )
+                ).props("flat size=sm no-caps").style("color: var(--accent-bright)")
                 ui.button(
-                    "Generate requirements.md",
+                    "Export evidence",
+                    icon="fact_check",
+                    on_click=lambda: ui.navigate.to("/report"),
+                ).props("flat size=sm no-caps").style("color: var(--accent-bright)")
+                ui.button(
+                    "requirements.md",
                     icon="description",
                     on_click=lambda: ui.navigate.to("/requirements"),
-                ).props("color=primary size=sm no-caps")
+                ).props("flat size=sm no-caps").style("color: var(--accent-bright)")
                 ui.button(
-                    "Open LLM Judge",
+                    "LLM Judge",
                     icon="gavel",
                     on_click=lambda: ui.navigate.to("/judge"),
-                ).props("outline size=sm no-caps").style(
-                    "color: var(--accent-bright); border-color: var(--border-subtle)"
-                )
-                ui.button(
-                    "Kiro Power",
-                    icon="bolt",
-                    on_click=lambda: ui.notify("Kiro Power lives in power-gedd/ and consumes domain-expert-curated GEDD evidence.", type="info"),
-                ).props("flat size=sm no-caps").style("color: var(--text-secondary)")
+                ).props("flat size=sm no-caps").style("color: var(--accent-bright)")
 
         progress_container = ui.element("div").classes("w-full")
 
         def refresh_progress():
             progress_container.clear()
-            step = min(_user_state()["current_step"], 5)
+            cur_s = _user_state()
+            cur_session = _user_session()
+            cur_has_domain = bool(cur_session.agent_spec.domain_context or cur_session.agent_spec.name)
+            cur_has_baseline = bool(cur_s.get("baseline_requirements_md") or cur_session.agent_spec.system_prompt)
+            cur_has_queries = bool(cur_session.golden_prompts)
+            cur_has_baseline_evidence = bool(cur_s.get("eval_results") or cur_s.get("coding_annotations"))
+            cur_has_annotations = bool(cur_s.get("coding_annotations"))
+            step = 1
+            if cur_has_domain and cur_has_baseline:
+                step = 2
+            if cur_has_queries:
+                step = 3
+            if cur_has_baseline_evidence:
+                step = 4
+            if cur_has_annotations:
+                step = 5
             steps = [
-                "Define Agent",
-                "Generate Test Cases",
-                "SME Error Analysis",
-                "Kiro requirements.md",
-                "LLM Judge",
+                "Domain + Baseline",
+                "Queries",
+                "Baseline Test",
+                "Annotations",
+                "Outputs",
             ]
             with progress_container:
                 ui.html(
@@ -454,7 +507,26 @@ def main_page() -> None:
         refresh_progress()
 
         # Chat card
-        with ui.card().classes("w-full chat-card").style("padding: 1.5rem; margin-top: 0.75rem"):
+        with ui.card().classes("w-full chat-card").style("padding: 1.25rem; margin-top: 0.75rem"):
+            with ui.row().classes("coach-chat-header"):
+                with ui.column().style("gap:2px; min-width:240px"):
+                    ui.html(
+                        '<div class="coach-chat-title">'
+                        '<span class="material-icons">forum</span>'
+                        "Coach workbench"
+                        "</div>"
+                    )
+                    ui.html(
+                        '<div class="coach-chat-copy">'
+                        "Use the chat to curate domain evidence before generating specs and the judge."
+                        "</div>"
+                    )
+                ui.html(
+                    '<div class="dynamic-kicker">'
+                    '<span class="material-icons" style="font-size:0.9rem">verified</span>'
+                    "SME curated"
+                    "</div>"
+                )
             chat_container = ui.column().classes("w-full").style(
                 "max-height: 62vh; overflow-y: auto; padding-right: 8px"
             )
@@ -471,43 +543,46 @@ def main_page() -> None:
                     if step == 1:
                         welcome = (
                             '<div class="msg-ai"><strong>I am your GEDD Coach for Kiro Domain Specs.</strong><br><br>'
-                            'I will guide the product workflow:<br>'
-                            '1. <strong>Define your agent</strong> - name, users, capabilities, and task boundary<br>'
-                            '2. <strong>Generate test cases</strong> - normal, edge, ambiguous, adversarial, and recovery queries<br>'
-                            '3. <strong>Curate evidence through SME error analysis</strong> - verdicts, failure codes, severity, confidence, and memos<br>'
-                            '4. <strong>Generate Kiro requirements.md</strong> - EARS acceptance criteria grounded in curated evidence<br>'
-                            '5. <strong>Generate the LLM Judge</strong> - a release gate for the same failure modes<br><br>'
-                            '<strong>What AI agent are you building?</strong></div>'
+                            'We will start where the domain expert starts:<br>'
+                            '1. <strong>Domain intake</strong> - domain, users, risks, constraints, and edge cases<br>'
+                            '2. <strong>Baseline Kiro spec</strong> - upload or capture the initial requirements.md context<br>'
+                            '3. <strong>Curated domain queries</strong> - happy path, edge, adversarial, ambiguous, multi-turn, recovery, persona, and red-flag cases<br>'
+                            '4. <strong>Kiro baseline test</strong> - run the baseline agent created from initial requirements.md<br>'
+                            '5. <strong>SME annotation</strong> - label failures with domain vocabulary and severity<br>'
+                            '6. <strong>SME_error_analysis.md</strong> - package the evidence for requirements.md and the LLM Judge<br><br>'
+                            '<strong>What domain are you the expert in?</strong></div>'
                         )
                     elif step == 2:
                         welcome = (
                             f'<div class="msg-ai"><strong>Welcome back!</strong> Your agent '
                             f'<strong>{session.agent_spec.name}</strong> is defined.<br><br>'
-                            f'Let\'s work on the <strong>system prompt</strong>. What should your agent\'s personality and rules be?</div>'
+                            f'If you have the current Kiro requirements.md, upload it as the baseline spec. '
+                            f'Then we will curate the <strong>domain query set</strong> before trusting any baseline result. '
+                            f'What happy-path task should this agent handle reliably?</div>'
                         )
                     elif step == 3:
                         welcome = (
                             f'<div class="msg-ai"><strong>Welcome back!</strong> '
-                            f'Agent and system prompt are set for <strong>{session.agent_spec.name}</strong>.<br><br>'
-                            f'Ready to generate <strong>domain test cases</strong> across normal, edge, ambiguous, adversarial, and recovery cases. '
-                            f'Say "generate queries" to start.</div>'
+                            f'The curated query set is ready for <strong>{session.agent_spec.name}</strong>.<br><br>'
+                            f'Next we test the <strong>Kiro baseline agent</strong> created from the initial requirements.md. '
+                            f'Say "run baseline test" or paste baseline responses.</div>'
                         )
                     elif step == 4:
                         welcome = (
-                            '<div class="msg-ai"><strong>Golden queries are ready.</strong><br><br>'
-                            'Next, review model responses with SME annotations: name the failure modes, set severity, '
-                            'and write the notes that both requirements.md and the LLM Judge should enforce.</div>'
+                            '<div class="msg-ai"><strong>Baseline responses are ready for SME review.</strong><br><br>'
+                            'Review each query and response, then annotate what only a domain expert would catch: '
+                            'verdict, failure code, severity, confidence, and memo.</div>'
                         )
                     else:
                         welcome = (
-                            '<div class="msg-ai"><strong>Error modes are ready for judging.</strong><br><br>'
-                            'Open Kiro requirements.md and LLM Judge to generate the two product outputs from the latest curated evidence.</div>'
+                            '<div class="msg-ai"><strong>Annotated evidence is ready.</strong><br><br>'
+                            'Open Kiro requirements.md, LLM Judge, and Measurement to compare the generic baseline against the GEDD-improved spec.</div>'
                         )
                     ui.html(welcome)
 
             ui.separator().style("opacity: 0.1; margin: 12px 0")
-            with ui.row().classes("w-full items-center gap-sm"):
-                user_input = ui.input(placeholder="Tell me about your AI agent...").classes("flex-grow input-box").props("borderless dense")
+            with ui.row().classes("w-full items-center gap-sm coach-input-row"):
+                user_input = ui.input(placeholder="Start with your domain expertise...").classes("flex-grow input-box").props("borderless dense")
                 send_btn = ui.button(icon="arrow_upward").classes("send-btn").props("round size=md")
 
             # Downloads
@@ -521,7 +596,7 @@ def main_page() -> None:
             def _download_queries_csv():
                 cur = _user_session()
                 if not cur.golden_prompts:
-                    ui.notify("No golden queries yet", type="warning")
+                    ui.notify("No curated domain queries yet", type="warning")
                     return
                 output = io.StringIO()
                 writer = csv.writer(output)
@@ -533,7 +608,7 @@ def main_page() -> None:
             def _download_queries_jsonl():
                 cur = _user_session()
                 if not cur.golden_prompts:
-                    ui.notify("No golden queries yet", type="warning")
+                    ui.notify("No curated domain queries yet", type="warning")
                     return
                 sp = cur.agent_spec.system_prompt or ""
                 lines = [
@@ -605,6 +680,9 @@ def main_page() -> None:
                     "_simple_judge_prompt": cur_s.get("_simple_judge_prompt", ""),
                     "_generated_judge_prompt": cur_s.get("_generated_judge_prompt", ""),
                     "_jb_generated_at": cur_s.get("_jb_generated_at", ""),
+                    "baseline_requirements_md": cur_s.get("baseline_requirements_md", ""),
+                    "baseline_requirements_filename": cur_s.get("baseline_requirements_filename", ""),
+                    "baseline_requirements_uploaded_at": cur_s.get("baseline_requirements_uploaded_at", ""),
                 }
                 ui.download(json.dumps(payload, indent=2).encode(), "gedd_session.json")
 
@@ -618,7 +696,9 @@ def main_page() -> None:
                                     "codebook", "coding_annotations", "memos", "paradigm_model",
                                     "failure_patterns", "eval_results", "eval_selected_models",
                                     "_simple_judge_prompt", "_generated_judge_prompt",
-                                    "_jb_generated_at"]:
+                                    "_jb_generated_at", "baseline_requirements_md",
+                                    "baseline_requirements_filename",
+                                    "baseline_requirements_uploaded_at"]:
                             if key in data:
                                 s[key] = data[key]
                         ui.notify("Session restored ✓", type="positive")
@@ -630,19 +710,19 @@ def main_page() -> None:
                     "accept=.json flat dense"
                 ).style("color: var(--text-tertiary); font-size: 0.8rem")
 
-            with ui.row().classes("w-full justify-center gap-sm flex-wrap").style("margin-top: 8px"):
+            with ui.row().classes("w-full justify-center gap-sm flex-wrap coach-download-rail"):
                 ui.button("System Prompt", icon="download", on_click=_download_system_prompt).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
-                ui.button("Queries (CSV)", icon="download", on_click=_download_queries_csv).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
-                ui.button("Queries (JSONL)", icon="download", on_click=_download_queries_jsonl).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Curated Queries (CSV)", icon="download", on_click=_download_queries_csv).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
+                ui.button("Curated Queries (JSONL)", icon="download", on_click=_download_queries_jsonl).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Annotations", icon="download", on_click=_download_annotations_json).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Judge Prompt", icon="download", on_click=_download_judge_prompt).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Export Session", icon="save", on_click=_export_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
                 ui.button("Import Session", icon="upload_file", on_click=_import_session).props("flat size=sm").style("text-transform: none; color: var(--text-tertiary)")
 
-        # Golden query table — view, edit, delete
+        # Curated domain query table - view, edit, delete
         if session.golden_prompts:
             with ui.expansion(
-                f"Golden Queries ({len(session.golden_prompts)})",
+                f"Curated Domain Queries ({len(session.golden_prompts)})",
                 icon="list",
             ).classes("w-full").style(
                 "margin-top: 12px; background: var(--bg-surface-2); border-radius: 10px; "
@@ -696,7 +776,7 @@ def main_page() -> None:
                 with ui.row().classes("gap-2 items-end flex-wrap").style("margin-top:4px"):
                     new_q_input = ui.input(
                         label="Add query",
-                        placeholder="Type a new golden query…"
+                        placeholder="Type a new domain query..."
                     ).props("dense outlined dark").style("flex:1; min-width:200px; font-size:0.82rem")
                     new_cat_input = ui.input(
                         label="Category",
@@ -725,7 +805,7 @@ def main_page() -> None:
                     ).props("size=sm color=primary round dense").tooltip("Add query")
 
             # Category saturation coverage
-            with ui.expansion("Coverage by Category", icon="donut_large").classes("w-full").style(
+            with ui.expansion("Curated Query Coverage", icon="donut_large").classes("w-full").style(
                 "margin-top: 8px; background: var(--bg-surface-2); border-radius: 10px; "
                 "border: 1px solid var(--border-subtle); color: var(--text-primary)"
             ):
@@ -769,20 +849,20 @@ def main_page() -> None:
                 "background: var(--green-tint); border: 1px solid rgba(39,166,68,0.2); text-align: center"
             ):
                 ui.label(
-                    f"✓ {len(session.golden_prompts)} golden queries generated. "
-                    "Ready for SME error analysis, Kiro requirements.md, and the LLM Judge."
+                    f"{len(session.golden_prompts)} curated domain queries are ready. "
+                    "Use them to test the Kiro baseline agent, then annotate the responses."
                 ).style("font-size: 0.82rem; color: var(--green-bright); font-weight: 500")
                 ui.button("Continue to Annotations", icon="arrow_forward", on_click=lambda: ui.navigate.to("/coding")).props("size=sm").style(
                     "margin-top: 6px; background: var(--accent); color: white; border-radius: 6px"
                 )
 
-        # Feature 4: Adversarial Query Suggestions
+        # Feature 4: adversarial and domain red-flag query suggestions
         if session.agent_spec.system_prompt:
-            with ui.expansion("⚔️ Adversarial Suggestions", icon="security").classes("w-full").style(
+            with ui.expansion("Adversarial + Domain Red-Flag Suggestions", icon="security").classes("w-full").style(
                 "background: var(--bg-surface-2); border: 1px solid var(--border-subtle); "
                 "border-radius: 10px; margin-top: 8px; color: var(--text-primary)"
             ):
-                ui.label("Queries designed to exploit weaknesses in your system prompt.").style(
+                ui.label("Queries designed to expose baseline gaps, policy bypasses, and SME-only red flags.").style(
                     "font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 8px"
                 )
 
@@ -798,10 +878,12 @@ def main_page() -> None:
                         model_id = get_model_id()
                         prompt_text = session.agent_spec.system_prompt[:500]
                         agent_name = session.agent_spec.name or "the agent"
+                        domain_context = session.agent_spec.domain_context or "the agent's domain"
                         adv_prompt = (
                             f"Given this AI agent system prompt:\n\n{prompt_text}\n\n"
+                            f"Domain context: {domain_context}\n\n"
                             f"Generate 5 adversarial test queries that would likely cause {agent_name} to fail. "
-                            f"Focus on: constraint violations, edge cases in the instructions, "
+                            f"Focus on constraint violations, domain-specific red flags, edge cases in the instructions, "
                             f"ambiguous requests that exploit gaps, and attempts to override rules.\n"
                             f"Return ONLY the 5 queries, one per line, numbered 1-5."
                         )
@@ -840,7 +922,7 @@ def main_page() -> None:
                                 ):
                                     ui.label(f"{i}. {q}").style("font-size: 0.78rem; color: var(--text-secondary)")
 
-                ui.button("Generate Adversarial Queries", icon="bolt", on_click=generate_adversarial).props("size=sm outline dark").style(
+                ui.button("Generate Red-Flag Queries", icon="bolt", on_click=generate_adversarial).props("size=sm outline dark").style(
                     "color: var(--red); margin-top: 4px"
                 )
 

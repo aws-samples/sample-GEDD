@@ -1,8 +1,9 @@
 # Requirements Generation — EARS Notation
 
-Generate Kiro `requirements.md` using EARS (Easy Approach to Requirements Syntax).
-The requirements start from the agent spec and become domain-driven through SME error
-analysis, failure codes, severity, and annotation memos.
+Generate or upgrade Kiro `requirements.md` using EARS (Easy Approach to Requirements Syntax).
+The preferred path is to start from a baseline Kiro requirements file, test the
+baseline agent with SME-curated domain queries, then improve the requirements
+through SME error analysis, failure codes, severity, and annotation memos.
 
 ## EARS Overview
 
@@ -26,14 +27,14 @@ Optional feature (WHERE) is used for product variants but rarely applies to agen
 
 ### Why EARS for Agent Requirements
 
-- **Directly testable** — Each EARS requirement maps to a golden query test case
+- **Directly testable** — Each EARS requirement maps to a curated domain query test case
 - **Unambiguous** — Fixed clause order eliminates interpretation disagreements
 - **LLM-parseable** — Kiro and AI tools can read and validate EARS requirements
 - **Evidence-linkable** — The trigger/precondition comes directly from the observed failure context
 
 ---
 
-## Two Modes
+## Three Modes
 
 ### Mode A: Generate Baseline (no annotations yet)
 
@@ -42,12 +43,26 @@ From the agent spec, generate EARS requirements using:
 - Known edge cases → Unwanted Behaviour requirements
 - Capability boundaries → Event-driven requirements
 
-### Mode B: Upgrade with Evidence (annotations available)
+This baseline is intentionally generic. It is useful because it gives the team
+something to test against the curated query set.
 
-From `error-analysis.md`, upgrade requirements using:
+### Mode B: Test Baseline and Identify Gaps
+
+From curated queries and baseline responses, identify:
+- Which happy path cases already pass
+- Which edge, adversarial, ambiguous, multi-turn, recovery, persona, or red-flag
+  cases fail
+- Which failures are caused by missing requirements vs. weak implementation
+- Which failures need a new EARS acceptance criterion, a changed user story, or
+  a judge rule
+
+### Mode C: Upgrade with Evidence (annotations available)
+
+From `SME_error_analysis.md`, upgrade requirements using:
 - Failure codes → Unwanted Behaviour requirements (IF failure pattern detected, THEN...)
 - Paradigm model causal conditions → State-driven requirements (WHILE condition holds...)
 - Annotated failures → Event-driven requirements (WHEN trigger occurs...)
+- Baseline-vs-improved delta → Traceability notes explaining what changed and why
 
 ---
 
@@ -91,7 +106,7 @@ Phenomenon: "Policy Hallucination"
 
 ### Annotations → Event-driven (WHEN)
 
-Specific triggering scenarios from golden queries become WHEN requirements:
+Specific triggering scenarios from curated domain queries become WHEN requirements:
 
 ```
 Golden query: "My flight from Frankfurt was cancelled — what compensation am I owed?"
@@ -131,14 +146,14 @@ instead of escalating to human per system prompt rule.
 
 ## Requirements Document Structure
 
-Generate `.kiro/specs/{agent-name}/requirements.md` using Kiro's requirements-first structure:
+Generate or upgrade `.kiro/specs/{agent-name}/requirements.md` using Kiro's requirements-first structure:
 
 ```markdown
 # Requirements Document
 
 ## Introduction
 
-{Agent purpose, target users, evidence summary, and annotation coverage.}
+{Agent purpose, target users, baseline summary, evidence summary, and annotation coverage.}
 
 ## Requirements
 
@@ -152,15 +167,17 @@ Generate `.kiro/specs/{agent-name}/requirements.md` using Kiro's requirements-fi
 2. WHEN {domain trigger}, THE SYSTEM SHALL {expected behavior}.
 3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
 
-**Evidence:** Failure code `{code}`, severity `{severity}`, examples `{query ids}`.
+**Evidence:** Baseline failure `{query ids}`, failure code `{code}`, severity `{severity}`, examples `{query ids}`.
 ```
 
 Add optional evidence sections after requirements only when they help Kiro or reviewers:
 
 - Evidence summary
+- Baseline gap summary
 - Failure code glossary
 - Traceability table
 - Judge alignment notes
+- Measurement notes
 
 ---
 
@@ -198,9 +215,10 @@ Completeness 1.2×, Quality 1.0×, Tone 0.8×, Brand Relevance 0.8×
 Every EARS requirement traces to:
 1. **EARS pattern** — which pattern type and why
 2. **Failure code(s)** — which observed failures it addresses
-3. **Golden queries** — which test cases verify it
+3. **Curated queries** — which test cases verify it
 4. **Paradigm model** — which root cause analysis supports it
 5. **Annotations** — which human judgments ground it
+6. **Baseline gap** — what the baseline requirements or baseline response missed
 
 ---
 
@@ -211,5 +229,6 @@ The lifecycle triggers a new requirements upgrade when:
 - Severity changes alter priority ordering
 - Paradigm model gains new causal insights
 - Agent is updated and re-evaluated
+- Baseline-vs-GEDD measurements show unresolved coverage or accuracy gaps
 
 Each run produces versioned EARS requirements with full traceability.

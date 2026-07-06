@@ -1059,7 +1059,7 @@ def demos_page():
                 ui.html(
                     '<div class="ds-page-subtitle">'
                     'Load a 50-query annotation demo or a domain scenario. Each demo is organized '
-                    'around two generated outputs: Kiro requirements.md and an LLM Judge.'
+                    'around SME_error_analysis.md feeding Kiro requirements.md and an LLM Judge.'
                     '</div>'
                 )
             ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')

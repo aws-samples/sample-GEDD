@@ -1,11 +1,11 @@
 # Session Import Workflow
 
-Guide for importing a GEDD error-analysis markdown file into the two-output generation pipeline.
+Guide for importing a GEDD error-analysis markdown file into the baseline-to-improved generation pipeline.
 
-## What is error-analysis.md?
+## What is SME_error_analysis.md?
 
-The `error-analysis.md` file is the canonical handoff artifact from the GEDD web app or CLI.
-It contains structured annotation evidence in a human-readable, LLM-optimized markdown format.
+The `SME_error_analysis.md` file is the canonical handoff artifact from the GEDD web app or CLI.
+It contains structured domain profile, curated query, baseline response, and annotation evidence in a human-readable, LLM-optimized markdown format.
 
 Export it from:
 - **Web app:** Outputs page or session export
@@ -14,20 +14,27 @@ Export it from:
 ## Expected Structure
 
 ```markdown
-# GEDD Error Analysis — {Agent Name}
+# SME Error Analysis — {Agent Name}
 
-## Agent Spec
+## Domain Expert Profile
+- **Domain Context:** SME domain, regulatory context, and risk posture
 - **Name:** AgentName
 - **Description:** What the agent does
 - **Capabilities:** cap1, cap2, ...
 - **Target Users:** user1, user2, ...
+- **Known Edge Cases:** edge1, edge2, ...
+- **Constraints:** hard rule1, hard rule2, ...
 
 ### System Prompt
 (the agent's system prompt)
 
-## Golden Queries ({n} total, {saturation}% saturated)
+## Curated Domain Queries ({n} total, {saturation}% saturated)
 | # | Query | Category | Expected Behavior |
 |---|-------|----------|-------------------|
+
+## Baseline Responses
+| # | Query | Baseline Response | Baseline Requirement Version |
+|---|-------|-------------------|------------------------------|
 
 ## Annotations Summary
 - **Total:** N | Correct: X | Partial: Y | Incorrect: Z
@@ -68,6 +75,8 @@ Export it from:
 ### Step 1: Locate the error analysis file
 
 Search for the markdown file in common locations:
+- `./SME_error_analysis.md`
+- `./*_SME_error_analysis.md`
 - `./*_error_analysis.md`
 - `./error-analysis.md`
 - `./outputs/*_error_analysis.md`
@@ -82,8 +91,9 @@ Extract each section and report status:
 
 | Section | Required For | Status |
 |---------|-------------|--------|
-| Agent Spec | Both outputs | ✓/✗ |
-| Golden Queries | Requirements, Judge | ✓/✗ |
+| Domain Expert Profile | Both outputs | ✓/✗ |
+| Curated Domain Queries | Requirements, Judge | ✓/✗ |
+| Baseline Responses | Requirements, Judge, Measurement | ✓/✗ |
 | Failure Codebook | Requirements, Judge | ✓/✗ |
 | Annotated Failures | Requirements, Judge | ✓/✗ |
 | Paradigm Model | Requirement rationale | ✓/✗ |
@@ -94,19 +104,19 @@ Extract each section and report status:
 
 | Output | Minimum Required |
 |--------|-----------------|
-| requirements.md | Agent Spec + Codebook + Annotated Failures (severity ≥ critical) |
-| llm-judge.md | Agent Spec + Codebook + Annotated Failures + release-gate memos |
+| requirements.md | Domain Expert Profile + Curated Queries + Baseline Responses + Codebook + Annotated Failures (severity ≥ critical) |
+| llm-judge.md | Domain Expert Profile + Codebook + Annotated Failures + release-gate memos |
 
 ### Step 4: Report gaps
 
 If the file is incomplete, guide the user:
 
-- **Missing annotations:** "Your file has golden queries but no annotated failures.
-  Use the annotation workflow to review agent responses."
+- **Missing annotations:** "Your file has curated queries but no annotated failures.
+  Use the annotation workflow to review baseline agent responses."
 - **Missing paradigm model:** "Your annotations are complete but root cause analysis
   hasn't been done. Let's build paradigm models for your high-severity failures."
-- **Low saturation:** "Some categories show ✗ needs more. Consider adding more
-  golden queries to reach saturation before generating specs."
+- **Low saturation:** "Some categories show missing coverage. Consider adding more
+  curated domain queries to reach saturation before generating specs."
 - **No codebook:** "No failure codes found. The domain expert needs to annotate
   agent responses and name the failure patterns first."
 
@@ -117,13 +127,14 @@ Parse the markdown sections and prepare data for spec generation:
 1. **Build codebook** — Extract from the Failure Codebook table (Code, Severity, Freq, Definition)
 2. **Build priority queue** — Score each code: severity × frequency × dimension_weight
 3. **Extract paradigm models** — Parse the Paradigm Model section lists
-4. **Map golden queries** — Parse the Golden Queries table for categories and expected behavior
-5. **Compute saturation** — Read the Saturation Evidence table
+4. **Map curated queries** — Parse the Curated Domain Queries table for categories and expected behavior
+5. **Map baseline responses** — Parse baseline responses and link them to curated queries
+6. **Compute saturation** — Read the Saturation Evidence table
 
 ### Step 6: Proceed to generation
 
 Once validated, proceed through:
-1. `requirements-generation.md` — Generate Kiro requirements from codebook + annotated failures
+1. `requirements-generation.md` — Improve Kiro requirements from curated queries, baseline responses, codebook, and annotated failures
 2. `judge-generation.md` — Generate the LLM Judge from the same failure modes
 
 Only run `design-generation.md` or `tasks-generation.md` if the user explicitly asks for Kiro follow-on docs after the two GEDD outputs are complete.
@@ -152,6 +163,6 @@ If multiple files exist (e.g., different annotation rounds), merge by:
 ### Legacy session.json found
 If only a `session.json` exists (no markdown), instruct:
 ```
-grounded-evals export-md --session session.json --output error-analysis.md
+grounded-evals export-md --session session.json --output SME_error_analysis.md
 ```
 Then proceed with the markdown file.

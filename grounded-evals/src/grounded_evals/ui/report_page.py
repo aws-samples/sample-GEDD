@@ -35,7 +35,7 @@ REPORT_CSS = """
   font-size: 1.35rem;
   font-weight: 750;
   color: var(--text-primary);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   line-height: 1.2;
   margin-top: 4px;
 }
@@ -812,20 +812,19 @@ def report_page():
     storage = app.storage.user
 
     if not storage.get("_generated_judge_prompt"):
-        with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
-            with ui.element("div").style(
-                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 420px"
-            ):
-                ui.icon("download").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("Generate both outputs").style("font-size: 1.1rem; font-weight: 700; color: var(--text-primary)")
-                ui.label("Create the LLM Judge after annotations. The Kiro requirements.md output is available from its nav tab.").style(
-                    "font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5"
+        with ui.element("main").classes("dynamic-page"):
+            with ui.element("div").classes("empty-state-panel"):
+                ui.icon("fact_check")
+                ui.html('<div class="empty-state-title">Evidence handoff is not ready</div>')
+                ui.html(
+                    '<div class="empty-state-copy">'
+                    "Create the LLM Judge after annotations. GEDD will then package "
+                    "SME_error_analysis.md, requirements.md, and the judge as one evidence-backed output set."
+                    "</div>"
                 )
-                ui.button("Build a judge first", icon="gavel",
-                          on_click=lambda: ui.navigate.to("/judge")).style(
-                    "margin-top: 1.5rem; background: var(--accent); color: white; border-radius: 6px"
-                )
+                ui.button("Build a judge first", icon="gavel", on_click=lambda: ui.navigate.to("/judge")).props(
+                    "color=primary no-caps"
+                ).style("margin-top:16px")
         return
 
     session = storage.get("session_data", {})
@@ -873,7 +872,6 @@ def report_page():
         if ann.get("severity") in ("critical", "catastrophic")
     ]
     n_blockers = len(blocking_annotations)
-    n_codes = len(codebook)
     top_pattern = patterns[0]["name"] if patterns else "No dominant pattern yet"
     _health = compute_eval_health(dict(app.storage.user))
     _total_color = (
@@ -1000,8 +998,7 @@ def report_page():
         from grounded_evals.guide.markdown_export import export_error_analysis_md
 
         md = export_error_analysis_md(storage)
-        safe_name = agent_name.replace(" ", "_").replace("/", "-").lower()
-        ui.download(md.encode(), f"{safe_name}_error_analysis.md")
+        ui.download(md.encode(), "SME_error_analysis.md")
 
     recent_memos = storage.get("memos", [])
     judge_prompt_text = storage.get("_generated_judge_prompt", "")
@@ -1021,59 +1018,65 @@ def report_page():
     severity_colors = {"high": "var(--red)", "medium": "var(--yellow)", "low": "var(--green-bright)"}
     rubric_mix = _build_rubric_error_mode_mix(codebook, coding_annotations)
 
-    with ui.column().classes("w-full max-w-5xl mx-auto").style("padding: 1.5rem; gap: 16px"):
+    with ui.element("main").classes("dynamic-page"):
+        with ui.element("section").classes("dynamic-hero"):
+            with ui.element("div"):
+                ui.html(
+                    '<div class="dynamic-kicker">'
+                    '<span class="material-icons" style="font-size:0.95rem">fact_check</span>'
+                    "Evidence handoff"
+                    "</div>"
+                )
+                ui.html(f'<div class="dynamic-title">{agent_name}</div>')
+                ui.html(
+                    '<div class="dynamic-copy">'
+                    "Download SME_error_analysis.md as the shared evidence handoff, then use "
+                    "the same SME evidence for Kiro requirements.md and the LLM Judge."
+                    "</div>"
+                )
+            with ui.element("aside").classes("dynamic-side-panel").style(
+                f"border-left:3px solid {decision_color}"
+            ):
+                ui.html('<div class="dynamic-side-label">Decision</div>')
+                ui.html(
+                    f'<div class="dynamic-side-value" style="color:{decision_color};font-size:1.35rem">'
+                    f'{decision_label}</div>'
+                )
+                ui.html(f'<div class="dynamic-side-copy">{date.today().isoformat()}</div>')
 
-        with ui.element("div").classes("rr-hero"):
-            with ui.row().classes("items-start justify-between gap-4 flex-wrap"):
-                with ui.column().style("gap: 0; flex: 1; min-width: 260px"):
-                    ui.html('<div class="rr-eyebrow">Generated Outputs</div>')
-                    ui.html(f'<div class="rr-title">{agent_name}</div>')
-                    ui.html(
-                        '<div class="rr-subtitle">'
-                        'Download the two GEDD outputs generated from the same annotations: '
-                        'Kiro requirements.md and the LLM Judge.'
-                        '</div>'
-                    )
-                with ui.element("div").classes("rr-decision").style(
-                    f"border-left:3px solid {decision_color}"
-                ):
-                    ui.html('<div class="rr-decision-label">Decision</div>')
-                    ui.html(
-                        f'<div class="rr-decision-value" style="color:{decision_color}">{decision_label}</div>'
-                    )
-                    ui.label(date.today().isoformat()).style(
-                        "font-size:0.68rem; color:var(--text-muted); margin-top:4px"
-                    )
+        with ui.element("section").classes("metric-strip"):
+            for value, label in [
+                ("ready", "SME_error_analysis.md"),
+                ("ready" if requirements_markdown else "missing", "requirements.md"),
+                ("ready", "LLM Judge"),
+                (n_blockers, "Release blockers"),
+            ]:
+                with ui.element("div").classes("metric-tile"):
+                    ui.html(f'<div class="metric-tile-value">{value}</div>')
+                    ui.html(f'<div class="metric-tile-label">{label}</div>')
 
-            with ui.element("div").classes("rr-metric-grid").style("margin-top: 16px"):
-                for value, label, color in [
-                    ("ready" if requirements_markdown else "missing", "requirements.md", "var(--green-bright)" if requirements_markdown else "var(--yellow)"),
-                    ("ready", "LLM Judge", "var(--green-bright)"),
-                    (str(n_blockers), "Release blockers", "var(--red)" if n_blockers else "var(--green-bright)"),
-                    (str(n_codes), "Failure codes", "var(--accent-bright)"),
-                ]:
-                    with ui.element("div").classes("rr-metric"):
-                        ui.html(f'<div class="rr-metric-value" style="color:{color}">{value}</div>')
-                        ui.html(f'<div class="rr-metric-label">{label}</div>')
-
-            with ui.element("div").classes("rr-action-card").style("margin-top: 14px"):
+        with ui.column().classes("w-full").style("gap:16px; margin-top:16px"):
+            with ui.element("div").classes("rr-action-card"):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:0; flex:1; min-width:260px"):
-                        ui.html('<div class="rr-action-title">Primary outputs</div>')
+                        ui.html('<div class="rr-action-title">Primary handoff and downstream outputs</div>')
                         ui.html(
-                            f'<div class="rr-action-copy">Both files are generated from the annotation codebook. '
+                            f'<div class="rr-action-copy">SME_error_analysis.md captures the annotation codebook. '
                             f'Top observed pattern: <strong>{top_pattern}</strong>.</div>'
                         )
                     with ui.row().classes("gap-2 flex-wrap"):
                         ui.button(
-                            "Download requirements.md", icon="description", on_click=download_requirements_md
+                            "Download SME_error_analysis.md", icon="fact_check", on_click=download_error_analysis_md
                         ).props("size=sm color=primary no-caps")
+                        ui.button(
+                            "Download requirements.md", icon="description", on_click=download_requirements_md
+                        ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
                         ui.button(
                             "Download LLM Judge", icon="gavel", on_click=download_judge_prompt
-                        ).props("size=sm color=primary no-caps")
+                        ).props("size=sm outline no-caps").style("color:var(--violet); border-color:rgba(177,140,255,0.35)")
                         ui.button(
                             "Open requirements.md", icon="open_in_new", on_click=lambda: ui.navigate.to("/requirements")
-                        ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
+                        ).props("size=sm outline no-caps").style("color:var(--blue); border-color:rgba(106,169,255,0.35)")
 
         with ui.element("div").classes("page-card"):
             with ui.row().classes("items-start justify-between gap-3 flex-wrap").style("margin-bottom: 10px"):
@@ -1389,9 +1392,15 @@ def report_page():
         with ui.element("div").classes("page-card"):
             ui.label("Export").classes("rr-section-title")
             ui.label(
-                "Primary outputs first. Supporting evidence exports remain available for traceability."
+                "Export SME_error_analysis.md as the shared evidence handoff, then use it for requirements.md and the LLM Judge."
             ).style("font-size: 0.78rem; color: var(--text-muted); margin-top: 6px")
             with ui.row().classes("gap-2 flex-wrap").style("margin-top: 12px"):
+                ui.button(
+                    "SME_error_analysis.md",
+                    on_click=download_error_analysis_md, icon="fact_check",
+                ).props("size=sm dark").style(
+                    "background: var(--accent); color: white"
+                )
                 ui.button(
                     "requirements.md",
                     on_click=download_requirements_md, icon="description",
@@ -1404,10 +1413,6 @@ def report_page():
                 ).props("size=sm dark").style(
                     "background: var(--accent); color: white"
                 )
-                ui.button(
-                    "Error Analysis (MD)",
-                    on_click=download_error_analysis_md, icon="description",
-                ).props("outline size=sm dark")
                 ui.button(
                     "HTML Report",
                     on_click=download_html_report, icon="download",
@@ -1432,7 +1437,7 @@ def report_page():
 
             # Markdown preview
             with ui.expansion(
-                "Preview: Error Analysis (MD)", icon="preview"
+                "Preview: SME_error_analysis.md", icon="preview"
             ).classes("w-full").style("margin-top: 10px"):
                 from grounded_evals.guide.markdown_export import (
                     export_error_analysis_md,

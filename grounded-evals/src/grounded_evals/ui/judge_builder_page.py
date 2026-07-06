@@ -398,50 +398,51 @@ def judge_builder_page() -> None:
     agent_name = agent.get("name") or "Untitled AI product"
 
     if not modes:
-        with ui.column().classes("w-full items-center justify-center").style("min-height: 60vh"):
-            with ui.element("div").style(
-                "background: var(--bg-surface-1); border: 1px solid var(--border-subtle); "
-                "border-radius: var(--radius-xl); padding: 3rem; text-align: center; max-width: 460px"
-            ):
-                ui.icon("gavel").style("font-size: 3rem; color: var(--accent-bright); margin-bottom: 1rem")
-                ui.label("Create the LLM Judge").style(
-                    "font-size: 1.1rem; font-weight: 700; color: var(--text-primary)"
+        with ui.element("main").classes("dynamic-page"):
+            with ui.element("div").classes("empty-state-panel"):
+                ui.icon("gavel")
+                ui.html('<div class="empty-state-title">Create the LLM Judge</div>')
+                ui.html(
+                    '<div class="empty-state-copy">'
+                    "Curate failure evidence first. The judge uses the same SME-derived "
+                    "failure modes as requirements.md."
+                    "</div>"
                 )
-                ui.label(
-                    "Curate failure evidence first. The judge prompt is the second GEDD output and "
-                    "uses the same domain-expert-curated failure modes as requirements.md.",
-                ).style("font-size: 0.82rem; color: var(--text-secondary); margin-top: 0.5rem; line-height: 1.5")
-                with ui.row().classes("justify-center gap-2").style("margin-top: 1.5rem"):
-                    ui.button("Open Annotations", icon="label", on_click=lambda: ui.navigate.to("/coding")).style(
-                        "background: var(--accent); color: white; border-radius: 6px"
+                with ui.row().classes("justify-center gap-2").style("margin-top:16px"):
+                    ui.button("Open Annotations", icon="label", on_click=lambda: ui.navigate.to("/coding")).props(
+                        "color=primary no-caps"
                     )
                     ui.button("Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
-                        "outline"
-                    ).style("color: var(--accent-bright); border-color: var(--border-subtle); border-radius: 6px")
+                        "outline no-caps"
+                    ).style("color: var(--accent-bright); border-color: var(--border-subtle)")
         return
 
     default_prompt = _get("_simple_judge_prompt") or _build_simple_prompt(modes)
 
-    with ui.column().classes("w-full").style("max-width: 1180px; margin: 0 auto; padding: 1.25rem 1.5rem 2.75rem"):
-        with ui.element("section").style("padding: 1.5rem 0 0.75rem"):
-            ui.html(
-                '<div class="coach-kicker">'
-                '<span class="material-icons" style="font-size:0.95rem">gavel</span>'
-                "Output 2: LLM Judge"
-                "</div>"
-            )
-            ui.html(
-                '<h1 style="max-width:760px;margin:14px 0 0;font-size:2rem;line-height:1.12;'
-                'letter-spacing:0;font-weight:740;color:var(--text-primary)">'
-                "Create the LLM-as-Judge from annotated failure modes."
-                "</h1>"
-            )
-            ui.html(
-                '<div style="max-width:760px;margin-top:10px;font-size:0.95rem;line-height:1.6;color:var(--text-secondary)">'
-                "No dimension mapping required. Review the domain-expert-curated failure modes, generate a concise judge prompt, "
-                "edit if needed, then save or download it alongside Kiro requirements.md."
-                "</div>"
-            )
+    with ui.element("main").classes("dynamic-page"):
+        with ui.element("section").classes("dynamic-hero"):
+            with ui.element("div"):
+                ui.html(
+                    '<div class="dynamic-kicker">'
+                    '<span class="material-icons" style="font-size:0.95rem">gavel</span>'
+                    "LLM Judge"
+                    "</div>"
+                )
+                ui.html('<div class="dynamic-title">Judge prompt from annotated failure modes</div>')
+                ui.html(
+                    '<div class="dynamic-copy">'
+                    "Review SME-curated failure modes, generate a concise release-gate judge, "
+                    "edit if needed, then save or download it alongside Kiro requirements.md."
+                    "</div>"
+                )
+            with ui.element("aside").classes("dynamic-side-panel"):
+                ui.html('<div class="dynamic-side-label">Release blockers</div>')
+                ui.html(
+                    '<div class="dynamic-side-value">'
+                    f'{sum(1 for mode in modes if SEVERITY_RANK.get(mode.get("severity", "functional"), 2) >= 3)}'
+                    "</div>"
+                )
+                ui.html('<div class="dynamic-side-copy">Critical or catastrophic failure modes in the current evidence set.</div>')
 
         stats = [
             (str(len(modes)), "Failure modes", "var(--accent-bright)"),

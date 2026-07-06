@@ -33,6 +33,20 @@ TOOLS = [
                 "description": {"type": "string"},
                 "capabilities": {"type": "array", "items": {"type": "string"}},
                 "target_users": {"type": "array", "items": {"type": "string"}},
+                "domain_context": {
+                    "type": "string",
+                    "description": "The SME's domain, expertise, regulatory context, risk posture, and domain vocabulary",
+                },
+                "known_edge_cases": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Domain-specific boundary cases, exceptions, and risky scenarios the SME names",
+                },
+                "constraints": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "Hard rules, safety constraints, policies, and things the agent must not do",
+                },
                 "system_prompt": {"type": "string", "description": "Full system prompt text when approved"},
             },
             "required": [],
@@ -45,7 +59,10 @@ TOOLS = [
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "The test query text"},
-                "category": {"type": "string", "description": "happy_path|edge_case|adversarial|ambiguous|multi_turn|error_recovery|persona_variation"},
+                "category": {
+                    "type": "string",
+                    "description": "happy_path|edge_case|adversarial|ambiguous|multi_turn|error_recovery|persona_variation|domain_red_flag",
+                },
                 "expected_behavior": {"type": "string", "description": "Brief description of correct agent behavior"},
                 "dimensions": {"type": "string", "description": "Which dimensions this varies: e.g. 'complex, frustrated tone, expert user'"},
             },
@@ -84,7 +101,10 @@ TOOLS = [
         "input_schema": {
             "type": "object",
             "properties": {
-                "step": {"type": "integer", "description": "1=Define, 2=System Prompt, 3=Runtime, 4=Golden Queries, 5=Annotate & Judge"},
+                "step": {
+                    "type": "integer",
+                    "description": "1=Domain Intake, 2=Query Curation, 3=Kiro Baseline Test, 4=SME Error Analysis, 5=Improve requirements.md and Judge",
+                },
             },
             "required": ["step"],
         },
@@ -115,6 +135,12 @@ def handle_tool_call(tool_name: str, tool_input: dict, state: StateBundle) -> st
             state.session.agent_spec.capabilities = [Capability(name=c) for c in tool_input["capabilities"]]
         if tool_input.get("target_users"):
             state.session.agent_spec.target_users = [Persona(name=u) for u in tool_input["target_users"]]
+        if tool_input.get("domain_context"):
+            state.session.agent_spec.domain_context = tool_input["domain_context"]
+        if tool_input.get("known_edge_cases"):
+            state.session.agent_spec.known_edge_cases = tool_input["known_edge_cases"]
+        if tool_input.get("constraints"):
+            state.session.agent_spec.constraints = tool_input["constraints"]
         if tool_input.get("system_prompt"):
             state.session.agent_spec.system_prompt = tool_input["system_prompt"]
         return json.dumps({"status": "saved"})
@@ -132,7 +158,7 @@ def handle_tool_call(tool_name: str, tool_input: dict, state: StateBundle) -> st
 
     elif tool_name == "run_agent_query":
         if not state.session.agent_spec.system_prompt:
-            return json.dumps({"error": "No system prompt defined. Complete step 2 first."})
+            return json.dumps({"error": "No baseline system prompt defined. Capture the baseline prompt before running baseline tests."})
         client = get_default_client()
         model_id = get_model_id()
         resp = traced_eval_call(client, model_id, state.session.agent_spec.system_prompt, tool_input["query"])

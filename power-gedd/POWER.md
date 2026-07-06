@@ -1,39 +1,54 @@
 ---
 name: "gedd"
 displayName: "GEDD - Kiro Domain Specs + LLM Judge"
-description: "A Kiro Power for consuming GEDD's domain-expert-curated evidence and generating two outputs: Kiro requirements.md and an LLM-as-a-Judge release gate"
+description: "A Kiro Power for consuming GEDD's SME-curated baseline evidence and improving Kiro requirements.md plus an LLM-as-a-Judge release gate"
 keywords: ["gedd", "kiro", "requirements.md", "ears", "llm judge", "error analysis", "annotation", "failure codes", "codebook", "agent evaluation", "grounded theory", "open coding", "axial coding", "golden dataset", "saturation", "domain specs"]
 author: "GEDD Team"
 ---
 
 # GEDD Power - Kiro Domain Specs + LLM Judge
 
-GEDD is the Coach-led workflow for converting domain expert review of AI agent failures into curated evidence. This Power consumes that evidence and generates two concrete artifacts:
+GEDD is the Coach-led workflow for converting domain expert query curation, Kiro baseline testing, and SME annotations into curated evidence. This Power consumes `SME_error_analysis.md` and generates two downstream artifacts:
 
 1. `.kiro/specs/{agent-name}/requirements.md`
 2. `llm-judge.md`
 
-Use the GEDD web UI when SMEs need a guided annotation surface to curate evidence. Use this Kiro Power when Kiro should consume that evidence and write Kiro-ready specs directly into the workspace.
+Use the GEDD web UI when SMEs need a guided surface to define their domain, curate query coverage, test the baseline agent, and annotate failures. Use this Kiro Power when Kiro should consume that evidence and upgrade specs directly inside the workspace.
 
 ## Product Workflow
 
 ```
-Coach -> SME Error Analysis -> Annotations -> Kiro requirements.md + LLM Judge
+Domain Expert Intake -> Curated Query Set -> Kiro Baseline Test -> SME Error Analysis -> Improved requirements.md + LLM Judge + Measurement
 ```
 
 | Phase | Who | What Happens | Output |
 |-------|-----|--------------|--------|
-| Coach | SME + product owner | Define the agent, users, task boundary, risk posture, and query plan | Agent spec + golden queries |
-| Error Analysis | SME + evaluator | Review real or proposed agent responses and identify incorrect behavior | Curated evidence queue |
+| Domain Intake | SME + product owner | Capture the domain, users, task boundary, risk posture, constraints, edge cases, and baseline requirements context | Domain expert profile |
+| Query Curation | SME + Coach | Build happy path, edge, adversarial, ambiguous, multi-turn, recovery, persona, and domain-red-flag queries | Curated query set |
+| Kiro Baseline Test | Kiro + evaluator | Run the baseline agent created from the initial `requirements.md` against the curated queries | Baseline response evidence |
 | Annotations | SME | Capture verdict, failure code, severity, confidence, and memo | Domain-expert-curated codebook + annotated failures |
-| Domain Specs | GEDD Power + Kiro | Convert curated evidence into EARS acceptance criteria in Kiro's requirements format | `requirements.md` |
+| Domain Specs | GEDD Power + Kiro | Improve baseline requirements with EARS acceptance criteria grounded in curated evidence | `requirements.md` |
 | Judge | GEDD Power + evaluator | Convert the same failure modes into an automated release gate | `llm-judge.md` |
+| Measurement | GEDD + Kiro | Compare baseline requirements against the GEDD-improved requirements and response labels when available | Improvement report |
 
-Kiro's feature-spec workflow is requirements-first. GEDD provides the domain evidence Kiro needs: user stories and EARS acceptance criteria that come from SME-curated failures rather than generic assumptions.
+Kiro's feature-spec workflow is requirements-first. GEDD provides the domain evidence Kiro needs to improve an initial requirements file: user stories, EARS acceptance criteria, traceability, and judge gates that come from SME-curated baseline failures rather than generic assumptions.
 
 ## What GEDD Generates
 
-### Primary Output 1: Kiro `requirements.md`
+### Primary Output 1: `SME_error_analysis.md`
+
+Generated or imported at:
+
+```text
+SME_error_analysis.md
+```
+
+This is the source-of-truth handoff. It contains the domain expert profile,
+curated queries, baseline responses, SME annotations, failure codebook, memos,
+and saturation evidence. Use this file to build or improve Kiro
+`requirements.md` and to generate the LLM Judge.
+
+### Primary Output 2: Improved Kiro `requirements.md`
 
 Generated at:
 
@@ -59,7 +74,7 @@ The file uses Kiro's requirements structure and EARS notation:
 3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
 ```
 
-### Primary Output 2: LLM Judge
+### Primary Output 3: LLM Judge
 
 Generated at:
 
@@ -67,7 +82,7 @@ Generated at:
 .kiro/specs/{agent-name}/llm-judge.md
 ```
 
-The judge prompt enforces the same failure codes and release gates used in `requirements.md`. It should return a structured decision with:
+The judge prompt enforces the same failure codes and release gates used in the improved `requirements.md`. It should return a structured decision with:
 
 ```json
 {
@@ -85,8 +100,9 @@ The judge prompt enforces the same failure codes and release gates used in `requ
 GEDD provides the evidence layer. Treat these inputs as the domain-expert-curated source of truth:
 
 - A GEDD web UI export containing session data, annotations, codebook, and judge prompt inputs
-- A markdown `error-analysis.md` handoff
-- Manually supplied agent description, golden queries, and SME annotations
+- A markdown `SME_error_analysis.md` handoff
+- Manually supplied domain profile, curated queries, baseline responses, and SME annotations
+- Existing `.kiro/specs/{agent-name}/requirements.md` content when upgrading a baseline spec
 
 The minimum viable curated evidence for generation:
 
@@ -94,7 +110,7 @@ The minimum viable curated evidence for generation:
 |----------|--------------|
 | Agent name and task boundary | Both outputs |
 | Target users and capabilities | User stories |
-| Golden queries or traces | Acceptance criteria and judge examples |
+| Curated domain queries or baseline traces | Acceptance criteria and judge examples |
 | SME verdicts | Failure-mode grounding |
 | Failure codes | Requirements and judge rules |
 | Severity and memos | Priority, release gates, rationale |
@@ -121,6 +137,8 @@ Check for existing artifacts:
 
 - `.kiro/specs/{agent-name}/requirements.md`
 - `.kiro/specs/{agent-name}/llm-judge.md`
+- `./SME_error_analysis.md`
+- `./*_SME_error_analysis.md`
 - `./*_error_analysis.md`
 - `./error-analysis.md`
 - `./outputs/*_error_analysis.md`
@@ -130,7 +148,8 @@ Choose the entry point:
 
 | Found | Start Here |
 |-------|------------|
-| No evidence, no spec | Coach the agent definition and golden queries |
+| No evidence, no spec | Coach domain intake and curated query generation |
+| Baseline requirements, no evidence | Test the baseline agent with curated domain queries |
 | Curated evidence, no requirements | Generate Kiro `requirements.md` and LLM Judge |
 | Existing requirements, new annotations | Upgrade requirements and judge from the delta |
 | Requirements but no judge | Generate LLM Judge from the same failure modes |
@@ -140,15 +159,16 @@ Choose the entry point:
 Before generation, report what is present and missing:
 
 - Agent spec
+- Domain context and known edge cases
 - System prompt or behavior contract
-- Golden queries or traces
+- Curated domain queries or baseline traces
 - SME annotations
 - Failure codebook
 - Severity labels
 - Memos or release-gate notes
 - Saturation evidence
 
-If failure codes or SME annotations are missing, do not fabricate domain requirements. Ask for GEDD evidence curation first.
+If curated queries, failure codes, or SME annotations are missing, do not fabricate domain requirements. Ask for GEDD evidence curation first.
 
 ### Step 3: Generate the Two Outputs
 
@@ -177,7 +197,7 @@ Create `.kiro/hooks/gedd-review.kiro.hook` when the project uses ongoing annotat
   "description": "When GEDD curated evidence changes, check whether requirements.md or the LLM Judge must be updated",
   "when": {
     "type": "fileEdited",
-    "patterns": ["**/*_error_analysis.md", "**/error-analysis.md", "**/session.json"]
+    "patterns": ["**/SME_error_analysis.md", "**/*_SME_error_analysis.md", "**/*_error_analysis.md", "**/error-analysis.md", "**/session.json"]
   },
   "then": {
     "type": "askAgent",
@@ -199,13 +219,14 @@ Before calling the output complete:
 ## Example Command
 
 ```text
-Use GEDD to turn this domain-expert-curated evidence into Kiro requirements.md and an LLM Judge.
+Use GEDD to upgrade this baseline requirements.md from SME-curated evidence and generate the LLM Judge.
 ```
 
 Expected behavior:
 
 1. Validate evidence completeness.
-2. Consolidate failure codes.
-3. Generate `.kiro/specs/{agent-name}/requirements.md`.
-4. Generate `.kiro/specs/{agent-name}/llm-judge.md`.
-5. Report gaps that still need SME annotation.
+2. Identify the baseline requirements and baseline response evidence.
+3. Consolidate failure codes.
+4. Upgrade `.kiro/specs/{agent-name}/requirements.md`.
+5. Generate `.kiro/specs/{agent-name}/llm-judge.md`.
+6. Report improvement evidence and gaps that still need SME annotation.
