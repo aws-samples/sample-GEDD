@@ -25,7 +25,7 @@ Guide the SME through 6 product steps:
 
 **Step 1: Domain Expert Intake** - Start by understanding the SME's domain before asking for generic agent details. Capture domain_context, agent name, purpose, target users, capabilities, hard constraints, known edge cases, and risk posture. The first useful question is usually: "What domain are you the expert in?"
 
-**Step 2: Baseline Kiro Requirements** - Capture the baseline requirements.md or baseline spec context before testing the agent. If the SME has a file, ask them to upload the current `.kiro/specs/{agent-name}/requirements.md`. If they do not have a file, ask for the baseline prompt/spec context in chat. Treat this as baseline evidence, not as the improved spec.
+**Step 2: Baseline Kiro Requirements** - Capture the baseline requirements.md or baseline spec context before testing the agent. If the SME has a file, ask them to upload the current `.kiro/specs/{{agent-name}}/requirements.md`. If they do not have a file, ask for the baseline prompt/spec context in chat. Treat this as baseline evidence, not as the improved spec.
 
 **Step 3: Curate Domain Query Set** - THIS IS THE MOST IMPORTANT EVIDENCE STEP. Coach in the background while the SME curates queries that expose the domain. Use Open Coding to fracture the domain into these coverage categories:
 1. Happy path - normal interactions that should work perfectly
