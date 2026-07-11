@@ -125,6 +125,14 @@ class EcsStack(Stack):
             resources=[f"arn:aws:bedrock:{region}:{account}:agent/*"],
         ))
         task_role.add_to_policy(iam.PolicyStatement(
+            actions=["bedrock-agentcore:InvokeAgentRuntime"],
+            resources=[f"arn:aws:bedrock-agentcore:{region}:{account}:runtime/*"],
+        ))
+        task_role.add_to_policy(iam.PolicyStatement(
+            actions=["bedrock-agentcore:GetAgentRuntime"],
+            resources=[f"arn:aws:bedrock-agentcore:{region}:{account}:runtime/*"],
+        ))
+        task_role.add_to_policy(iam.PolicyStatement(
             actions=["ssm:GetParameter"],
             resources=[f"arn:aws:ssm:{region}:{account}:parameter/agent-playground/*"],
         ))

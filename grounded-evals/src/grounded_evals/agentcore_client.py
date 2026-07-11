@@ -1,7 +1,7 @@
 """Client for invoking the Agent Playground agent deployed on AgentCore Runtime.
 
 Used by the NiceGUI UI to call the remote agent instead of running the LLM loop locally.
-Falls back to local mode when AGENTCORE_AGENT_ID is not set.
+Falls back to local mode when AGENTCORE_AGENT_ID or AGENTCORE_AGENT_ARN is not set.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ import os
 from dataclasses import dataclass, field
 
 import boto3
+from botocore.exceptions import ClientError, NoCredentialsError
 
 
 @dataclass
@@ -40,17 +41,22 @@ class AgentCoreClient:
         region: str | None = None,
     ):
         self.agent_runtime_arn = agent_runtime_arn or os.environ.get("AGENTCORE_AGENT_ARN", "")
+        self.agent_runtime_id = os.environ.get("AGENTCORE_AGENT_ID", "")
         self.region = region or os.environ.get("AWS_REGION", "us-east-1")
         self._client = None
+        self._control = None
 
     @property
     def client(self):
         if self._client is None:
-            self._client = boto3.client(
-                "bedrock-agent-runtime",
-                region_name=self.region,
-            )
+            self._client = boto3.client("bedrock-agentcore", region_name=self.region)
         return self._client
+
+    @property
+    def control(self):
+        if self._control is None:
+            self._control = boto3.client("bedrock-agentcore-control", region_name=self.region)
+        return self._control
 
     def invoke_coach(
         self,
@@ -60,21 +66,14 @@ class AgentCoreClient:
         messages: list[dict],
     ) -> CoachResponse:
         """Invoke the coach agent for a conversation turn."""
-        payload = json.dumps({
+        payload = {
             "request_type": "coach",
             "user_message": user_message,
             "session_state": session_state,
             "messages": messages,
-        })
+        }
 
-        response = self.client.invoke_agent(
-            agentId=self._extract_agent_id(),
-            agentAliasId=os.environ.get("AGENTCORE_ALIAS_ID", "TSTALIASID"),
-            sessionId=session_id,
-            inputText=payload,
-        )
-
-        result_text = self._read_completion_stream(response)
+        result_text = self._invoke_runtime(payload, session_id)
 
         try:
             result = json.loads(result_text)
@@ -95,21 +94,14 @@ class AgentCoreClient:
         session_id: str,
     ) -> EvalResponse:
         """Invoke the eval agent for multi-model comparison."""
-        payload = json.dumps({
+        payload = {
             "request_type": "eval",
             "queries": queries,
             "model_ids": model_ids,
             "system_prompt": system_prompt,
-        })
+        }
 
-        response = self.client.invoke_agent(
-            agentId=self._extract_agent_id(),
-            agentAliasId=os.environ.get("AGENTCORE_ALIAS_ID", "TSTALIASID"),
-            sessionId=session_id,
-            inputText=payload,
-        )
-
-        result_text = self._read_completion_stream(response)
+        result_text = self._invoke_runtime(payload, session_id)
 
         try:
             result = json.loads(result_text)
@@ -119,28 +111,87 @@ class AgentCoreClient:
         except (json.JSONDecodeError, KeyError):
             return EvalResponse(error=f"Failed to parse response: {result_text[:200]}")
 
-    def _extract_agent_id(self) -> str:
-        """Extract agent ID from ARN or env var."""
-        agent_id = os.environ.get("AGENTCORE_AGENT_ID", "")
-        if agent_id:
-            return agent_id
-        if self.agent_runtime_arn:
-            parts = self.agent_runtime_arn.split("/")
-            return parts[-1] if parts else ""
-        raise ValueError("AGENTCORE_AGENT_ID or AGENTCORE_AGENT_ARN must be set")
+    def _invoke_runtime(self, payload: dict, session_id: str) -> str:
+        """Invoke the AgentCore runtime and return the raw response text."""
+        args = {
+            "agentRuntimeArn": self._get_agent_runtime_arn(),
+            "runtimeSessionId": session_id,
+            "contentType": "application/json",
+            "accept": "application/json",
+            "payload": json.dumps(payload).encode("utf-8"),
+        }
+        qualifier = os.environ.get("AGENTCORE_QUALIFIER") or os.environ.get(
+            "AGENTCORE_ENDPOINT_NAME"
+        )
+        if qualifier:
+            args["qualifier"] = qualifier
 
-    def _read_completion_stream(self, response: dict) -> str:
-        """Read the streaming completion from an invoke_agent response."""
-        chunks: list[str] = []
-        completion = response.get("completion", [])
-        for event in completion:
-            if "chunk" in event:
-                chunk_bytes = event["chunk"].get("bytes", b"")
-                if isinstance(chunk_bytes, bytes):
-                    chunks.append(chunk_bytes.decode("utf-8"))
-                else:
-                    chunks.append(str(chunk_bytes))
-        return "".join(chunks)
+        try:
+            response = self.client.invoke_agent_runtime(**args)
+        except KeyError as exc:
+            raise RuntimeError(
+                "AgentCore runtime configuration is invalid. Set AGENTCORE_AGENT_ARN "
+                "to the full runtime ARN, or set AGENTCORE_AGENT_ID to a valid runtime id."
+            ) from exc
+        except NoCredentialsError as exc:
+            raise RuntimeError(
+                "AWS credentials not found. Configure AWS credentials for AgentCore."
+            ) from exc
+        except ClientError as exc:
+            code = exc.response["Error"]["Code"]
+            msg = exc.response["Error"]["Message"]
+            raise RuntimeError(f"AgentCore invoke failed ({code}): {msg}") from exc
+
+        return self._read_runtime_response(response)
+
+    def _get_agent_runtime_arn(self) -> str:
+        """Return the full AgentCore runtime ARN, resolving a short id if needed."""
+        configured = (self.agent_runtime_arn or self.agent_runtime_id).strip()
+        if not configured:
+            raise ValueError("AGENTCORE_AGENT_ID or AGENTCORE_AGENT_ARN must be set")
+        if configured.startswith("arn:"):
+            self.agent_runtime_arn = configured
+            return configured
+
+        try:
+            response = self.control.get_agent_runtime(agentRuntimeId=configured)
+        except NoCredentialsError as exc:
+            raise RuntimeError(
+                "AWS credentials not found. Configure AWS credentials for AgentCore."
+            ) from exc
+        except ClientError as exc:
+            code = exc.response["Error"]["Code"]
+            msg = exc.response["Error"]["Message"]
+            raise RuntimeError(f"Unable to resolve AgentCore runtime id ({code}): {msg}") from exc
+
+        arn = response.get("agentRuntimeArn", "")
+        if not arn:
+            raise RuntimeError(f"Unable to resolve AgentCore runtime ARN for id: {configured}")
+        self.agent_runtime_arn = arn
+        return arn
+
+    def _read_runtime_response(self, response: dict) -> str:
+        """Read the streaming response body from invoke_agent_runtime."""
+        body = response.get("response", b"")
+        if hasattr(body, "read"):
+            data = body.read()
+        else:
+            data = body
+
+        if isinstance(data, bytes):
+            text = data.decode("utf-8")
+        else:
+            text = str(data)
+
+        stripped = text.strip()
+        if stripped.startswith("data:"):
+            chunks = []
+            for line in stripped.splitlines():
+                line = line.strip()
+                if line.startswith("data:"):
+                    chunks.append(line.removeprefix("data:").strip())
+            return "".join(chunks)
+        return stripped
 
 
 def get_agentcore_client() -> AgentCoreClient | None:

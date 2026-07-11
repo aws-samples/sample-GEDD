@@ -24,7 +24,7 @@ MODEL_ID = os.environ.get("BEDROCK_MODEL_ID", "us.anthropic.claude-haiku-4-5-202
 @app.entrypoint
 async def handler(request):
     """Route requests to coach or eval agent based on request_type field."""
-    payload = request.get("payload", {})
+    payload = request.get("payload", request)
     request_type = payload.get("request_type", "coach")
 
     if request_type == "eval":
