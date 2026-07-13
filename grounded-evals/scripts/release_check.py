@@ -16,31 +16,48 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-ROUTES = ["/", "/demos", "/coach", "/eval", "/coding", "/analysis", "/judge", "/report", "/health"]
+ROUTES = [
+    "/",
+    "/demos",
+    "/coach",
+    "/eval",
+    "/coding",
+    "/analysis",
+    "/requirements",
+    "/judge",
+    "/report",
+    "/improvement",
+    "/health",
+]
 CONTENT_CHECKS = {
     "/": [
-        "Turn PM annotations into a defensible LLM-as-a-judge.",
-        "Load 50-query localization demo",
-        "PM Annotation Workbench",
-        "Starter datasets for the AI PM flow",
-        "50-query Localization",
+        "GEDD Coach",
+        "Open Coach",
+        "SME_error_analysis.md",
     ],
     "/demos": [
-        "Demos and PM Workbench",
-        "Load the main 50-query localization annotation demo",
-        "AAA Game Localization Workbench",
-        "Main 50-query demo",
-        "50 golden queries",
+        "Demos for requirements.md and LLM Judge",
+        "Load a 50-query annotation demo",
+        "scenarios",
+    ],
+    "/coach": [
+        "Curate evidence for Kiro specs",
+        "Coach workbench",
+        "Start with your domain expertise",
     ],
     "/coding": [
-        "PM Annotation Workbench",
-        "AAA Game Localization Workbench",
-        "Load the 50-query localization PM demo",
-        "Load 50-query localization demo",
-        "Judge from evidence",
+        "No baseline responses yet",
+        "Open Coach",
+        "requirements.md",
     ],
-    "/judge": ["Create a simple judge prompt", "Open PM Annotations", "AI PM Coach"],
-    "/report": ["Release Report", "Review release readiness and export evidence.", "Build a judge first"],
+    "/requirements": [
+        "requirements.md built from SME evidence",
+        "No requirements evidence yet",
+        "Open Coach",
+    ],
+    "/judge": ["Create the LLM Judge", "Open Annotations", "Coach"],
+    "/report": ["Evidence handoff is not ready", "SME_error_analysis.md", "Build a judge first"],
+    "/improvement": ["requirements.md quality uplift", "No measurement evidence yet", "Open Coach"],
 }
 
 
@@ -147,11 +164,14 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         browser = await p.chromium.launch()
         page = await browser.new_page(viewport={"width": 1440, "height": 1000})
         for route, selector_text in [
-            ("/", "Load 50-query localization demo"),
-            ("/demos", "Demos and PM Workbench"),
-            ("/coding", "PM Annotation Workbench"),
-            ("/judge", "Create a simple judge prompt"),
-            ("/report", "Release Report"),
+            ("/", "Open Coach"),
+            ("/demos", "Demos for requirements.md and LLM Judge"),
+            ("/coach", "Coach workbench"),
+            ("/coding", "No baseline responses yet"),
+            ("/requirements", "No requirements evidence yet"),
+            ("/judge", "Create the LLM Judge"),
+            ("/report", "Evidence handoff is not ready"),
+            ("/improvement", "No measurement evidence yet"),
         ]:
             try:
                 response = await page.goto(f"{base_url}{route}", wait_until="networkidle", timeout=30000)

@@ -241,7 +241,7 @@ class EcsStack(Stack):
         # ── ALB Listener ──────────────────────────────────────────────────────
         elbv2.CfnListener(
             self,
-            "PublicHttpListener",
+            "AppHttpListener",
             load_balancer_arn=alb.load_balancer_arn,
             port=80,
             protocol="HTTP",
