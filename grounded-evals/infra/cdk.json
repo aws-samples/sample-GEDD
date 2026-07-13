@@ -2,6 +2,6 @@
   "app": "python3 app.py",
   "context": {
     "@aws-cdk/aws-ecs:enableExecuteCommand": true,
-    "enable_app_auth": false
+    "enable_app_auth": true
   }
 }
