@@ -18,7 +18,6 @@ import grounded_evals.ui.coding_page  # noqa: F401
 import grounded_evals.ui.demos_page  # noqa: F401
 import grounded_evals.ui.ears_page  # noqa: F401
 import grounded_evals.ui.eval_page  # noqa: F401
-import grounded_evals.ui.gdpr_demo_page  # noqa: F401
 import grounded_evals.ui.mass_effect_demo_page  # noqa: F401
 
 # Import new pages (registers their @ui.page routes)
@@ -44,7 +43,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-07-13-simple-judge-gate-message"
+APP_RELEASE = "2026-07-13-sme-evidence-judge-gates"
 
 
 def _cognito_hosted_domain() -> str:
@@ -185,7 +184,7 @@ def login_page():
         ui.html('<div class="brand-title" style="font-size:1.4rem; color:#f7f8f8; font-weight:700">GEDD</div>')
         ui.html(
             '<div style="font-size:0.8rem; color:#6e737b">'
-            "SME evidence -> LLM-as-Judge response gates"
+            "SME evidence to LLM-as-Judge response gates"
             "</div>"
         )
         with ui.card().style("width: 320px; padding: 2rem; border-radius: 12px; background: #141516; border: 1px solid rgba(255,255,255,0.09)"):
@@ -431,7 +430,7 @@ def main_page() -> None:
                 "6",
                 "Outputs",
                 "Export SME_error_analysis.md, then generate the Kiro judge-subagent requirements.md and LLM-as-Judge gate.",
-                "Judge spec + response gate + measurement",
+                "Judge-subagent requirements.md + response gate + measurement",
                 coach_status(bool(cur_s.get("_generated_judge_prompt")), has_evidence_handoff),
             ),
         ]

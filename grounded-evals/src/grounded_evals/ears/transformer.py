@@ -168,7 +168,7 @@ class EARSTransformer:
             agent_name=agent_name,
             introduction=(
                 "Generated from GEDD error analysis and SME/PM annotations. This "
-                "Kiro-ready requirements.md specifies the LLM-as-a-Judge subagent "
+                "Kiro-ready requirements.md specifies the LLM-as-Judge subagent "
                 "that evaluates candidate customer-facing responses before customers "
                 "see them. Requirements use EARS acceptance criteria and are "
                 "prioritized by observed severity, frequency, and product-risk dimension."

@@ -1,7 +1,7 @@
 # Pattern Discovery (Open Coding → Axial Coding)
 
 Transform raw annotations into structured failure patterns using grounded theory.
-The result feeds the two GEDD product outputs: Kiro `requirements.md` and the LLM Judge.
+The result feeds the two GEDD product outputs: Kiro judge-subagent `requirements.md` and the LLM-as-Judge gate.
 
 ## Prerequisites
 - Completed annotations with failure codes, severity, and memos

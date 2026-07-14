@@ -359,8 +359,8 @@ def _render_baseline_tab() -> None:
         ui.html(
             '<div class="dynamic-panel-copy">'
             "This is the starting Kiro-style requirements file for the Mass Effect localization "
-            "assistant under evaluation. GEDD uses SME annotations to create the separate judge-subagent "
-            "spec and response gates for lore drift, runtime tokens, controller prompts, product-scope copy, "
+            "assistant under test. GEDD uses SME annotations to create the separate judge-subagent "
+            "requirements.md and response gates for lore drift, runtime tokens, controller prompts, product-scope copy, "
             "and regional compliance."
             "</div>"
         )
@@ -395,12 +395,12 @@ def mass_effect_demo_page() -> None:
                     "Mass Effect localization demo"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">Mass Effect localization quality gates for a Kiro judge subagent</div>')
+                ui.html('<div class="dynamic-title">Mass Effect SME evidence to LLM-as-Judge response gates</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
-                    "A localization specialist reviews an AAA sci-fi RPG assistant, names the "
+                    "A localization specialist reviews baseline assistant responses, names the "
                     "Mass Effect-specific risks, and turns that evidence into a Kiro judge-subagent "
-                    "requirements.md plus an LLM-as-Judge gate for customer-facing assistant answers."
+                    "requirements.md plus an LLM-as-Judge gate before customer-facing answers are shown."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):

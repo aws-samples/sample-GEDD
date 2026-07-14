@@ -904,7 +904,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">SME evidence -> LLM-as-Judge response gates</span>'
+                '<span class="brand-context">SME evidence to LLM-as-Judge response gates</span>'
                 '</span>'
             )
 

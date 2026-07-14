@@ -314,7 +314,7 @@ def _build_simple_prompt(modes: list[dict]) -> str:
     context_block = "\n".join(paradigm) if paradigm else "- No root-cause summary recorded yet."
     failure_block = "\n".join(failure_lines)
 
-    return f"""You are an LLM-as-a-Judge subagent for {agent_name}.
+    return f"""You are an LLM-as-Judge subagent for {agent_name}.
 
 Product context:
 {agent_desc}

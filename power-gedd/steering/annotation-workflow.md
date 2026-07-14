@@ -1,6 +1,6 @@
 # Annotation Workflow
 
-Guide the domain expert through domain intake, curated query generation, Kiro baseline testing, and systematic annotation so GEDD can improve Kiro `requirements.md` and generate an LLM Judge.
+Guide the domain expert through domain intake, curated query generation, Kiro baseline testing, and systematic annotation so GEDD can generate Kiro judge-subagent `requirements.md` and an LLM-as-Judge response gate.
 
 ## Prerequisites
 - An AI agent with a defined system prompt and task boundary
@@ -117,5 +117,5 @@ After annotation, you should have:
 
 This feeds into:
 - Pattern Discovery (`pattern-discovery.md`) when codes need consolidation
-- Requirements Generation (`requirements-generation.md`) for improved Kiro `requirements.md`
-- Judge Generation (`judge-generation.md`) for the LLM-as-a-Judge release gate
+- Requirements Generation (`requirements-generation.md`) for Kiro judge-subagent `requirements.md`
+- Judge Generation (`judge-generation.md`) for the LLM-as-Judge response gate

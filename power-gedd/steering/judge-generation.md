@@ -1,4 +1,4 @@
-# LLM Judge Generation
+# LLM-as-Judge Gate Generation
 
 Generate an LLM-as-Judge response gate from the same SME annotations used for the Kiro judge-subagent `requirements.md`.
 
@@ -35,7 +35,7 @@ Preferred:
 Use this structure:
 
 ```markdown
-# LLM Judge: {Agent Name}
+# LLM-as-Judge Gate: {Agent Name}
 
 ## Objective
 Evaluate whether a candidate customer-facing agent response violates the domain failure modes discovered by SME error analysis.

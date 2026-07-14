@@ -1,4 +1,4 @@
-"""Domain Specialists Gallery — /demos page."""
+"""Evidence-to-gate demos for the /demos page."""
 
 import html as _html
 
@@ -961,7 +961,7 @@ def _render_domain(domain: dict):
         "game_localization",
         "game_operator",
     }
-    load_label = workbench_labels.get(domain.get("id"), "Load scenario")
+    load_label = workbench_labels.get(domain.get("id"), "Load evidence demo")
 
     def make_loader(d=domain):
         def _load():
@@ -1072,14 +1072,14 @@ def demos_page():
         # Page header
         with ui.element("div").classes("ds-page-heading"):
             with ui.element("div"):
-                ui.html('<div class="ds-page-title">Demos for Kiro judge specs and response gates</div>')
+                ui.html('<div class="ds-page-title">SME evidence to LLM-as-Judge response gates</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
-                    'Load a 50-query annotation demo or a domain scenario. Each demo is organized '
-                    'around SME_error_analysis.md feeding Kiro judge-subagent requirements.md and an LLM-as-Judge response gate.'
+                    'Each demo starts with baseline evidence and SME annotations, then produces '
+                    'SME_error_analysis.md, Kiro judge-subagent requirements.md, and an LLM-as-Judge gate.'
                     '</div>'
                 )
-            ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')
+            ui.html(f'<div class="ds-page-count">{len(domains)} evidence demos</div>')
 
         with ui.element("div").classes("ds-shell"):
             picker_area = ui.element("aside").classes("ds-picker-panel")
