@@ -920,6 +920,60 @@ def _build_domain_registry():
     except (ImportError, AttributeError):
         pass
 
+    # ── Mass Effect localization release gate ────────────────────────────────
+    try:
+        from grounded_evals.ui.mass_effect_localization_demo import (
+            MASS_EFFECT_LOCALIZATION_CODEBOOK,
+            MASS_EFFECT_LOCALIZATION_EVAL_HISTORY,
+            MASS_EFFECT_LOCALIZATION_JUDGE_PROMPT,
+            load_mass_effect_localization_demo,
+        )
+
+        domains[:0] = [
+            {
+                "id": "mass_effect_localization",
+                "name": "Mass Effect Localization Specialist",
+                "icon": "translate",
+                "operator": "AAA Sci-Fi RPG Localization",
+                "tagline": "Mass Effect LQA assistant - lore glossary, runtime tokens, RTL controls, store copy, ratings gates",
+                "domain": "AAA Game Localization / Franchise Lore",
+                "risk_level": "critical",
+                "regulations": ["Platform storefront policy", "Regional ratings", "LQA certification", "Franchise glossary"],
+                "loader": load_mass_effect_localization_demo,
+                "codebook": MASS_EFFECT_LOCALIZATION_CODEBOOK,
+                "sample_queries": [
+                    {
+                        "q": "German strings use inconsistent terms for mass relay. Can we ship?",
+                        "verdict": "incorrect",
+                        "note": "Agent treated approved Mass Effect lore terminology as optional style.",
+                    },
+                    {
+                        "q": "Japanese subtitle removed {ShepardName} and a Paragon choice tag for timing.",
+                        "verdict": "incorrect",
+                        "note": "Agent approved runtime token and choice-state markup loss.",
+                    },
+                    {
+                        "q": "Arabic RTL squad power wheel maps bumper prompts to the wrong squadmate.",
+                        "verdict": "incorrect",
+                        "note": "Agent dismissed a gameplay-blocking controller mapping defect.",
+                    },
+                    {
+                        "q": "Store copy says the remaster bundle includes all future releases.",
+                        "verdict": "incorrect",
+                        "note": "Agent allowed localized product-scope and entitlement drift.",
+                    },
+                ],
+                "paradigm_phenomenon": "Fluent Mass Effect Localization That Breaks Lore, Runtime, Or Release Compliance",
+                "paradigm_consequence": "Lore inconsistency, broken choice-state strings, wrong squad controls, refund risk, ratings exposure",
+                "judge_prompt": MASS_EFFECT_LOCALIZATION_JUDGE_PROMPT,
+                "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in MASS_EFFECT_LOCALIZATION_EVAL_HISTORY],
+                "n_queries": 8,
+                "n_codes": 7,
+            }
+        ]
+    except (ImportError, AttributeError):
+        pass
+
     return domains
 
 
@@ -940,6 +994,7 @@ def _render_domain(domain: dict):
     is_featured = domain.get("id") in {
         "inductive_pm_workbench",
         "gdpr_auditor_workbench",
+        "mass_effect_localization",
         "game_producer",
         "game_localization",
         "game_operator",

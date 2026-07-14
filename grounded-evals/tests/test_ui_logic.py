@@ -289,16 +289,27 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
         "Home",
         "Coach",
         "GDPR Demo",
+        "Mass Effect LQA",
         "Annotations",
         "Evidence",
         "requirements.md",
         "Judge",
     ]
-    assert paths == ["/", "/coach", "/gdpr-demo", "/coding", "/report", "/requirements", "/judge"]
+    assert paths == [
+        "/",
+        "/coach",
+        "/gdpr-demo",
+        "/mass-effect-localization-demo",
+        "/coding",
+        "/report",
+        "/requirements",
+        "/judge",
+    ]
     assert "Demos" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
     assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "GDPR Demo")["core"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "Mass Effect LQA")["core"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "requirements.md")["output"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
 
@@ -465,6 +476,7 @@ def test_domain_registry_includes_all_launch_demos():
     assert len(domains) >= 22
     assert {
         "AWS Cloud GDPR Auditor Outputs",
+        "Mass Effect Localization Specialist",
         "AAA Game Localization Outputs",
         "AAA Game Producer",
         "AAA Game Localization",
@@ -574,6 +586,26 @@ def test_game_localization_demo_loads_lqa_release_gate():
     assert storage["paradigm_model"]["phenomenon"]
     assert "localization qa assistant" in storage["_generated_judge_prompt"].lower()
     assert "Placeholder And Markup Corruption" in {
+        code["name"] for code in storage["codebook"]
+    }
+
+
+def test_mass_effect_localization_demo_loads_domain_release_gate():
+    from grounded_evals.ui.mass_effect_localization_demo import load_mass_effect_localization_demo
+
+    storage = {"authenticated": True, "email": "lqa@example.com"}
+    load_mass_effect_localization_demo(storage)
+
+    session = storage["session_data"]
+
+    assert session["agent_spec"]["name"] == "MassEffectLocaleGate"
+    assert len(session["golden_prompts"]) == 8
+    assert len(storage["annotations"]) == 6
+    assert len(storage["coding_annotations"]) == 7
+    assert len(storage["codebook"]) == 7
+    assert storage["paradigm_model"]["phenomenon"]
+    assert "mass effect" in storage["_generated_judge_prompt"].lower()
+    assert "Runtime Token And Choice Markup Loss" in {
         code["name"] for code in storage["codebook"]
     }
 

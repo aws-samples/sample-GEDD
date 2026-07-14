@@ -20,6 +20,7 @@ ROUTES = [
     "/",
     "/demos",
     "/gdpr-demo",
+    "/mass-effect-localization-demo",
     "/coach",
     "/eval",
     "/coding",
@@ -44,6 +45,12 @@ CONTENT_CHECKS = {
     "/gdpr-demo": [
         "AWS GDPR assistant to specs and judge",
         "GDPR Compliance Specialist Assistant",
+        "requirements.md",
+        "LLM Judge",
+    ],
+    "/mass-effect-localization-demo": [
+        "Mass Effect localization assistant to specs and judge",
+        "Mass Effect Localization Specialist",
         "requirements.md",
         "LLM Judge",
     ],
@@ -174,6 +181,7 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
             ("/", "Open Coach"),
             ("/demos", "Demos for requirements.md and LLM Judge"),
             ("/gdpr-demo", "AWS GDPR assistant to specs and judge"),
+            ("/mass-effect-localization-demo", "Mass Effect localization assistant to specs and judge"),
             ("/coach", "Coach workbench"),
             ("/coding", "No baseline responses yet"),
             ("/requirements", "No requirements evidence yet"),
