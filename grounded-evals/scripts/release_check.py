@@ -19,6 +19,7 @@ from pathlib import Path
 ROUTES = [
     "/",
     "/demos",
+    "/gdpr-demo",
     "/coach",
     "/eval",
     "/coding",
@@ -39,6 +40,12 @@ CONTENT_CHECKS = {
         "Demos for requirements.md and LLM Judge",
         "Load a 50-query annotation demo",
         "scenarios",
+    ],
+    "/gdpr-demo": [
+        "AWS GDPR assistant to specs and judge",
+        "GDPR Compliance Specialist Assistant",
+        "requirements.md",
+        "LLM Judge",
     ],
     "/coach": [
         "Curate evidence for Kiro specs",
@@ -166,6 +173,7 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         for route, selector_text in [
             ("/", "Open Coach"),
             ("/demos", "Demos for requirements.md and LLM Judge"),
+            ("/gdpr-demo", "AWS GDPR assistant to specs and judge"),
             ("/coach", "Coach workbench"),
             ("/coding", "No baseline responses yet"),
             ("/requirements", "No requirements evidence yet"),

@@ -288,15 +288,17 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert labels == [
         "Home",
         "Coach",
+        "GDPR Demo",
         "Annotations",
         "Evidence",
         "requirements.md",
         "Judge",
     ]
-    assert paths == ["/", "/coach", "/coding", "/report", "/requirements", "/judge"]
+    assert paths == ["/", "/coach", "/gdpr-demo", "/coding", "/report", "/requirements", "/judge"]
     assert "Demos" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
     assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "GDPR Demo")["core"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "requirements.md")["output"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
 
