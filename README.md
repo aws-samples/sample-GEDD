@@ -1,8 +1,5 @@
 # GEDD - SME evidence to LLM-as-Judge response gates
 
-<img width="1370" height="667" alt="Screenshot 2026-07-09 at 10 08 17 PM" src="https://github.com/user-attachments/assets/eeee4959-3189-4913-9e3f-d4384c59a440" />
-
-
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
