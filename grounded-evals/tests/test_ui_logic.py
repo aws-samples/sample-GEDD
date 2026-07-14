@@ -288,7 +288,7 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert labels == [
         "Home",
         "Coach",
-        "Mass Effect LQA",
+        "AAA Game Localization",
         "Annotations",
         "Evidence",
         "Judge Spec",
@@ -297,7 +297,7 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert paths == [
         "/",
         "/coach",
-        "/mass-effect-localization-demo",
+        "/aaa-game-localization-demo",
         "/coding",
         "/report",
         "/requirements",
@@ -307,7 +307,7 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert "GDPR Demo" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
     assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
-    assert next(item for item in NAV_ITEMS if item["label"] == "Mass Effect LQA")["core"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "AAA Game Localization")["core"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge Spec")["output"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
 
@@ -473,7 +473,7 @@ def test_domain_registry_includes_all_launch_demos():
 
     assert len(domains) >= 22
     assert {
-        "Mass Effect Localization Specialist",
+        "AAA Game Localization Agent",
         "AAA Game Localization Outputs",
         "AAA Game Producer",
         "AAA Game Localization",
@@ -589,23 +589,24 @@ def test_game_localization_demo_loads_lqa_release_gate():
     }
 
 
-def test_mass_effect_localization_demo_loads_domain_release_gate():
-    from grounded_evals.ui.mass_effect_localization_demo import load_mass_effect_localization_demo
+def test_aaa_game_localization_demo_loads_domain_release_gate():
+    from grounded_evals.ui.aaa_game_localization_demo import load_aaa_game_localization_demo
 
     storage = {"authenticated": True, "email": "lqa@example.com"}
-    load_mass_effect_localization_demo(storage)
+    load_aaa_game_localization_demo(storage)
 
     session = storage["session_data"]
 
-    assert session["agent_spec"]["name"] == "MassEffectLocaleGate"
+    assert session["agent_spec"]["name"] == "AAAGameLocaleGate"
     assert len(session["golden_prompts"]) == 8
     assert len(storage["annotations"]) == 6
     assert len(storage["coding_annotations"]) == 7
     assert len(storage["codebook"]) == 7
     assert storage["paradigm_model"]["phenomenon"]
     assert "### Requirement 1: Terminology Lookup" in storage["baseline_requirements_md"]
-    assert storage["baseline_requirements_filename"] == "mass-effect-localization-requirements.md"
-    assert "mass effect" in storage["_generated_judge_prompt"].lower()
+    assert storage["baseline_requirements_filename"] == "aaa-game-localization-requirements.md"
+    assert "aaa game" in storage["_generated_judge_prompt"].lower()
+    assert "mass effect" not in storage["_generated_judge_prompt"].lower()
     assert "Runtime Token And Choice Markup Loss" in {
         code["name"] for code in storage["codebook"]
     }

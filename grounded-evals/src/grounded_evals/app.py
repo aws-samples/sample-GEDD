@@ -18,7 +18,7 @@ import grounded_evals.ui.coding_page  # noqa: F401
 import grounded_evals.ui.demos_page  # noqa: F401
 import grounded_evals.ui.ears_page  # noqa: F401
 import grounded_evals.ui.eval_page  # noqa: F401
-import grounded_evals.ui.mass_effect_demo_page  # noqa: F401
+import grounded_evals.ui.aaa_game_demo_page  # noqa: F401
 
 # Import new pages (registers their @ui.page routes)
 import grounded_evals.ui.home_page  # noqa: F401
@@ -43,7 +43,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-07-13-sme-evidence-judge-gates"
+APP_RELEASE = "2026-07-13-aaa-game-localization-anonymized"
 
 
 def _cognito_hosted_domain() -> str:
