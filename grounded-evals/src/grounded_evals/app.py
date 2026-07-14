@@ -44,7 +44,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-07-13-judge-gate-messaging"
+APP_RELEASE = "2026-07-13-simple-judge-gate-message"
 
 
 def _cognito_hosted_domain() -> str:
@@ -185,7 +185,7 @@ def login_page():
         ui.html('<div class="brand-title" style="font-size:1.4rem; color:#f7f8f8; font-weight:700">GEDD</div>')
         ui.html(
             '<div style="font-size:0.8rem; color:#6e737b">'
-            "SME Evidence -> Kiro Judge requirements.md -> Customer Response Gates"
+            "SME evidence -> LLM-as-Judge response gates"
             "</div>"
         )
         with ui.card().style("width: 320px; padding: 2rem; border-radius: 12px; background: #141516; border: 1px solid rgba(255,255,255,0.09)"):
@@ -223,6 +223,12 @@ def _user_state() -> dict:
         s["annotations"] = []
         s["messages"] = []
         s["prompt_variants"] = []
+    for message in s.get("messages", []):
+        if isinstance(message, dict) and isinstance(message.get("content"), str):
+            message["content"] = message["content"].replace(
+                "I am your GEDD Coach for Kiro LLM-as-Judge subagent specs.",
+                "I am your GEDD Coach for LLM-as-Judge response gates.",
+            )
     if 'codebook' not in s:
         s['codebook'] = []
     if 'coding_annotations' not in s:
@@ -480,12 +486,12 @@ def main_page() -> None:
                 "Coach"
                 "</div>"
             )
-            ui.html('<div class="coach-product-title">Build Kiro judge-subagent quality gates</div>')
+            ui.html('<div class="coach-product-title">SME evidence to LLM-as-Judge response gates</div>')
             ui.html(
                 '<div class="coach-product-copy">'
-                "Coach controls the sequence. Finish the current prompt, then the next step appears. "
-                "The path ends in SME_error_analysis.md, a Kiro judge-subagent requirements.md, "
-                "and an LLM-as-Judge gate for customer-facing responses."
+                "Coach leads SMEs and product managers from baseline evidence to a "
+                "judge-subagent requirements.md, and an LLM-as-Judge gate that checks "
+                "customer-facing responses before customers see them."
                 "</div>"
             )
             coach_stage_container = ui.element("div")
@@ -527,7 +533,7 @@ def main_page() -> None:
                     )
                     ui.html(
                         '<div class="coach-chat-copy">'
-                        "Use the chat to curate SME evidence before generating the judge spec and response gate."
+                        "Use the chat to curate SME evidence before generating the judge-subagent requirements.md and response gate."
                         "</div>"
                     )
                 ui.html(
@@ -551,7 +557,7 @@ def main_page() -> None:
                     step = current_coach_view()[0]
                     if step == 1:
                         welcome = (
-                            '<div class="msg-ai"><strong>I am your GEDD Coach for Kiro LLM-as-Judge subagent specs.</strong><br><br>'
+                            '<div class="msg-ai"><strong>I am your GEDD Coach for LLM-as-Judge response gates.</strong><br><br>'
                             'First we anchor the work in your domain before designing the response gate.<br><br>'
                             '<strong>What domain are you the expert in, who uses this agent, and what can go wrong if it answers badly?</strong></div>'
                         )
@@ -649,11 +655,26 @@ def main_page() -> None:
 
     send_btn.on_click(send_message)
     user_input.on("keydown.enter", send_message)
+    ui.run_javascript(
+        """
+        const replaceOldCoachMessage = () => {
+          document.querySelectorAll('.msg-ai').forEach((el) => {
+            el.innerHTML = el.innerHTML.replace(
+              'I am your GEDD Coach for Kiro LLM-as-Judge subagent specs.',
+              'I am your GEDD Coach for LLM-as-Judge response gates.'
+            );
+          });
+        };
+        replaceOldCoachMessage();
+        setTimeout(replaceOldCoachMessage, 100);
+        setTimeout(replaceOldCoachMessage, 500);
+        """
+    )
 
 
 def run() -> None:
     ui.run(
-        title="GEDD - SME Evidence to Kiro Judge Response Gates",
+        title="GEDD - SME evidence to LLM-as-Judge response gates",
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",

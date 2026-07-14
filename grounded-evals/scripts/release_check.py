@@ -33,8 +33,9 @@ ROUTES = [
 CONTENT_CHECKS = {
     "/": [
         "GEDD Coach",
+        "SME evidence to LLM-as-Judge response gates",
         "Open Coach",
-        "SME_error_analysis.md",
+        "judge-subagent requirements.md",
     ],
     "/demos": [
         "Demos for Kiro judge specs and response gates",
@@ -49,7 +50,7 @@ CONTENT_CHECKS = {
         "Response Gate",
     ],
     "/coach": [
-        "Build Kiro judge-subagent quality gates",
+        "SME evidence to LLM-as-Judge response gates",
         "Coach workbench",
         "Start with your domain expertise",
     ],

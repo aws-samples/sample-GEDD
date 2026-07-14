@@ -1,4 +1,4 @@
-# GEDD - SME Evidence to Kiro LLM-as-Judge Response Gates
+# GEDD - SME evidence to LLM-as-Judge response gates
 
 <img width="1370" height="667" alt="Screenshot 2026-07-09 at 10 08 17 PM" src="https://github.com/user-attachments/assets/eeee4959-3189-4913-9e3f-d4384c59a440" />
 
@@ -8,7 +8,7 @@
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-GEDD is a Coach-led product for helping domain experts, SMEs, and product managers create the evidence-backed Kiro `requirements.md` file for an LLM-as-a-Judge subagent. That subagent evaluates candidate customer-facing agent responses before customers see them.
+Coach leads SMEs and product managers from baseline evidence to a judge-subagent `requirements.md`, and an LLM-as-Judge gate that checks customer-facing responses before customers see them.
 
 The product has one main path:
 

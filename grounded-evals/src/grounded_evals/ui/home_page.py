@@ -1468,14 +1468,14 @@ def home_page():
                 )
                 ui.html(
                     '<h1 class="clean-headline">'
-                    "SME evidence to Kiro LLM-as-Judge response gates"
+                    "SME evidence to LLM-as-Judge response gates"
                     "</h1>"
                 )
                 ui.html(
                     '<div class="clean-subhead">'
-                    "Coach leads SMEs and product managers from baseline evidence to "
-                    "SME_error_analysis.md, Kiro judge-subagent requirements.md, and an "
-                    "LLM-as-Judge gate that checks customer-facing responses before customers see them."
+                    "Coach leads SMEs and product managers from baseline evidence to a "
+                    "judge-subagent requirements.md, and an LLM-as-Judge gate that checks "
+                    "customer-facing responses before customers see them."
                     "</div>"
                 )
                 with ui.element("div").classes("clean-actions"):
