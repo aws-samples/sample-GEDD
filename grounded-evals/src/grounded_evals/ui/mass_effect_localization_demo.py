@@ -5,6 +5,142 @@ from uuid import uuid4
 from grounded_evals.ui.domain_demos import _clear_and_load
 
 
+MASS_EFFECT_BASELINE_REQUIREMENTS_MD = """# Requirements Document
+
+## Introduction
+
+This document defines the requirements for a domain-specific localization assistant agent tailored to the Mass Effect franchise. The agent assists translators and localizers by providing terminology consistency checking, context-aware translation suggestions, character voice guidance, and text constraint validation - all grounded in deep knowledge of the Mass Effect universe lore, characters, species, and established translation conventions.
+
+## Glossary
+
+- **Agent**: The Mass Effect Localization Assistant system that processes localization queries and provides translation guidance
+- **Translator**: A human localizer who uses the Agent to translate Mass Effect content into a target language
+- **Termbase**: A structured database of canonical Mass Effect terminology with approved translations per target language
+- **Translation_Memory**: A store of previously approved translation segments from Mass Effect titles, indexed by source text and context
+- **Codex_Entry**: An in-game lore article from the Mass Effect Codex system that provides canonical universe information
+- **Source_Segment**: A unit of English source text submitted for translation assistance
+- **Target_Language**: The language into which content is being localized
+- **Character_Profile**: A data record describing a character's species, rank, personality traits, speech patterns, and tone guidelines
+- **UI_Constraint**: A maximum character or pixel length imposed on a translated string by the game interface
+- **Consistency_Violation**: An instance where a proposed translation diverges from the approved Termbase entry for the same term
+- **Lore_Context**: Metadata describing the in-game situation, speaker, audience, and narrative context of a Source_Segment
+- **Paragon_Renegade_Tone**: The moral alignment tone system in Mass Effect dialogue, where Paragon is compassionate/diplomatic and Renegade is aggressive/ruthless
+
+## Requirements
+
+### Requirement 1: Terminology Lookup
+
+**User Story:** As a Translator, I want to look up canonical Mass Effect terms and their approved translations, so that I can use consistent terminology across the franchise.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator queries a term, THE Agent SHALL return the approved translation for that term in the specified Target_Language from the Termbase
+2. WHEN a Translator queries a term that exists in the Termbase with multiple contextual translations, THE Agent SHALL return all approved variants with their usage contexts
+3. WHEN a Translator queries a term that does not exist in the Termbase, THE Agent SHALL indicate that no approved translation exists and suggest candidate translations based on franchise conventions
+4. THE Agent SHALL support lookup of species names, technology terms, location names, organization names, character names, and rank titles
+
+### Requirement 2: Terminology Consistency Checking
+
+**User Story:** As a Translator, I want the agent to flag inconsistencies in my translations against the established termbase, so that I maintain consistency across the franchise.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator submits a translated segment, THE Agent SHALL identify all Mass Effect domain terms in the Source_Segment and verify their translations match the Termbase
+2. WHEN the Agent detects a Consistency_Violation, THE Agent SHALL report the violation specifying the term, the expected translation, and the translation used
+3. WHEN a Source_Segment contains a neologism or invented word (such as "eezo", "medi-gel", or "omni-tool"), THE Agent SHALL verify that the translation follows the approved Termbase convention for that Target_Language
+4. WHEN the Agent performs consistency checking on a batch of segments, THE Agent SHALL produce a summary report listing all Consistency_Violations grouped by term
+
+### Requirement 3: Context-Aware Translation Suggestions
+
+**User Story:** As a Translator, I want translation suggestions that account for who is speaking, the narrative situation, and lore context, so that my translations are accurate within the Mass Effect universe.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator requests a translation suggestion for a Source_Segment with Lore_Context provided, THE Agent SHALL generate suggestions that respect the speaker's species, rank, and personality
+2. WHEN a Source_Segment contains an ambiguous English term, THE Agent SHALL disambiguate the term using the provided Lore_Context and offer the contextually appropriate translation
+3. WHEN a Source_Segment references in-universe events, locations, or technology, THE Agent SHALL align the suggestion with canonical Codex_Entry information
+4. WHEN a Source_Segment is dialogue tagged with Paragon_Renegade_Tone, THE Agent SHALL adjust the tone and register of the suggestion to match the moral alignment indicated
+5. IF Lore_Context is not provided with a Source_Segment, THEN THE Agent SHALL request the Translator to provide context or indicate that the suggestion may lack contextual accuracy
+
+### Requirement 4: Character Voice and Tone Guidance
+
+**User Story:** As a Translator, I want guidance on each character's voice and speech patterns, so that I can maintain consistent characterization across languages.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator requests voice guidance for a character, THE Agent SHALL return the Character_Profile including species, rank, personality traits, speech register, and notable speech patterns
+2. WHEN a Translator submits dialogue attributed to a specific character, THE Agent SHALL evaluate whether the translation maintains the character's established tone and speech patterns
+3. WHEN the Agent identifies a tone mismatch between a translation and the Character_Profile, THE Agent SHALL suggest revisions that better match the character's voice
+4. THE Agent SHALL distinguish between formal military speech (e.g., Commander Shepard in briefings), casual speech (e.g., Joker's humor), alien speech patterns (e.g., Mordin's clipped syntax), and colloquial registers
+
+### Requirement 5: Text Length Validation
+
+**User Story:** As a Translator, I want the agent to validate that my translations fit within UI character limits, so that text does not overflow in the game interface.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator submits a translated segment with an associated UI_Constraint, THE Agent SHALL measure the segment length and report whether it exceeds the constraint
+2. WHEN a translated segment exceeds the UI_Constraint, THE Agent SHALL suggest a shorter alternative that preserves the original meaning and terminology
+3. WHEN a translated segment is subtitle text, THE Agent SHALL validate that the segment length is appropriate for the reading speed of the Target_Language
+4. THE Agent SHALL account for character width differences between scripts (e.g., CJK characters vs. Latin characters) when evaluating UI_Constraints
+
+### Requirement 6: Translation Memory Integration
+
+**User Story:** As a Translator, I want the agent to leverage previously approved translations, so that I can reuse established patterns and maintain consistency with prior localized titles.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator submits a Source_Segment, THE Agent SHALL search the Translation_Memory for matching or similar previously translated segments
+2. WHEN a match is found in the Translation_Memory with a similarity score above a configurable threshold, THE Agent SHALL present the stored translation with its source game title and context
+3. WHEN multiple Translation_Memory matches exist across different Mass Effect titles (ME1, ME2, ME3, Andromeda), THE Agent SHALL present them chronologically and indicate which is the most recent approved version
+4. WHEN the Translator approves a new translation, THE Agent SHALL store the approved segment in the Translation_Memory with its Lore_Context metadata
+
+### Requirement 7: Multi-Language Support
+
+**User Story:** As a Translator, I want the agent to support multiple target languages with language-specific rules, so that teams localizing into different languages can all benefit from the tool.
+
+#### Acceptance Criteria
+
+1. THE Agent SHALL support at minimum the following Target_Languages: French, German, Italian, Spanish, Brazilian Portuguese, Polish, Russian, Japanese, Korean, and Simplified Chinese
+2. WHEN a Translator specifies a Target_Language, THE Agent SHALL apply language-specific grammatical rules, formality conventions, and script requirements to all suggestions
+3. WHEN a Translator switches Target_Language within a session, THE Agent SHALL load the corresponding Termbase entries and Translation_Memory for the new language
+4. THE Agent SHALL maintain separate Termbase entries per Target_Language, allowing each language to have independent approved translations for the same source term
+
+### Requirement 8: Lore Accuracy Validation
+
+**User Story:** As a Translator, I want the agent to detect when a translation might misrepresent Mass Effect lore, so that localized content remains faithful to the universe.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator submits a translated segment, THE Agent SHALL verify that no lore-specific terms are mistranslated in a way that changes their canonical meaning
+2. WHEN a translation implies incorrect relationships between species, factions, or technology, THE Agent SHALL flag the segment with a lore accuracy warning and cite the relevant Codex_Entry
+3. WHEN a Source_Segment references events specific to a particular game in the trilogy, THE Agent SHALL verify temporal and narrative consistency with that game's storyline
+4. IF the Agent cannot determine whether a translation is lore-accurate due to insufficient context, THEN THE Agent SHALL flag the segment for human review rather than approve it silently
+
+### Requirement 9: Glossary Management
+
+**User Story:** As a Translator, I want to manage and update the Mass Effect termbase collaboratively, so that the glossary stays current as new content is localized.
+
+#### Acceptance Criteria
+
+1. WHEN a Translator proposes a new term entry, THE Agent SHALL validate that the entry includes the source term, Target_Language translation, usage context, and category (species, technology, location, organization, character, or military rank)
+2. WHEN a Translator updates an existing Termbase entry, THE Agent SHALL record the previous translation as a historical variant and flag all Translation_Memory segments that used the previous translation for review
+3. THE Agent SHALL prevent duplicate Termbase entries for the same source term and Target_Language combination
+4. WHEN a Translator imports terms from an external glossary file, THE Agent SHALL validate the format and report any conflicts with existing Termbase entries before importing
+
+### Requirement 10: Contextual Metadata Extraction
+
+**User Story:** As a Translator, I want the agent to automatically extract context from structured source files, so that I don't have to manually specify context for every segment.
+
+#### Acceptance Criteria
+
+1. WHEN a Source_Segment is provided with structured metadata tags (speaker, scene, game title, UI element type), THE Agent SHALL parse and apply those tags as Lore_Context automatically
+2. WHEN a Source_Segment contains inline markup indicating the speaker's species or faction, THE Agent SHALL use that information to inform translation suggestions
+3. WHEN batch segments are submitted from the same dialogue tree, THE Agent SHALL maintain conversational context across segments in the batch
+4. IF a Source_Segment lacks metadata and cannot be contextually inferred, THEN THE Agent SHALL label the segment as "uncontextualized" and process it with reduced confidence in suggestions
+"""
+
+
 MASS_EFFECT_LOCALIZATION_SESSION = {
     "agent_spec": {
         "name": "MassEffectLocaleGate",
@@ -384,3 +520,6 @@ def load_mass_effect_localization_demo(storage: dict) -> None:
         MASS_EFFECT_LOCALIZATION_JUDGE_MAPPINGS,
         MASS_EFFECT_LOCALIZATION_JUDGE_PROMPT,
     )
+    storage["baseline_requirements_md"] = MASS_EFFECT_BASELINE_REQUIREMENTS_MD
+    storage["baseline_requirements_filename"] = "mass-effect-localization-requirements.md"
+    storage["baseline_requirements_uploaded_at"] = "2026-07-13T12:05:00+00:00"

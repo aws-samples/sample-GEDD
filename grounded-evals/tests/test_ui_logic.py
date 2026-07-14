@@ -604,6 +604,8 @@ def test_mass_effect_localization_demo_loads_domain_release_gate():
     assert len(storage["coding_annotations"]) == 7
     assert len(storage["codebook"]) == 7
     assert storage["paradigm_model"]["phenomenon"]
+    assert "### Requirement 1: Terminology Lookup" in storage["baseline_requirements_md"]
+    assert storage["baseline_requirements_filename"] == "mass-effect-localization-requirements.md"
     assert "mass effect" in storage["_generated_judge_prompt"].lower()
     assert "Runtime Token And Choice Markup Loss" in {
         code["name"] for code in storage["codebook"]

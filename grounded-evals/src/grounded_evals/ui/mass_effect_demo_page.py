@@ -15,6 +15,7 @@ from grounded_evals.ui.ears_page import (
 )
 from grounded_evals.ui.layout import page_layout
 from grounded_evals.ui.mass_effect_localization_demo import (
+    MASS_EFFECT_BASELINE_REQUIREMENTS_MD,
     MASS_EFFECT_LOCALIZATION_ANNOTATIONS,
     MASS_EFFECT_LOCALIZATION_CODEBOOK,
     MASS_EFFECT_LOCALIZATION_CODING_ANNOTATIONS,
@@ -349,6 +350,23 @@ def _render_requirements_tab() -> None:
             ui.markdown(f"```markdown\n{_requirements_preview()}\n```")
 
 
+def _render_baseline_tab() -> None:
+    preview = MASS_EFFECT_BASELINE_REQUIREMENTS_MD[:5200]
+    if len(MASS_EFFECT_BASELINE_REQUIREMENTS_MD) > len(preview):
+        preview += "\n\n..."
+    with ui.element("section").classes("dynamic-panel accent-blue"):
+        ui.html('<div class="dynamic-panel-title">Baseline requirements.md</div>')
+        ui.html(
+            '<div class="dynamic-panel-copy">'
+            "This is the starting Kiro-style requirements file for the Mass Effect localization "
+            "assistant. The demo uses SME annotations to add release gates for lore drift, runtime "
+            "tokens, controller prompts, product-scope copy, and regional compliance."
+            "</div>"
+        )
+        with ui.element("div").classes("me-preview"):
+            ui.markdown(f"```markdown\n{preview}\n```")
+
+
 def _render_judge_tab() -> None:
     with ui.element("section").classes("dynamic-panel accent-orange"):
         ui.html('<div class="dynamic-panel-title">Output 2: LLM-as-a-Judge prompt</div>')
@@ -403,6 +421,7 @@ def mass_effect_demo_page() -> None:
         with ui.tabs().classes("me-demo-tabs") as tabs:
             scenario = ui.tab("Scenario")
             evidence = ui.tab("Evidence")
+            baseline = ui.tab("Baseline")
             requirements = ui.tab("requirements.md")
             judge = ui.tab("LLM Judge")
 
@@ -411,6 +430,8 @@ def mass_effect_demo_page() -> None:
                 _render_scenario_tab()
             with ui.tab_panel(evidence).classes("me-demo-panel"):
                 _render_evidence_tab()
+            with ui.tab_panel(baseline).classes("me-demo-panel"):
+                _render_baseline_tab()
             with ui.tab_panel(requirements).classes("me-demo-panel"):
                 _render_requirements_tab()
             with ui.tab_panel(judge).classes("me-demo-panel"):

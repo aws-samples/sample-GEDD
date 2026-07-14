@@ -51,6 +51,7 @@ CONTENT_CHECKS = {
     "/mass-effect-localization-demo": [
         "Mass Effect localization assistant to specs and judge",
         "Mass Effect Localization Specialist",
+        "Baseline",
         "requirements.md",
         "LLM Judge",
     ],
