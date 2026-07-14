@@ -347,13 +347,6 @@ def _build_domain_registry():
         INDUCTIVE_PM_SAMPLE_QUERIES,
         load_inductive_pm_demo,
     )
-    from grounded_evals.ui.gdpr_auditor_demo import (
-        GDPR_AUDITOR_CODEBOOK,
-        GDPR_AUDITOR_EVAL_HISTORY,
-        GDPR_AUDITOR_JUDGE_PROMPT,
-        GDPR_AUDITOR_SAMPLE_QUERIES,
-        load_gdpr_auditor_demo,
-    )
     from grounded_evals.ui.domain_demos import (
         load_clinical_demo, load_lex_demo, load_wealth_demo,
         CLINICAL_CODEBOOK, CLINICAL_CODING_ANNOTATIONS, CLINICAL_PARADIGM_MODEL, CLINICAL_JUDGE_PROMPT, CLINICAL_EVAL_HISTORY,
@@ -376,35 +369,6 @@ def _build_domain_registry():
             "judge_prompt": INDUCTIVE_PM_JUDGE_PROMPT,
             "pass_rates": [int(r["pass_rate"].rstrip("%")) for r in INDUCTIVE_PM_EVAL_HISTORY],
             "n_queries": 50, "n_codes": len(INDUCTIVE_PM_CODEBOOK),
-        },
-        {
-            "id": "gdpr_auditor_workbench",
-            "name": "AWS Cloud GDPR Auditor Outputs",
-            "icon": "policy",
-            "operator": "Northstar Cloud Privacy",
-            "tagline": (
-                "50 AWS cloud GDPR traces → annotations → "
-                "Kiro requirements.md + LLM Judge"
-            ),
-            "domain": "AWS Cloud GDPR / Two outputs",
-            "risk_level": "critical",
-            "regulations": ["GDPR", "AWS data residency", "DSAR and breach duties"],
-            "loader": load_gdpr_auditor_demo,
-            "codebook": GDPR_AUDITOR_CODEBOOK,
-            "sample_queries": GDPR_AUDITOR_SAMPLE_QUERIES,
-            "paradigm_phenomenon": (
-                "Sounds Cloud-Safe, Still Fails GDPR"
-            ),
-            "paradigm_consequence": (
-                "Wrong region, wrong retention, broken DSAR and delete handling, unsafe Bedrock "
-                "or Rekognition use, regulator exposure"
-            ),
-            "judge_prompt": GDPR_AUDITOR_JUDGE_PROMPT,
-            "pass_rates": [
-                int(r["pass_rate"].rstrip("%")) for r in GDPR_AUDITOR_EVAL_HISTORY
-            ],
-            "n_queries": 50,
-            "n_codes": len(GDPR_AUDITOR_CODEBOOK),
         },
         {
             "id": "travel", "name": "TravelBot", "icon": "flight", "operator": "SkyLink Travel",
@@ -989,11 +953,9 @@ def _render_domain(domain: dict):
     judge_snippet = judge_prompt[:520] + ("..." if len(judge_prompt) > 520 else "")
     workbench_labels = {
         "inductive_pm_workbench": "Load localization output demo",
-        "gdpr_auditor_workbench": "Load AWS GDPR output demo",
     }
     is_featured = domain.get("id") in {
         "inductive_pm_workbench",
-        "gdpr_auditor_workbench",
         "mass_effect_localization",
         "game_producer",
         "game_localization",
@@ -1102,7 +1064,7 @@ def demos_page():
 
     domains = _build_domain_registry()
     active_tab = {"idx": 0}
-    workbench_ids = {"inductive_pm_workbench", "gdpr_auditor_workbench"}
+    workbench_ids = {"inductive_pm_workbench"}
     featured_ids = {"game_producer", "game_localization", "game_operator"}
 
     with ui.column().classes("w-full max-w-6xl mx-auto").style("padding: 1.5rem; gap: 0"):

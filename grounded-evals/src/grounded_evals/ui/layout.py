@@ -7,7 +7,6 @@ from nicegui import app, ui
 NAV_ITEMS = [
     {"path": "/", "label": "Home", "icon": "home"},
     {"path": "/coach", "label": "Coach", "icon": "auto_awesome", "primary": True},
-    {"path": "/gdpr-demo", "label": "GDPR Demo", "icon": "policy", "core": True},
     {"path": "/mass-effect-localization-demo", "label": "Mass Effect LQA", "icon": "translate", "core": True},
     {"path": "/coding", "label": "Annotations", "icon": "rate_review"},
     {"path": "/report", "label": "Evidence", "icon": "fact_check", "output": True},
@@ -919,7 +918,7 @@ def page_layout(title: str = "", current_path: str = ""):
         has_outputs = bool(storage.get("codebook") or storage.get("_generated_judge_prompt"))
 
         def should_show_nav(path: str) -> bool:
-            if path in {"/", "/coach", "/gdpr-demo", "/mass-effect-localization-demo"}:
+            if path in {"/", "/coach", "/mass-effect-localization-demo"}:
                 return True
             if path == "/coding":
                 return current_path == path or has_queries or has_baseline_evidence

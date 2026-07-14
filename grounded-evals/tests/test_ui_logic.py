@@ -288,7 +288,6 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert labels == [
         "Home",
         "Coach",
-        "GDPR Demo",
         "Mass Effect LQA",
         "Annotations",
         "Evidence",
@@ -298,7 +297,6 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert paths == [
         "/",
         "/coach",
-        "/gdpr-demo",
         "/mass-effect-localization-demo",
         "/coding",
         "/report",
@@ -306,9 +304,9 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
         "/judge",
     ]
     assert "Demos" not in labels
+    assert "GDPR Demo" not in labels
     assert all("children" not in item for item in NAV_ITEMS)
     assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
-    assert next(item for item in NAV_ITEMS if item["label"] == "GDPR Demo")["core"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Mass Effect LQA")["core"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "requirements.md")["output"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
@@ -475,7 +473,6 @@ def test_domain_registry_includes_all_launch_demos():
 
     assert len(domains) >= 22
     assert {
-        "AWS Cloud GDPR Auditor Outputs",
         "Mass Effect Localization Specialist",
         "AAA Game Localization Outputs",
         "AAA Game Producer",
@@ -486,6 +483,7 @@ def test_domain_registry_includes_all_launch_demos():
         "MigrateBot",
         "EnergyBot",
     }.issubset(names)
+    assert "AWS Cloud GDPR Auditor Outputs" not in names
 
 
 def test_home_expert_discoveries_are_domain_specific():
