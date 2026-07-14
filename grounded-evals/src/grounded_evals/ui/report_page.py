@@ -1,4 +1,4 @@
-"""Outputs page for Kiro requirements.md and the LLM Judge."""
+"""Outputs page for Kiro judge-subagent requirements.md and the LLM-as-Judge gate."""
 
 import asyncio
 import csv
@@ -576,7 +576,7 @@ def _build_engineering_handoff(
 
 def _build_engineering_clipboard_text(handoff: dict) -> str:
     lines = [
-        f"LLM Judge Builder Handoff: {handoff.get('agent', 'agent')}",
+        f"LLM-as-Judge Gate Handoff: {handoff.get('agent', 'agent')}",
         f"Status: {handoff.get('status_label', 'unknown')}",
         "",
         "Judge strategy:",
@@ -738,7 +738,7 @@ def _build_html_report(
         output_contract = json.dumps(engineering_handoff.get("output_contract", {}), indent=2)
         commands = "\n".join(engineering_handoff.get("commands", []))
         handoff_html = f"""
-<h2>LLM Judge Output Contract</h2>
+<h2>LLM-as-Judge Gate Contract</h2>
 <p><strong>Status:</strong> {engineering_handoff.get('status_label', 'Unknown')}</p>
 {"<h2>Judge Strategy</h2><ul>" + strategy_items + "</ul>" if strategy_items else ""}
 {"<h2>Calibration Set</h2><ul>" + dataset_items + "</ul>" if dataset_items else ""}
@@ -818,8 +818,8 @@ def report_page():
                 ui.html('<div class="empty-state-title">Evidence handoff is not ready</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Create the LLM Judge after annotations. GEDD will then package "
-                    "SME_error_analysis.md, requirements.md, and the judge as one evidence-backed output set."
+                    "Create the LLM-as-Judge gate after annotations. GEDD will then package "
+                    "SME_error_analysis.md, the Kiro judge-subagent requirements.md, and the gate as one evidence-backed output set."
                     "</div>"
                 )
                 ui.button("Build a judge first", icon="gavel", on_click=lambda: ui.navigate.to("/judge")).props(
@@ -1031,7 +1031,7 @@ def report_page():
                 ui.html(
                     '<div class="dynamic-copy">'
                     "Download SME_error_analysis.md as the shared evidence handoff, then use "
-                    "the same SME evidence for Kiro requirements.md and the LLM Judge."
+                    "the same SME evidence for the Kiro judge-subagent requirements.md and LLM-as-Judge gate."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel").style(
@@ -1047,9 +1047,9 @@ def report_page():
         with ui.element("section").classes("metric-strip"):
             for value, label in [
                 ("ready", "SME_error_analysis.md"),
-                ("ready" if requirements_markdown else "missing", "requirements.md"),
-                ("ready", "LLM Judge"),
-                (n_blockers, "Release blockers"),
+                ("ready" if requirements_markdown else "missing", "Judge requirements.md"),
+                ("ready", "LLM-as-Judge gate"),
+                (n_blockers, "Customer blocks"),
             ]:
                 with ui.element("div").classes("metric-tile"):
                     ui.html(f'<div class="metric-tile-value">{value}</div>')
@@ -1059,23 +1059,23 @@ def report_page():
             with ui.element("div").classes("rr-action-card"):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:0; flex:1; min-width:260px"):
-                        ui.html('<div class="rr-action-title">Primary handoff and downstream outputs</div>')
+                        ui.html('<div class="rr-action-title">Primary evidence and judge-gate outputs</div>')
                         ui.html(
                             f'<div class="rr-action-copy">SME_error_analysis.md captures the annotation codebook. '
-                            f'Top observed pattern: <strong>{top_pattern}</strong>.</div>'
+                            f'Top observed pattern: <strong>{top_pattern}</strong>. The generated judge gate uses this evidence before customer-facing responses are shown.</div>'
                         )
                     with ui.row().classes("gap-2 flex-wrap"):
                         ui.button(
                             "Download SME_error_analysis.md", icon="fact_check", on_click=download_error_analysis_md
                         ).props("size=sm color=primary no-caps")
                         ui.button(
-                            "Download requirements.md", icon="description", on_click=download_requirements_md
+                            "Download judge requirements.md", icon="description", on_click=download_requirements_md
                         ).props("size=sm outline no-caps").style("color:var(--accent-bright); border-color:var(--accent)")
                         ui.button(
-                            "Download LLM Judge", icon="gavel", on_click=download_judge_prompt
+                            "Download LLM-as-Judge gate", icon="gavel", on_click=download_judge_prompt
                         ).props("size=sm outline no-caps").style("color:var(--violet); border-color:rgba(177,140,255,0.35)")
                         ui.button(
-                            "Open requirements.md", icon="open_in_new", on_click=lambda: ui.navigate.to("/requirements")
+                            "Open Judge Spec", icon="open_in_new", on_click=lambda: ui.navigate.to("/requirements")
                         ).props("size=sm outline no-caps").style("color:var(--blue); border-color:rgba(106,169,255,0.35)")
 
         with ui.element("div").classes("page-card"):
@@ -1192,7 +1192,7 @@ def report_page():
 
             with ui.row().classes("items-start justify-between gap-3 flex-wrap").style("margin-bottom: 10px"):
                 with ui.column().style("gap: 2px; flex: 1; min-width: 260px"):
-                    ui.label("LLM Judge Output Contract").classes("rr-section-title")
+                    ui.label("LLM-as-Judge Gate Contract").classes("rr-section-title")
                     ui.label(
                         "This is the output contract the judge must return when enforcing the generated requirements."
                     ).style("font-size: 0.78rem; color: var(--text-muted); line-height: 1.5")
@@ -1392,7 +1392,7 @@ def report_page():
         with ui.element("div").classes("page-card"):
             ui.label("Export").classes("rr-section-title")
             ui.label(
-                "Export SME_error_analysis.md as the shared evidence handoff, then use it for requirements.md and the LLM Judge."
+                "Export SME_error_analysis.md as the shared evidence handoff, then use it for the Kiro judge-subagent requirements.md and LLM-as-Judge gate."
             ).style("font-size: 0.78rem; color: var(--text-muted); margin-top: 6px")
             with ui.row().classes("gap-2 flex-wrap").style("margin-top: 12px"):
                 ui.button(
@@ -1402,13 +1402,13 @@ def report_page():
                     "background: var(--accent); color: white"
                 )
                 ui.button(
-                    "requirements.md",
+                    "Judge requirements.md",
                     on_click=download_requirements_md, icon="description",
                 ).props("size=sm dark").style(
                     "background: var(--accent); color: white"
                 )
                 ui.button(
-                    "LLM Judge",
+                    "LLM-as-Judge gate",
                     on_click=download_judge_prompt, icon="gavel",
                 ).props("size=sm dark").style(
                     "background: var(--accent); color: white"

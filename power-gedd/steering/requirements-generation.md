@@ -1,9 +1,10 @@
-# Requirements Generation — EARS Notation
+# Judge-Subagent Requirements Generation - EARS Notation
 
-Generate or upgrade Kiro `requirements.md` using EARS (Easy Approach to Requirements Syntax).
+Generate or upgrade the Kiro LLM-as-Judge subagent `requirements.md` using EARS (Easy Approach to Requirements Syntax).
 The preferred path is to start from a baseline Kiro requirements file, test the
-baseline agent with SME-curated domain queries, then improve the requirements
-through SME error analysis, failure codes, severity, and annotation memos.
+baseline agent with SME-curated domain queries, then convert SME error analysis,
+failure codes, severity, and annotation memos into response-gating requirements
+for the judge subagent.
 
 ## EARS Overview
 
@@ -23,14 +24,14 @@ WHILE <precondition>, WHEN <trigger>, the <system> SHALL <response>
 | **Unwanted Behaviour** | IF...THEN | Response to faults/errors/failures | IF `<unwanted condition>`, THEN the `<system>` SHALL `<response>` |
 | **Complex** | WHILE + WHEN | Precondition + trigger | WHILE `<precondition>`, WHEN `<trigger>`, the `<system>` SHALL `<response>` |
 
-Optional feature (WHERE) is used for product variants but rarely applies to agent specs.
+Optional feature (WHERE) is used for product variants but rarely applies to judge-subagent specs.
 
-### Why EARS for Agent Requirements
+### Why EARS for Judge-Subagent Requirements
 
-- **Directly testable** — Each EARS requirement maps to a curated domain query test case
-- **Unambiguous** — Fixed clause order eliminates interpretation disagreements
-- **LLM-parseable** — Kiro and AI tools can read and validate EARS requirements
-- **Evidence-linkable** — The trigger/precondition comes directly from the observed failure context
+- **Directly testable** - Each EARS requirement maps to a curated domain query and candidate response
+- **Unambiguous** - Fixed clause order eliminates interpretation disagreements
+- **LLM-parseable** - Kiro and AI tools can read and validate judge-subagent requirements
+- **Evidence-linkable** - The trigger/precondition comes directly from the observed failure context
 
 ---
 
@@ -53,16 +54,16 @@ From curated queries and baseline responses, identify:
 - Which edge, adversarial, ambiguous, multi-turn, recovery, persona, or red-flag
   cases fail
 - Which failures are caused by missing requirements vs. weak implementation
-- Which failures need a new EARS acceptance criterion, a changed user story, or
-  a judge rule
+- Which failures need a new EARS acceptance criterion, a changed judge-subagent
+  user story, or a judge rule
 
-### Mode C: Upgrade with Evidence (annotations available)
+### Mode C: Regenerate with Evidence (annotations available)
 
-From `SME_error_analysis.md`, upgrade requirements using:
+From `SME_error_analysis.md`, regenerate judge-subagent requirements using:
 - Failure codes → Unwanted Behaviour requirements (IF failure pattern detected, THEN...)
 - Paradigm model causal conditions → State-driven requirements (WHILE condition holds...)
 - Annotated failures → Event-driven requirements (WHEN trigger occurs...)
-- Baseline-vs-improved delta → Traceability notes explaining what changed and why
+- Baseline response gaps -> Traceability notes explaining which customer-response risks the gate now covers
 
 ---
 
@@ -146,26 +147,26 @@ instead of escalating to human per system prompt rule.
 
 ## Requirements Document Structure
 
-Generate or upgrade `.kiro/specs/{agent-name}/requirements.md` using Kiro's requirements-first structure:
+Generate or upgrade `.kiro/specs/{agent-name}/requirements.md` for the LLM-as-Judge subagent using Kiro's requirements-first structure:
 
 ```markdown
 # Requirements Document
 
 ## Introduction
 
-{Agent purpose, target users, baseline summary, evidence summary, and annotation coverage.}
+{Customer-facing agent purpose, judge-subagent purpose, target users, baseline summary, evidence summary, and annotation coverage.}
 
 ## Requirements
 
 ### Requirement 1
 
-**User Story:** As a {target user}, I want {domain-safe behavior}, so that {risk is prevented}.
+**User Story:** As a {domain expert or product manager}, I want the judge subagent to detect {domain failure}, so that {customer-facing response risk is prevented}.
 
 #### Acceptance Criteria
 
-1. IF {unwanted failure condition}, THEN THE SYSTEM SHALL {required safe response}.
-2. WHEN {domain trigger}, THE SYSTEM SHALL {expected behavior}.
-3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
+1. IF {unwanted failure condition}, THEN THE JUDGE SUBAGENT SHALL {required gate decision}.
+2. WHEN {domain trigger}, THE JUDGE SUBAGENT SHALL {expected evaluation behavior}.
+3. WHILE {domain state}, THE JUDGE SUBAGENT SHALL {required invariant}.
 
 **Evidence:** Baseline failure `{query ids}`, failure code `{code}`, severity `{severity}`, examples `{query ids}`.
 ```
@@ -173,7 +174,7 @@ Generate or upgrade `.kiro/specs/{agent-name}/requirements.md` using Kiro's requ
 Add optional evidence sections after requirements only when they help Kiro or reviewers:
 
 - Evidence summary
-- Baseline gap summary
+- Baseline response gap summary
 - Failure code glossary
 - Traceability table
 - Judge alignment notes
@@ -224,11 +225,11 @@ Every EARS requirement traces to:
 
 ## When to Run This Again
 
-The lifecycle triggers a new requirements upgrade when:
+The lifecycle triggers a new judge-spec regeneration when:
 - New failure codes emerge from annotation rounds
 - Severity changes alter priority ordering
 - Paradigm model gains new causal insights
 - Agent is updated and re-evaluated
 - Baseline-vs-GEDD measurements show unresolved coverage or accuracy gaps
 
-Each run produces versioned EARS requirements with full traceability.
+Each run produces versioned judge-subagent EARS requirements with full traceability.

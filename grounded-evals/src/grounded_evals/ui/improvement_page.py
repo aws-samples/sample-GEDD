@@ -1,4 +1,4 @@
-"""NiceGUI page for EARS quality comparison."""
+"""NiceGUI page for judge-subagent EARS quality comparison."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ def _build_report(session: Session):
 
 @ui.page("/improvement")
 def improvement_page() -> None:
-    page_layout("requirements.md Quality", current_path="/improvement")
+    page_layout("Judge Spec Quality", current_path="/improvement")
     session = _session_from_storage(app.storage.user)
 
     with ui.element("main").classes("dynamic-page"):
@@ -38,17 +38,17 @@ def improvement_page() -> None:
                     "Measurement"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">requirements.md quality uplift</div>')
+                ui.html('<div class="dynamic-title">Judge-subagent requirements quality uplift</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
-                    "Compare the baseline Kiro requirements against the GEDD-improved spec "
-                    "created from SME-curated query results and annotations."
+                    "Compare the baseline Kiro requirements against the GEDD-generated "
+                    "judge-subagent spec created from SME-curated query results and annotations."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
                 ui.html('<div class="dynamic-side-label">Evidence drivers</div>')
                 ui.html(f'<div class="dynamic-side-value">{len(session.codes)}</div>')
-                ui.html('<div class="dynamic-side-copy">Failure modes available for measuring requirements quality.</div>')
+                ui.html('<div class="dynamic-side-copy">Failure modes available for measuring judge-spec quality.</div>')
 
         if not session.codes:
             with ui.element("div").classes("empty-state-panel"):
@@ -57,7 +57,7 @@ def improvement_page() -> None:
                 ui.html(
                     '<div class="empty-state-copy">'
                     "Test the Kiro baseline agent with curated domain queries, then annotate "
-                    "failures before measuring requirements uplift."
+                    "failures before measuring judge-subagent requirements uplift."
                     "</div>"
                 )
                 ui.button("Open Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
@@ -81,7 +81,7 @@ def improvement_page() -> None:
             ui.html('<div class="dynamic-panel-title">Quality comparison</div>')
             ui.html(
                 '<div class="dynamic-panel-copy">'
-                "Baseline vs GEDD-improved requirements across specificity, traceability, "
+                "Baseline vs GEDD judge-subagent requirements across specificity, traceability, "
                 "testability, and domain coverage."
                 "</div>"
             )

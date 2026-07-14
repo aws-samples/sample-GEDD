@@ -67,7 +67,7 @@ def _coverage_table(state, indent: str = "  ") -> str:
 
 @click.group()
 def main() -> None:
-    """GEDD: Systematic Evidence Driven LLM Judge + SPEC Framework for continuous learning."""
+    """GEDD: SME evidence to Kiro LLM-as-Judge response gates."""
 
 
 STEP_NAMES = {
@@ -297,7 +297,7 @@ def chat(session: str) -> None:
       3. Curate domain queries\n
       4. Test the Kiro baseline agent\n
       5. Annotate failures with SME judgment\n
-      6. Export SME_error_analysis.md, requirements.md, and the judge
+      6. Export SME_error_analysis.md, judge-subagent requirements.md, and the response gate
     """
     from grounded_evals.agent.handler import run_agent_turn
 

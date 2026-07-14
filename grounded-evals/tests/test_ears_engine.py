@@ -59,13 +59,14 @@ def test_ears_transformer_parser_and_measurement_round_trip() -> None:
     assert "### Requirement 1:" in markdown
     assert "**User Story:**" in markdown
     assert "#### Acceptance Criteria" in markdown
-    assert "WHEN TestBot produces or is evaluated against a response" in markdown
+    assert "WHEN TestBot produces a candidate customer-facing response" in markdown
     assert (
-        "THE SYSTEM SHALL classify the response as a release-blocking domain failure."
+        "THE JUDGE SUBAGENT SHALL classify the response as a release-blocking domain failure"
         in markdown
     )
     assert "LLM-as-Judge Release Gate" in markdown
     assert "pass_fail, failure_code, severity, rationale" in markdown
+    assert "customer_visible_block" in markdown
     assert parsed.requirements[0].traceability_links
     assert "Missing Refund Policy" in markdown
     assert report.gedd_metrics.domain_coverage == 100.0

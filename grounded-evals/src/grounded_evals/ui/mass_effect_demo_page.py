@@ -223,13 +223,13 @@ def _render_workflow() -> None:
         ),
         (
             "03",
-            "Domain specs",
-            "Observed defects become EARS requirements for a Kiro requirements.md handoff.",
+            "Judge-subagent spec",
+            "Observed defects become EARS requirements for the Kiro LLM-as-Judge subagent.",
         ),
         (
             "04",
-            "LLM judge",
-            "The same failure modes become Mass Effect localization release gates.",
+            "Response gate",
+            "The same failure modes become Mass Effect localization gates before assistant answers reach users.",
         ),
     ]
     with ui.element("div").classes("me-flow-grid"):
@@ -242,7 +242,7 @@ def _render_workflow() -> None:
 
 def _render_scenario_tab() -> None:
     with ui.element("section").classes("dynamic-panel accent-blue"):
-        ui.html('<div class="dynamic-panel-title">Mass Effect Localization Specialist</div>')
+        ui.html('<div class="dynamic-panel-title">Mass Effect Localization Specialist judge scenario</div>')
         ui.html(
             '<div class="dynamic-panel-copy">'
             "MassEffectLocaleGate reviews localization risks for a military sci-fi RPG setting "
@@ -263,7 +263,7 @@ def _render_scenario_tab() -> None:
                 on_click=lambda: _load_and_open("/coding"),
             ).props("outline no-caps")
             ui.button(
-                "Open requirements.md",
+                "Open Judge Spec",
                 icon="description",
                 on_click=lambda: _load_and_open("/requirements"),
             ).props("outline no-caps")
@@ -276,20 +276,20 @@ def _render_scenario_tab() -> None:
     with ui.element("div").classes("me-artifact-grid"):
         with ui.element("div").classes("me-artifact-panel"):
             ui.html('<div class="me-panel-label">Specialist outcome</div>')
-            ui.html('<div class="me-panel-title">Domain-driven specs</div>')
+            ui.html('<div class="me-panel-title">Kiro judge-subagent requirements</div>')
             ui.html(
                 '<div class="me-panel-copy">'
-                "The requirements are not generic translation advice. They encode Mass Effect "
+                "The requirements specify how the judge subagent evaluates assistant answers. They encode Mass Effect "
                 "lore glossary fidelity, runtime token preservation, biotic/system terminology, "
                 "choice-state safety, RTL controller validation, and store copy boundaries."
                 "</div>"
             )
         with ui.element("div").classes("me-artifact-panel"):
             ui.html('<div class="me-panel-label">Judge outcome</div>')
-            ui.html('<div class="me-panel-title">Release gates from LQA evidence</div>')
+            ui.html('<div class="me-panel-title">Response gates from LQA evidence</div>')
             ui.html(
                 '<div class="me-panel-copy">'
-                "The judge fails answers that approve fluent but unsafe localization, including "
+                "The judge blocks assistant answers that approve fluent but unsafe localization, including "
                 "lost placeholders, wrong squad controls, product-scope drift, ratings softening, "
                 "and canon role flattening."
                 "</div>"
@@ -327,11 +327,11 @@ def _render_evidence_tab() -> None:
 
 def _render_requirements_tab() -> None:
     with ui.element("section").classes("dynamic-panel accent-violet"):
-        ui.html('<div class="dynamic-panel-title">Output 1: Kiro requirements.md</div>')
+        ui.html('<div class="dynamic-panel-title">Output 1: Kiro judge-subagent requirements.md</div>')
         ui.html(
             '<div class="dynamic-panel-copy">'
-            "The requirements are generated from the Mass Effect localization codebook and linked "
-            "LQA evidence. Loading the workspace makes the full document available in requirements.md."
+            "The requirements define the LLM-as-Judge subagent using the Mass Effect localization codebook "
+            "and linked LQA evidence. Loading the workspace makes the full document available in requirements.md."
             "</div>"
         )
         with ui.element("div").classes("me-code-list"):
@@ -359,8 +359,9 @@ def _render_baseline_tab() -> None:
         ui.html(
             '<div class="dynamic-panel-copy">'
             "This is the starting Kiro-style requirements file for the Mass Effect localization "
-            "assistant. The demo uses SME annotations to add release gates for lore drift, runtime "
-            "tokens, controller prompts, product-scope copy, and regional compliance."
+            "assistant under evaluation. GEDD uses SME annotations to create the separate judge-subagent "
+            "spec and response gates for lore drift, runtime tokens, controller prompts, product-scope copy, "
+            "and regional compliance."
             "</div>"
         )
         with ui.element("div").classes("me-preview"):
@@ -369,11 +370,11 @@ def _render_baseline_tab() -> None:
 
 def _render_judge_tab() -> None:
     with ui.element("section").classes("dynamic-panel accent-orange"):
-        ui.html('<div class="dynamic-panel-title">Output 2: LLM-as-a-Judge prompt</div>')
+        ui.html('<div class="dynamic-panel-title">Output 2: LLM-as-Judge response gate</div>')
         ui.html(
             '<div class="dynamic-panel-copy">'
-            "The judge uses Mass Effect-specific localization failure modes as hard release gates "
-            "and returns a structured verdict for each candidate assistant answer."
+            "The judge uses Mass Effect-specific localization failure modes as hard gates and returns "
+            "a structured verdict before each candidate assistant answer can become customer-visible."
             "</div>"
         )
         with ui.element("div").classes("me-preview"):
@@ -394,12 +395,12 @@ def mass_effect_demo_page() -> None:
                     "Mass Effect localization demo"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">Mass Effect localization assistant to specs and judge</div>')
+                ui.html('<div class="dynamic-title">Mass Effect localization quality gates for a Kiro judge subagent</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
                     "A localization specialist reviews an AAA sci-fi RPG assistant, names the "
-                    "Mass Effect-specific release risks, and turns that evidence into Kiro "
-                    "requirements.md plus an LLM-as-a-judge release gate."
+                    "Mass Effect-specific risks, and turns that evidence into a Kiro judge-subagent "
+                    "requirements.md plus an LLM-as-Judge gate for customer-facing assistant answers."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
@@ -412,7 +413,7 @@ def mass_effect_demo_page() -> None:
                 ("Mass Effect", "Franchise context"),
                 ("LQA", "Specialist role"),
                 ("7", "Failure modes"),
-                ("2", "Generated outputs"),
+                ("2", "Judge artifacts"),
             ]:
                 with ui.element("div").classes("metric-tile"):
                     ui.html(f'<div class="metric-tile-value">{value}</div>')
@@ -422,8 +423,8 @@ def mass_effect_demo_page() -> None:
             scenario = ui.tab("Scenario")
             evidence = ui.tab("Evidence")
             baseline = ui.tab("Baseline")
-            requirements = ui.tab("requirements.md")
-            judge = ui.tab("LLM Judge")
+            requirements = ui.tab("Judge Spec")
+            judge = ui.tab("Response Gate")
 
         with ui.tab_panels(tabs, value=scenario).classes("me-demo-tab-panels"):
             with ui.tab_panel(scenario).classes("me-demo-panel"):

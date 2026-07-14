@@ -1,4 +1,4 @@
-"""Coach-first GEDD homepage for Kiro Domain Specs and LLM Judge outputs."""
+"""Coach-first GEDD homepage for Kiro judge-subagent specs and gates."""
 
 from nicegui import ui
 
@@ -75,7 +75,7 @@ def _get_sme_flow_steps(storage: dict) -> list[dict[str, str]]:
         {
             "num": "1",
             "title": "Set the domain and baseline",
-            "action": "Name the SME domain, then upload or capture the baseline Kiro requirements.md.",
+            "action": "Name the SME domain, then upload or capture the baseline Kiro requirements.md for the current assistant.",
             "evidence": "Domain profile + baseline requirements evidence",
             "path": "/coach",
             "button": "Open Coach",
@@ -114,9 +114,9 @@ def _get_sme_flow_steps(storage: dict) -> list[dict[str, str]]:
         },
         {
             "num": "5",
-            "title": "Generate outputs",
-            "action": "Export SME_error_analysis.md, then generate requirements.md, the judge, and measurement.",
-            "evidence": "SME_error_analysis.md + requirements.md + LLM Judge",
+            "title": "Generate judge gate",
+            "action": "Export SME_error_analysis.md, then generate the Kiro judge-subagent requirements.md, LLM-as-Judge gate, and measurement.",
+            "evidence": "SME_error_analysis.md + judge requirements.md + LLM-as-Judge gate",
             "path": "/report",
             "button": "Open Outputs",
             "icon": "fact_check",
@@ -1468,13 +1468,14 @@ def home_page():
                 )
                 ui.html(
                     '<h1 class="clean-headline">'
-                    "SME Error Analysis → Annotations → Domain Driven Specs Development"
+                    "SME evidence to Kiro LLM-as-Judge response gates"
                     "</h1>"
                 )
                 ui.html(
                     '<div class="clean-subhead">'
-                    "Coach leads the domain expert one step at a time from baseline evidence "
-                    "to SME_error_analysis.md, Kiro requirements.md, and an LLM Judge."
+                    "Coach leads SMEs and product managers from baseline evidence to "
+                    "SME_error_analysis.md, Kiro judge-subagent requirements.md, and an "
+                    "LLM-as-Judge gate that checks customer-facing responses before customers see them."
                     "</div>"
                 )
                 with ui.element("div").classes("clean-actions"):

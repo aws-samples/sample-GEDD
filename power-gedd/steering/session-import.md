@@ -1,6 +1,6 @@
 # Session Import Workflow
 
-Guide for importing a GEDD error-analysis markdown file into the baseline-to-improved generation pipeline.
+Guide for importing a GEDD error-analysis markdown file into the judge-subagent generation pipeline.
 
 ## What is SME_error_analysis.md?
 
@@ -104,7 +104,7 @@ Extract each section and report status:
 
 | Output | Minimum Required |
 |--------|-----------------|
-| requirements.md | Domain Expert Profile + Curated Queries + Baseline Responses + Codebook + Annotated Failures (severity ≥ critical) |
+| judge-subagent requirements.md | Domain Expert Profile + Curated Queries + Baseline Responses + Codebook + Annotated Failures (severity >= critical) |
 | llm-judge.md | Domain Expert Profile + Codebook + Annotated Failures + release-gate memos |
 
 ### Step 4: Report gaps
@@ -122,7 +122,7 @@ If the file is incomplete, guide the user:
 
 ### Step 5: Extract and transform
 
-Parse the markdown sections and prepare data for spec generation:
+Parse the markdown sections and prepare data for judge-subagent spec generation:
 
 1. **Build codebook** — Extract from the Failure Codebook table (Code, Severity, Freq, Definition)
 2. **Build priority queue** — Score each code: severity × frequency × dimension_weight
@@ -134,8 +134,8 @@ Parse the markdown sections and prepare data for spec generation:
 ### Step 6: Proceed to generation
 
 Once validated, proceed through:
-1. `requirements-generation.md` — Improve Kiro requirements from curated queries, baseline responses, codebook, and annotated failures
-2. `judge-generation.md` — Generate the LLM Judge from the same failure modes
+1. `requirements-generation.md` - Generate Kiro judge-subagent requirements from curated queries, baseline responses, codebook, and annotated failures
+2. `judge-generation.md` - Generate the LLM-as-Judge response gate from the same failure modes
 
 Only run `design-generation.md` or `tasks-generation.md` if the user explicitly asks for Kiro follow-on docs after the two GEDD outputs are complete.
 
@@ -144,7 +144,7 @@ Only run `design-generation.md` or `tasks-generation.md` if the user explicitly 
 ## Handling Partial Files
 
 ### No paradigm model section
-Proceed with requirements.md and llm-judge.md. Flag that root-cause rationale is weaker without paradigm model evidence.
+Proceed with judge-subagent requirements.md and llm-judge.md. Flag that root-cause rationale is weaker without paradigm model evidence.
 
 ### No severity in codebook
 Default all codes to severity "functional". Warn the user that prioritization

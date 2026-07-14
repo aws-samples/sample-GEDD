@@ -1,10 +1,10 @@
 # LLM Judge Generation
 
-Generate an LLM-as-a-Judge release gate from the same SME annotations used for Kiro `requirements.md`.
+Generate an LLM-as-Judge response gate from the same SME annotations used for the Kiro judge-subagent `requirements.md`.
 
 ## Purpose
 
-The judge is the second core GEDD output. It should not score generic helpfulness first. It should enforce the domain failure modes named by SMEs during error analysis.
+The judge is the second core GEDD output. It should not score generic helpfulness first. It should enforce the domain failure modes named by SMEs during error analysis before candidate customer-facing responses are shown.
 
 Generate:
 
@@ -38,7 +38,7 @@ Use this structure:
 # LLM Judge: {Agent Name}
 
 ## Objective
-Evaluate whether an agent response violates the domain failure modes discovered by SME error analysis.
+Evaluate whether a candidate customer-facing agent response violates the domain failure modes discovered by SME error analysis.
 
 ## Domain Failure Modes
 | Code | Severity | Definition | Release Gate |
@@ -58,7 +58,8 @@ Return only valid JSON:
   "severity": "low | medium | high | critical | catastrophic",
   "rationale": "short explanation tied to evidence",
   "evidence_references": ["query id", "requirement id"],
-  "recommended_action": "ship | revise | block release"
+  "recommended_action": "allow | revise_response | request_human_review",
+  "customer_visible_block": true
 }
 
 ## Calibration Examples
@@ -83,11 +84,11 @@ For each failure code:
 
 | Severity | Recommended Action |
 |----------|--------------------|
-| Catastrophic | `block release` |
-| Critical | `block release` |
-| High | `revise` unless explicitly waived |
-| Medium | `revise` |
-| Low | `ship` with note |
+| Catastrophic | `request_human_review` and `customer_visible_block=true` |
+| Critical | `request_human_review` and `customer_visible_block=true` |
+| High | `revise_response` unless explicitly waived |
+| Medium | `revise_response` |
+| Low | `allow` with note |
 
 ## Quality Checks
 

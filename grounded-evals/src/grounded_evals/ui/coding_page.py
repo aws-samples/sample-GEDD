@@ -1,4 +1,4 @@
-"""Annotation page for evidence that generates requirements.md and an LLM Judge."""
+"""Annotation page for evidence that generates judge-subagent requirements and a gate."""
 
 import asyncio
 import html as _html
@@ -606,8 +606,8 @@ def coding_page():
                 ui.html('<div class="coding-hero-title">Annotations</div>')
                 ui.html(
                     '<div class="coding-hero-copy">'
-                    "Review the customer-facing answer, tag the product failure in PM/domain language, "
-                    "set severity, then export SME_error_analysis.md for Kiro requirements.md and the LLM Judge."
+                    "Review the customer-facing answer, tag the product failure in SME/PM language, "
+                    "set severity, then export SME_error_analysis.md for the Kiro judge-subagent spec and LLM-as-Judge gate."
                     '</div>'
                 )
             with ui.row().classes("items-center gap-2 flex-wrap"):
@@ -615,8 +615,8 @@ def coding_page():
                     ("Evidence", "fact_check"),
                     ("Failure code", "label"),
                     ("Severity", "priority_high"),
-                    ("requirements.md", "description"),
-                    ("LLM Judge", "gavel"),
+                    ("Judge spec", "description"),
+                    ("Response gate", "gavel"),
                 ]:
                     ui.html(
                         f'<span class="coding-flow-pill"><span class="material-icons">{icon}</span>{label}</span>'
@@ -625,8 +625,8 @@ def coding_page():
             for label, icon in [
                 ("SME evidence", "fact_check"),
                 ("Annotations", "rate_review"),
-                ("Kiro requirements.md", "description"),
-                ("LLM Judge", "gavel"),
+                ("Kiro judge spec", "description"),
+                ("LLM-as-Judge gate", "gavel"),
             ]:
                 ui.html(
                     f'<span class="coding-flow-pill"><span class="material-icons">{icon}</span>{label}</span>'
@@ -672,7 +672,7 @@ def coding_page():
                 ui.html(
                     '<div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); '
                     'margin-bottom:6px">'
-                    'Continuous Learning Demo - requirements.md + LLM Judge'
+                    'Continuous Learning Demo - judge requirements.md + LLM-as-Judge gate'
                     '</div>'
                 )
                 ui.html(
@@ -682,7 +682,7 @@ def coding_page():
                     f'<strong>{uncoded_count}</strong> are uncoded — try annotating them yourself.<br>'
                     '<span style="color:var(--accent-bright)">The lifecycle:</span> '
                     'Review failures → Name the pattern → Set severity → '
-                    'Generate Kiro requirements.md + LLM Judge'
+                    'Generate Kiro judge requirements.md + LLM-as-Judge gate'
                     '</div>'
                 )
 
@@ -1450,11 +1450,11 @@ def coding_page():
             ):
                 with ui.row().classes("items-start justify-between gap-2 flex-wrap"):
                     with ui.column().style("gap:2px; flex:1; min-width:0"):
-                        ui.label("Next: LLM-as-a-judge prompt").style(
+                        ui.label("Next: LLM-as-Judge response gate").style(
                             "font-size:0.86rem; font-weight:700; color:var(--text-primary)"
                         )
                         ui.label(
-                            "Generated directly from the same annotations that feed requirements.md."
+                            "Generated directly from the same annotations that feed the Kiro judge-subagent requirements.md."
                         ).style("font-size:0.72rem; color:var(--text-tertiary); line-height:1.45")
                     ui.badge(f"{len(ann_list)} annotations · {mode_count} modes").props("outline")
 

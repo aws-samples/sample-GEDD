@@ -291,7 +291,7 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
         "Mass Effect LQA",
         "Annotations",
         "Evidence",
-        "requirements.md",
+        "Judge Spec",
         "Judge",
     ]
     assert paths == [
@@ -308,7 +308,7 @@ def test_main_nav_keeps_two_outputs_as_top_level_tabs():
     assert all("children" not in item for item in NAV_ITEMS)
     assert next(item for item in NAV_ITEMS if item["label"] == "Coach")["primary"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Mass Effect LQA")["core"] is True
-    assert next(item for item in NAV_ITEMS if item["label"] == "requirements.md")["output"] is True
+    assert next(item for item in NAV_ITEMS if item["label"] == "Judge Spec")["output"] is True
     assert next(item for item in NAV_ITEMS if item["label"] == "Judge")["output"] is True
 
 
@@ -431,7 +431,7 @@ def test_sme_flow_starts_with_domain_then_baseline_upload():
     ]
     assert steps[0]["status"] == "current"
     assert steps[1]["status"] == "todo"
-    assert steps[4]["title"] == "Generate outputs"
+    assert steps[4]["title"] == "Generate judge gate"
 
 
 def test_sme_flow_marks_uploaded_baseline_before_query_curation():
@@ -541,7 +541,8 @@ def test_requirements_page_hydrates_demo_codebook_into_kiro_requirements():
     assert "# Requirements Document" in markdown
     assert "Placeholder And Markup Corruption" in markdown
     assert "LLM-as-Judge Release Gate" in markdown
-    assert "THE SYSTEM SHALL return pass_fail, failure_code, severity" in markdown
+    assert "THE JUDGE SUBAGENT SHALL return pass_fail, failure_code, severity" in markdown
+    assert "customer_visible_block" in markdown
     assert "open coding" in storage["_generated_judge_prompt"].lower()
 
 

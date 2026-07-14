@@ -1,4 +1,4 @@
-"""GEDD — generate Kiro requirements.md and an LLM Judge from annotations."""
+"""GEDD - generate Kiro judge-subagent requirements.md and a response gate."""
 
 import asyncio
 import html as _html
@@ -44,7 +44,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-06-12-localization-50"
+APP_RELEASE = "2026-07-13-judge-gate-messaging"
 
 
 def _cognito_hosted_domain() -> str:
@@ -185,7 +185,7 @@ def login_page():
         ui.html('<div class="brand-title" style="font-size:1.4rem; color:#f7f8f8; font-weight:700">GEDD</div>')
         ui.html(
             '<div style="font-size:0.8rem; color:#6e737b">'
-            "SME Error Analysis → Annotations → Domain Driven Specs Development"
+            "SME Evidence -> Kiro Judge requirements.md -> Customer Response Gates"
             "</div>"
         )
         with ui.card().style("width: 320px; padding: 2rem; border-radius: 12px; background: #141516; border: 1px solid rgba(255,255,255,0.09)"):
@@ -371,7 +371,7 @@ def main_page() -> None:
         3: "Ask Coach to draft the first query batch, then approve, edit, or add SME-owned queries.",
         4: "Run the approved queries against the baseline Kiro agent, then paste the responses here.",
         5: "Open Annotations and label each baseline response with SME vocabulary and missing domain rules.",
-        6: "Open Evidence and use SME_error_analysis.md as the source for requirements.md and the LLM Judge.",
+        6: "Open Evidence and use SME_error_analysis.md as the source for the Kiro judge-subagent requirements.md and LLM-as-Judge gate.",
     }
 
     def current_coach_view() -> tuple[int, tuple[str, str, str, str, str]]:
@@ -424,8 +424,8 @@ def main_page() -> None:
             (
                 "6",
                 "Outputs",
-                "Export SME_error_analysis.md, then generate requirements.md and the LLM Judge.",
-                "Specs + judge + measurement",
+                "Export SME_error_analysis.md, then generate the Kiro judge-subagent requirements.md and LLM-as-Judge gate.",
+                "Judge spec + response gate + measurement",
                 coach_status(bool(cur_s.get("_generated_judge_prompt")), has_evidence_handoff),
             ),
         ]
@@ -480,12 +480,12 @@ def main_page() -> None:
                 "Coach"
                 "</div>"
             )
-            ui.html('<div class="coach-product-title">Curate evidence for Kiro specs</div>')
+            ui.html('<div class="coach-product-title">Build Kiro judge-subagent quality gates</div>')
             ui.html(
                 '<div class="coach-product-copy">'
                 "Coach controls the sequence. Finish the current prompt, then the next step appears. "
-                "The path ends in "
-                "SME_error_analysis.md, requirements.md, and the LLM Judge."
+                "The path ends in SME_error_analysis.md, a Kiro judge-subagent requirements.md, "
+                "and an LLM-as-Judge gate for customer-facing responses."
                 "</div>"
             )
             coach_stage_container = ui.element("div")
@@ -527,7 +527,7 @@ def main_page() -> None:
                     )
                     ui.html(
                         '<div class="coach-chat-copy">'
-                        "Use the chat to curate domain evidence before generating specs and the judge."
+                        "Use the chat to curate SME evidence before generating the judge spec and response gate."
                         "</div>"
                     )
                 ui.html(
@@ -551,8 +551,8 @@ def main_page() -> None:
                     step = current_coach_view()[0]
                     if step == 1:
                         welcome = (
-                            '<div class="msg-ai"><strong>I am your GEDD Coach for Kiro Domain Specs.</strong><br><br>'
-                            'First we anchor the work in your domain before discussing specs or outputs.<br><br>'
+                            '<div class="msg-ai"><strong>I am your GEDD Coach for Kiro LLM-as-Judge subagent specs.</strong><br><br>'
+                            'First we anchor the work in your domain before designing the response gate.<br><br>'
                             '<strong>What domain are you the expert in, who uses this agent, and what can go wrong if it answers badly?</strong></div>'
                         )
                     elif step == 2:
@@ -582,8 +582,8 @@ def main_page() -> None:
                     else:
                         welcome = (
                             '<div class="msg-ai"><strong>Annotated evidence is ready.</strong><br><br>'
-                            'Open Evidence to export SME_error_analysis.md, then use it for Kiro requirements.md, '
-                            'the LLM Judge, and measurement.</div>'
+                            'Open Evidence to export SME_error_analysis.md, then use it for the Kiro judge-subagent requirements.md, '
+                            'the LLM-as-Judge gate, and measurement.</div>'
                         )
                     ui.html(welcome)
 
@@ -653,7 +653,7 @@ def main_page() -> None:
 
 def run() -> None:
     ui.run(
-        title="GEDD — SME Error Analysis → Annotations → Domain Driven Specs Development",
+        title="GEDD - SME Evidence to Kiro Judge Response Gates",
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",

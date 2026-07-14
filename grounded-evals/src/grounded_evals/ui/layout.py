@@ -10,7 +10,7 @@ NAV_ITEMS = [
     {"path": "/mass-effect-localization-demo", "label": "Mass Effect LQA", "icon": "translate", "core": True},
     {"path": "/coding", "label": "Annotations", "icon": "rate_review"},
     {"path": "/report", "label": "Evidence", "icon": "fact_check", "output": True},
-    {"path": "/requirements", "label": "requirements.md", "icon": "description", "output": True},
+    {"path": "/requirements", "label": "Judge Spec", "icon": "description", "output": True},
     {"path": "/judge", "label": "Judge", "icon": "gavel", "output": True},
 ]
 
@@ -904,7 +904,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">SME Error Analysis → Annotations → Domain Driven Specs Development</span>'
+                '<span class="brand-context">SME Evidence -> Kiro Judge requirements.md -> Customer Response Gates</span>'
                 '</span>'
             )
 

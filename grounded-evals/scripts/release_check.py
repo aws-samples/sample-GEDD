@@ -37,19 +37,19 @@ CONTENT_CHECKS = {
         "SME_error_analysis.md",
     ],
     "/demos": [
-        "Demos for requirements.md and LLM Judge",
+        "Demos for Kiro judge specs and response gates",
         "Load a 50-query annotation demo",
         "scenarios",
     ],
     "/mass-effect-localization-demo": [
-        "Mass Effect localization assistant to specs and judge",
+        "Mass Effect localization quality gates for a Kiro judge subagent",
         "Mass Effect Localization Specialist",
         "Baseline",
         "requirements.md",
-        "LLM Judge",
+        "Response Gate",
     ],
     "/coach": [
-        "Curate evidence for Kiro specs",
+        "Build Kiro judge-subagent quality gates",
         "Coach workbench",
         "Start with your domain expertise",
     ],
@@ -59,13 +59,13 @@ CONTENT_CHECKS = {
         "requirements.md",
     ],
     "/requirements": [
-        "requirements.md built from SME evidence",
+        "Kiro judge-subagent requirements.md from SME evidence",
         "No requirements evidence yet",
         "Open Coach",
     ],
-    "/judge": ["Create the LLM Judge", "Open Annotations", "Coach"],
+    "/judge": ["Create the LLM-as-Judge response gate", "Open Annotations", "Coach"],
     "/report": ["Evidence handoff is not ready", "SME_error_analysis.md", "Build a judge first"],
-    "/improvement": ["requirements.md quality uplift", "No measurement evidence yet", "Open Coach"],
+    "/improvement": ["Judge-subagent requirements quality uplift", "No measurement evidence yet", "Open Coach"],
 }
 
 
@@ -173,17 +173,17 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         page = await browser.new_page(viewport={"width": 1440, "height": 1000})
         for route, selector_text in [
             ("/", "Open Coach"),
-            ("/demos", "Demos for requirements.md and LLM Judge"),
-            ("/mass-effect-localization-demo", "Mass Effect localization assistant to specs and judge"),
+            ("/demos", "Demos for Kiro judge specs and response gates"),
+            ("/mass-effect-localization-demo", "Mass Effect localization quality gates for a Kiro judge subagent"),
             ("/coach", "Coach workbench"),
             ("/coding", "No baseline responses yet"),
             ("/requirements", "No requirements evidence yet"),
-            ("/judge", "Create the LLM Judge"),
+            ("/judge", "Create the LLM-as-Judge response gate"),
             ("/report", "Evidence handoff is not ready"),
             ("/improvement", "No measurement evidence yet"),
         ]:
             try:
-                response = await page.goto(f"{base_url}{route}", wait_until="networkidle", timeout=30000)
+                response = await page.goto(f"{base_url}{route}", wait_until="domcontentloaded", timeout=30000)
                 content = await page.content()
                 await page.screenshot(path=screenshot_dir / f"{route.strip('/') or 'home'}.png", full_page=True)
                 status = response.status if response else 0

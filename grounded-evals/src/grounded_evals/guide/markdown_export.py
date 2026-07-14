@@ -46,8 +46,8 @@ def export_error_analysis_md(storage: dict) -> str:
     lines.append("## Handoff Purpose\n")
     lines.append(
         "`SME_error_analysis.md` is the domain-expert-curated evidence file. "
-        "Use it to build or improve Kiro `requirements.md` and to generate the "
-        "LLM-as-a-Judge release gate from the same failure evidence.\n"
+        "Use it to build the Kiro judge-subagent `requirements.md` and to generate the "
+        "LLM-as-Judge response gate from the same failure evidence before customer-facing responses are shown.\n"
     )
 
     # Domain profile and agent spec

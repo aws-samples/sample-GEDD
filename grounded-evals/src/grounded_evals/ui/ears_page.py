@@ -1,4 +1,4 @@
-"""NiceGUI page for Kiro-ready domain requirements."""
+"""NiceGUI page for Kiro-ready judge-subagent requirements."""
 
 from __future__ import annotations
 
@@ -101,7 +101,7 @@ def _build_requirements_markdown(session: Session, codebook: list[dict] | None =
 
 @ui.page("/requirements")
 def ears_requirements_page() -> None:
-    page_layout("Kiro requirements.md", current_path="/requirements")
+    page_layout("Kiro Judge Spec", current_path="/requirements")
     storage = app.storage.user
     session = _session_from_storage(storage)
     codebook = storage.get("codebook", []) or []
@@ -117,17 +117,18 @@ def ears_requirements_page() -> None:
                     "Kiro output"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">requirements.md built from SME evidence</div>')
+                ui.html('<div class="dynamic-title">Kiro judge-subagent requirements.md from SME evidence</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
                     "GEDD converts annotated baseline failures into Kiro-ready user stories "
-                    "and EARS acceptance criteria. Every requirement should trace back to SME evidence."
+                    "and EARS acceptance criteria for the LLM-as-Judge subagent that gates "
+                    "customer-facing responses. Every requirement traces back to SME evidence."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
                 ui.html('<div class="dynamic-side-label">Requirement source</div>')
                 ui.html(f'<div class="dynamic-side-value">{len(session.codes)}</div>')
-                ui.html('<div class="dynamic-side-copy">SME-derived failure modes available for requirements generation.</div>')
+                ui.html('<div class="dynamic-side-copy">SME-derived failure modes available for judge-subagent specification.</div>')
 
         with ui.element("section").classes("metric-strip"):
             for value, label in [
@@ -146,7 +147,7 @@ def ears_requirements_page() -> None:
                 ui.html('<div class="empty-state-title">No requirements evidence yet</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Complete Coach and SME annotations first. The requirements file is generated "
+                    "Complete Coach and SME annotations first. The judge-subagent requirements file is generated "
                     "from failure codes, severity, memos, and curated baseline evidence."
                     "</div>"
                 )
@@ -160,8 +161,8 @@ def ears_requirements_page() -> None:
             with ui.element("div").classes("dynamic-panel accent-teal"):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:2px"):
-                        ui.html('<div class="dynamic-panel-title">Generated requirements.md</div>')
-                        ui.html('<div class="dynamic-panel-copy">Kiro-ready markdown preview.</div>')
+                        ui.html('<div class="dynamic-panel-title">Generated judge requirements.md</div>')
+                        ui.html('<div class="dynamic-panel-copy">Kiro-ready markdown preview for the LLM-as-Judge subagent.</div>')
                     ui.button(
                         "Download",
                         icon="download",
@@ -174,11 +175,11 @@ def ears_requirements_page() -> None:
                 ui.html('<div class="dynamic-panel-title">Next outputs</div>')
                 ui.html(
                     '<div class="dynamic-panel-copy">'
-                    "Use the same SME evidence to generate the judge and measure the improved spec."
+                    "Use the same SME evidence to generate the LLM-as-Judge gate and measure the judge spec."
                     "</div>"
                 )
                 with ui.column().style("gap:8px; margin-top:12px"):
-                    ui.button("Open LLM Judge", icon="gavel", on_click=lambda: ui.navigate.to("/judge")).props(
+                    ui.button("Open Response Gate", icon="gavel", on_click=lambda: ui.navigate.to("/judge")).props(
                         "outline no-caps"
                     ).style("color:var(--violet); border-color:rgba(177,140,255,0.35)")
                     ui.button("Measure Improvement", icon="monitoring", on_click=lambda: ui.navigate.to("/improvement")).props(

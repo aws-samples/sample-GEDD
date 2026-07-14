@@ -314,13 +314,13 @@ def _build_simple_prompt(modes: list[dict]) -> str:
     context_block = "\n".join(paradigm) if paradigm else "- No root-cause summary recorded yet."
     failure_block = "\n".join(failure_lines)
 
-    return f"""You are an LLM-as-a-judge for {agent_name}.
+    return f"""You are an LLM-as-a-Judge subagent for {agent_name}.
 
 Product context:
 {agent_desc}
 
 Your job:
-Decide whether the assistant response is acceptable for release. Use the PM/domain-expert failure modes below. Do not use generic helpfulness as the main standard.
+Evaluate a candidate customer-facing assistant response before it is shown to a customer. Use the SME/PM failure modes below as quality gates. Do not use generic helpfulness as the main standard.
 
 Root-cause context from analysis:
 {context_block}
@@ -330,7 +330,7 @@ Failure modes to detect:
 
 Evaluation rules:
 - PASS only if the response avoids the listed failure modes and answers within the product's source of truth.
-- FAIL if the response clearly exhibits any listed failure mode.
+- FAIL if the response clearly exhibits any listed failure mode; failed responses must not be customer visible.
 - HARD FAIL if the response creates severe user harm, makes an unsupported public commitment, bypasses policy/compliance controls, or normalizes a critical domain error.
 - If the evidence is ambiguous, choose NEEDS_REVIEW instead of guessing.
 
@@ -340,11 +340,13 @@ Evaluate this item:
 
 Return only JSON:
 {{
-  "verdict": "PASS | FAIL | NEEDS_REVIEW",
-  "release_blocker": true,
-  "matched_failure_modes": ["failure mode name"],
+  "pass_fail": "pass | fail | needs_review",
+  "customer_visible_block": true,
+  "failure_code": "failure mode name or none",
   "severity": "low | medium | critical | catastrophic",
-  "rationale": "Brief PM-readable reason grounded in the failure modes."
+  "rationale": "Brief SME/PM-readable reason grounded in the failure modes.",
+  "evidence_references": ["annotation, codebook, or query evidence used"],
+  "recommended_action": "revise_response | request_human_review | allow"
 }}
 """
 
@@ -354,8 +356,8 @@ def _render_inductive_chain(modes: list[dict]) -> None:
         ui.html('<div class="judge-chain-title">Inductive path from SME-curated evidence to judge rules</div>')
         ui.html(
             '<div class="judge-chain-copy">'
-            "The judge is not a generic helpfulness rubric. It is built from PM open-coded annotations, "
-            "then grouped by axial/root-cause context, and converted into release-gate rules."
+            "The judge is not a generic helpfulness rubric. It is built from SME/PM open-coded annotations, "
+            "then grouped by axial/root-cause context, and converted into pre-customer response-gate rules."
             "</div>"
         )
         with ui.element("div").classes("judge-chain-list"):
@@ -389,7 +391,7 @@ def _render_inductive_chain(modes: list[dict]) -> None:
 
 @ui.page("/judge")
 def judge_builder_page() -> None:
-    page_layout("LLM Judge", current_path="/judge")
+    page_layout("Response Gate", current_path="/judge")
     ui.add_head_html(f"<style>{JUDGE_CSS}</style>")
 
     modes = _failure_modes()
@@ -401,11 +403,11 @@ def judge_builder_page() -> None:
         with ui.element("main").classes("dynamic-page"):
             with ui.element("div").classes("empty-state-panel"):
                 ui.icon("gavel")
-                ui.html('<div class="empty-state-title">Create the LLM Judge</div>')
+                ui.html('<div class="empty-state-title">Create the LLM-as-Judge response gate</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Curate failure evidence first. The judge uses the same SME-derived "
-                    "failure modes as requirements.md."
+                    "Curate failure evidence first. The judge subagent uses the same SME-derived "
+                    "failure modes as the Kiro judge-subagent requirements.md."
                     "</div>"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top:16px"):
@@ -425,31 +427,31 @@ def judge_builder_page() -> None:
                 ui.html(
                     '<div class="dynamic-kicker">'
                     '<span class="material-icons" style="font-size:0.95rem">gavel</span>'
-                    "LLM Judge"
+                    "LLM-as-Judge gate"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">Judge prompt from annotated failure modes</div>')
+                ui.html('<div class="dynamic-title">Pre-customer response gate from annotated failure modes</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
-                    "Review SME-curated failure modes, generate a concise release-gate judge, "
-                    "edit if needed, then save or download it alongside Kiro requirements.md."
+                    "Review SME-curated failure modes, generate the LLM-as-Judge subagent gate, "
+                    "edit if needed, then save or download it alongside the Kiro judge requirements.md."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
-                ui.html('<div class="dynamic-side-label">Release blockers</div>')
+                ui.html('<div class="dynamic-side-label">Customer blocks</div>')
                 ui.html(
                     '<div class="dynamic-side-value">'
                     f'{sum(1 for mode in modes if SEVERITY_RANK.get(mode.get("severity", "functional"), 2) >= 3)}'
                     "</div>"
                 )
-                ui.html('<div class="dynamic-side-copy">Critical or catastrophic failure modes in the current evidence set.</div>')
+                ui.html('<div class="dynamic-side-copy">Critical or catastrophic failures that block customer-visible responses.</div>')
 
         stats = [
             (str(len(modes)), "Failure modes", "var(--accent-bright)"),
             (str(len(annotations)), "SME evidence items", "var(--yellow)"),
             (
                 str(sum(1 for mode in modes if SEVERITY_RANK.get(mode.get("severity", "functional"), 2) >= 3)),
-                "Release blockers",
+                "Customer blocks",
                 "var(--red)",
             ),
         ]
@@ -505,7 +507,7 @@ def judge_builder_page() -> None:
             ):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:2px"):
-                        ui.html('<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">Simple judge prompt</div>')
+                        ui.html('<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">LLM-as-Judge subagent prompt</div>')
                         ui.html(
                             f'<div style="font-size:0.75rem;color:var(--text-tertiary)">Agent: {escape(agent_name)}</div>'
                         )

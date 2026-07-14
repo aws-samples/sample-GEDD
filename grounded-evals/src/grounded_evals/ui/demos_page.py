@@ -337,7 +337,7 @@ DEMOS_CSS = """
 # ── Domain registry ───────────────────────────────────────────────────────────
 
 def _build_domain_registry():
-    """Build list of domain specs; add HRBot/EduBot if available."""
+    """Build list of domain judge-gate demos; add HRBot/EduBot if available."""
     from grounded_evals.ui.demo_data import load_demo_data
     from grounded_evals.ui.support_bot_demo import load_support_bot_demo
     from grounded_evals.ui.inductive_pm_demo import (
@@ -358,7 +358,7 @@ def _build_domain_registry():
         {
             "id": "inductive_pm_workbench", "name": "AAA Game Localization Outputs", "icon": "translate",
             "operator": "Orion Forge Localization",
-            "tagline": "50 LQA traces → annotations → Kiro requirements.md + LLM Judge",
+            "tagline": "50 LQA traces -> annotations -> Kiro judge requirements.md + LLM-as-Judge gate",
             "domain": "AAA Game Localization / Two outputs", "risk_level": "critical",
             "regulations": ["LQA", "Runtime tokens", "Regional compliance"],
             "loader": load_inductive_pm_demo,
@@ -966,7 +966,7 @@ def _render_domain(domain: dict):
     def make_loader(d=domain):
         def _load():
             d["loader"](app.storage.user)
-            ui.notify(f'{d["name"]} loaded for requirements.md and LLM Judge.', type="positive")
+            ui.notify(f'{d["name"]} loaded for judge-subagent spec and response gate.', type="positive")
             ui.navigate.to("/coding")
         return _load
 
@@ -995,7 +995,7 @@ def _render_domain(domain: dict):
             if domain.get("id") in workbench_labels:
                 ui.html('<span class="ds-pill ds-feature-badge">Main two-output demo</span>')
             elif is_featured:
-                ui.html('<span class="ds-pill ds-feature-badge">Judge + requirements seed</span>')
+                ui.html('<span class="ds-pill ds-feature-badge">Judge spec + gate seed</span>')
             ui.html(
                 f'<span class="ds-pill {risk_class}">{_html.escape(risk.upper())} risk</span>'
             )
@@ -1051,7 +1051,7 @@ def _render_domain(domain: dict):
 
                 if judge_snippet:
                     with ui.element("div").classes("ds-judge-preview"):
-                        ui.html('<div class="ds-section-title">Output 2: LLM Judge seed</div>')
+                        ui.html('<div class="ds-section-title">Output 2: LLM-as-Judge gate seed</div>')
                         ui.label(judge_snippet).classes("ds-judge-text")
 
 
@@ -1072,11 +1072,11 @@ def demos_page():
         # Page header
         with ui.element("div").classes("ds-page-heading"):
             with ui.element("div"):
-                ui.html('<div class="ds-page-title">Demos for requirements.md and LLM Judge</div>')
+                ui.html('<div class="ds-page-title">Demos for Kiro judge specs and response gates</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
                     'Load a 50-query annotation demo or a domain scenario. Each demo is organized '
-                    'around SME_error_analysis.md feeding Kiro requirements.md and an LLM Judge.'
+                    'around SME_error_analysis.md feeding Kiro judge-subagent requirements.md and an LLM-as-Judge response gate.'
                     '</div>'
                 )
             ui.html(f'<div class="ds-page-count">{len(domains)} scenarios</div>')
