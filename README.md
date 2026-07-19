@@ -209,6 +209,7 @@ grounded-evals/src/grounded_evals/
 
 - [SETUP.md](SETUP.md): local setup, model provider configuration, auth, AWS deployment, troubleshooting
 - [METHODOLOGY.md](METHODOLOGY.md): grounded theory, coding workflow, judge spec generation, judge calibration
+- [From SME Evidence to LLM-as-Judge Gates](grounded-evals/docs/blog-grounded-evidence-to-judge-gates.md): step-by-step refocus from scattered eval messaging to guardrail calibration and response gates
 - [CONTRIBUTING.md](CONTRIBUTING.md): contribution and security reporting guidance
 
 ## License
