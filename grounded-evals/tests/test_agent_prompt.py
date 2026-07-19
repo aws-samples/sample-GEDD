@@ -11,6 +11,7 @@ def test_system_prompt_format_escapes_documentation_placeholders() -> None:
 
     assert "Grounded Evidence Driven Development" in prompt
     assert "systematic LLM-as-Judge" in prompt
+    assert "guardrail calibration set" in prompt
     assert "judge spec, judge prompt, and response gate" in prompt
     assert "before customers see them" in prompt
     assert "Current step: 1" in prompt

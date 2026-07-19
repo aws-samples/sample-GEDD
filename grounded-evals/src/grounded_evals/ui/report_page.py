@@ -466,6 +466,8 @@ def _build_engineering_handoff(
         ),
     }
     output_contract = {
+        "evaluation_side": "input_guardrail|output_guardrail|response_gate",
+        "expected_tier": "allow|continue_with_resources|block|human_review|null",
         "pass": "boolean",
         "triggered_failure_modes": "list[str] using exact codebook names only",
         "max_severity": "cosmetic|functional|critical|catastrophic|null",
@@ -508,7 +510,7 @@ def _build_engineering_handoff(
 
     artifact_status = [
         {"artifact": "session.json handoff", "status": "ready" if golden_count else "missing", "detail": f"{golden_count} golden queries"},
-        {"artifact": "golden_dataset.jsonl", "status": "ready" if golden_count or total else "missing", "detail": f"{golden_count} queries, {total} labels"},
+        {"artifact": "guardrail_calibration_set", "status": "ready" if golden_count or total else "missing", "detail": f"{golden_count} scenarios, {total} labels"},
         {"artifact": "codebook.json", "status": "ready" if codebook else "missing", "detail": f"{len(codebook)} failure codes"},
         {"artifact": "judge_prompt.txt", "status": "ready" if judge_prompt else "missing", "detail": "generated" if judge_prompt else "generate judge first"},
         {"artifact": "pass_set", "status": "ready" if pass_examples else "missing", "detail": f"{pass_examples} clean pass examples"},
@@ -532,7 +534,7 @@ def _build_engineering_handoff(
     next_steps = [
         "Export the session handoff and judge-builder JSON from this page.",
         "Start with a strong judge model, keep the task single-answer pass/fail, and only optimize cost after agreement is acceptable.",
-        "Build a calibration set that includes clean passes, coded fails, and partial borderline cases.",
+        "Build a guardrail calibration set that includes clean passes, coded fails, partial borderline cases, expected tiers, categories, reasons, and corrective feedback.",
         "Instrument false positives, false negatives, and schema-validity before promoting the judge from shadow mode to blocking mode.",
     ]
     if not fix_queue:

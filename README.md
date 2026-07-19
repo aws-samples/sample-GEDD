@@ -6,7 +6,7 @@ Grounded Evidence Driven Development for systematic LLM-as-Judge curation.
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
 
-GEDD helps domain experts, SMEs, and product managers curate the evidence needed to build a domain-specific LLM-as-Judge. It turns baseline agent behavior into a structured judge spec, a reusable judge prompt, and a measurable response gate.
+GEDD helps domain experts, SMEs, and product managers curate the evidence needed to build a domain-specific LLM-as-Judge. It turns baseline agent behavior into a guardrail calibration set, a structured judge spec, a reusable judge prompt, and a measurable response gate.
 
 The core idea is simple: the judge should come from grounded evidence, not generic assumptions. Domain owners define the query set, review baseline responses, name the failure modes, and decide which failures should block customer-facing answers.
 
@@ -16,6 +16,7 @@ Domain context
   -> baseline responses
   -> SME annotations
   -> failure codebook
+  -> guardrail calibration scenarios
   -> systematic LLM-as-Judge
   -> response gate before customers see answers
 ```
@@ -27,6 +28,7 @@ Domain context
 | Artifact | Purpose |
 |---|---|
 | `SME_error_analysis.md` | Evidence handoff with domain context, query coverage, baseline responses, annotations, failure codes, memos, and traceability |
+| Guardrail calibration set | Scenario rows with conversation turns, input/output side, expected pass/fail or tier, category labels, SME rationale, and corrective feedback |
 | Judge spec | A structured description of what the LLM-as-Judge must detect, block, escalate, and explain |
 | LLM-as-Judge prompt | A domain-specific judge prompt grounded in SME-defined failure modes |
 | Response gate | A pass/fail decision contract that runs before an answer becomes customer-visible |
@@ -48,6 +50,21 @@ Coach guides the SME through six steps:
 | 6. Generate the judge | Produce the evidence handoff, judge spec, LLM-as-Judge prompt, and measurement | Systematic judge package |
 
 The result is a judge that reflects observed behavior and SME judgment. A fluent answer can still fail if it violates the domain evidence.
+
+## Guardrail Calibration Pattern
+
+GEDD is inspired by framework-agnostic guardrail evaluation datasets: simple scenario files that make safety and quality expectations explicit enough to run as regression tests.
+
+In GEDD, a useful scenario has:
+
+- Conversation turns for the user request and, when evaluating outputs, the candidate assistant response
+- An evaluation side: input guardrail, output guardrail, or response gate
+- An expected result or tier such as allow, continue with resources, block, or human review
+- Domain category labels for per-category coverage analysis
+- SME rationale explaining why the scenario should pass or fail
+- Corrective feedback or an example safer response when the baseline fails
+
+The same scenario set can calibrate a judge, run regression tests on every model or prompt change, and expose category coverage gaps. It is still only a starting point: GEDD expects SME review, production annotation, red-teaming, and ongoing calibration before a judge becomes a blocking gate.
 
 ## Quick Start
 

@@ -1,6 +1,6 @@
-# GEDD Methodology — Evidence-Driven LLM Judge + SPEC Generation
+# GEDD Methodology — Evidence-Driven LLM Judge + Guardrail Calibration
 
-GEDD is a systematic evidence-driven framework that combines LLM-as-a-Judge evaluation with structured SPEC generation in a continuous learning lifecycle. This document covers the academic depth — grounded theory foundations, calibration statistics, and generation techniques — for product leaders, researchers, and engineers who need to defend the approach in a design review.
+GEDD is a systematic evidence-driven framework that combines grounded SME evidence, guardrail calibration scenarios, and LLM-as-a-Judge evaluation in a continuous learning lifecycle. This document covers the academic depth — grounded theory foundations, calibration statistics, and judge generation techniques — for product leaders, researchers, and engineers who need to defend the approach in a design review.
 
 The practical product guide lives in [README.md](README.md).
 
@@ -8,7 +8,7 @@ The practical product guide lives in [README.md](README.md).
 
 ## The mapping
 
-GEDD applies three phases of Strauss & Corbin's grounded theory to LLM evaluation and spec generation:
+GEDD applies three phases of Strauss & Corbin's grounded theory to LLM evaluation and judge-gate generation:
 
 | Grounded Theory Concept | GEDD Implementation |
 |---|---|
@@ -61,6 +61,24 @@ flowchart TD
 - **Constructed codes** — AI-suggested labels for patterns (e.g., "context_window_overflow")
 - **Properties & dimensions** — Each category varies along axes (complexity: low↔high, tone: casual↔formal)
 - **Saturation** — A category is saturated when ≥3 prompts cover it and no new patterns emerge
+
+### Guardrail calibration scenarios
+
+Each approved query should become more than a prompt in a spreadsheet. GEDD treats it as a guardrail calibration scenario that can be replayed during judge calibration and model/prompt regression.
+
+Recommended scenario fields:
+
+| Field | Purpose |
+|---|---|
+| `conversation_turns` | User and assistant messages needed to reproduce the risk |
+| `evaluation_side` | Whether the scenario tests an input guardrail, output guardrail, or pre-customer response gate |
+| `expected_result` | The SME-approved result, such as allow, continue with resources, block, or human review |
+| `category` | Domain grouping for coverage and per-category pass/fail analysis |
+| `failure_code` | Exact codebook label when the scenario should fail |
+| `reason` | SME rationale for why the expected result is correct |
+| `feedback` | Corrective guidance or safer-response notes when the baseline fails |
+
+This structure keeps GEDD framework-agnostic while making the evidence usable as a calibration benchmark, regression suite, and coverage report.
 
 ### Saturation states
 
