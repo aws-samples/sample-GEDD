@@ -9,7 +9,8 @@ def test_system_prompt_format_escapes_documentation_placeholders() -> None:
 
     prompt = SYSTEM_PROMPT.format(state=state)
 
-    assert ".kiro/specs/{agent-name}/requirements.md" in prompt
-    assert "LLM-as-Judge subagent" in prompt
+    assert "Grounded Evidence Driven Development" in prompt
+    assert "systematic LLM-as-Judge" in prompt
+    assert "judge spec, judge prompt, and response gate" in prompt
     assert "before customers see them" in prompt
     assert "Current step: 1" in prompt

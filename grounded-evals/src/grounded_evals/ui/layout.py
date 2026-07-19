@@ -904,7 +904,7 @@ def page_layout(title: str = "", current_path: str = ""):
             ui.html(
                 '<span class="brand-stack">'
                 '<span class="brand-title">GEDD</span>'
-                '<span class="brand-context">SME evidence to LLM-as-Judge response gates</span>'
+                '<span class="brand-context">Grounded Evidence Driven Development</span>'
                 '</span>'
             )
 
@@ -993,7 +993,7 @@ def page_layout(title: str = "", current_path: str = ""):
                     )
                     ui.label(
                         "Export or import SME_error_analysis.md, the curated evidence handoff "
-                        "behind Kiro requirements.md and the LLM-as-Judge prompt."
+                        "behind the judge spec and LLM-as-Judge prompt."
                     ).style("font-size:0.82rem; color:var(--text-secondary); margin-bottom:16px")
 
                     def export_session():

@@ -1,4 +1,4 @@
-"""Coach-first GEDD homepage for Kiro judge-subagent specs and gates."""
+"""Coach-first GEDD homepage for evidence-backed judge specs and gates."""
 
 from nicegui import ui
 
@@ -75,7 +75,7 @@ def _get_sme_flow_steps(storage: dict) -> list[dict[str, str]]:
         {
             "num": "1",
             "title": "Set the domain and baseline",
-            "action": "Name the SME domain, then upload or capture the baseline Kiro requirements.md for the current assistant.",
+            "action": "Name the SME domain, then upload or capture baseline evidence for the current assistant.",
             "evidence": "Domain profile + baseline requirements evidence",
             "path": "/coach",
             "button": "Open Coach",
@@ -94,7 +94,7 @@ def _get_sme_flow_steps(storage: dict) -> list[dict[str, str]]:
         },
         {
             "num": "3",
-            "title": "Test the Kiro baseline",
+            "title": "Test the baseline",
             "action": "Run or paste baseline agent responses for the curated query set.",
             "evidence": "Baseline response traces",
             "path": "/",
@@ -115,8 +115,8 @@ def _get_sme_flow_steps(storage: dict) -> list[dict[str, str]]:
         {
             "num": "5",
             "title": "Generate judge gate",
-            "action": "Export SME_error_analysis.md, then generate the Kiro judge-subagent requirements.md, LLM-as-Judge gate, and measurement.",
-            "evidence": "SME_error_analysis.md + judge requirements.md + LLM-as-Judge gate",
+            "action": "Export SME_error_analysis.md, then generate the judge spec, LLM-as-Judge gate, and measurement.",
+            "evidence": "SME_error_analysis.md + judge spec + LLM-as-Judge gate",
             "path": "/report",
             "button": "Open Outputs",
             "icon": "fact_check",
@@ -1474,7 +1474,7 @@ def home_page():
                 ui.html(
                     '<div class="clean-subhead">'
                     "Coach leads SMEs and product managers from baseline evidence to a "
-                    "judge-subagent requirements.md, and an LLM-as-Judge gate that checks "
+                    "systematic judge spec, and an LLM-as-Judge gate that checks "
                     "customer-facing responses before customers see them."
                     "</div>"
                 )

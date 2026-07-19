@@ -72,11 +72,11 @@ def main() -> None:
 
 STEP_NAMES = {
     1: "Domain Intake",
-    2: "Baseline Kiro Requirements",
+    2: "Baseline Evidence",
     3: "Curated Queries",
-    4: "Kiro Baseline Test",
+    4: "Baseline Agent Test",
     5: "SME Error Analysis",
-    6: "Output Handoff",
+    6: "Systematic Judge Generation",
 }
 
 
@@ -293,11 +293,11 @@ def chat(session: str) -> None:
 
     Steps:\n
       1. Identify the SME domain\n
-      2. Capture baseline Kiro requirements.md\n
+      2. Capture baseline evidence\n
       3. Curate domain queries\n
-      4. Test the Kiro baseline agent\n
+      4. Test the baseline agent\n
       5. Annotate failures with SME judgment\n
-      6. Export SME_error_analysis.md, judge-subagent requirements.md, and the response gate
+      6. Export SME_error_analysis.md, the judge spec, and the response gate
     """
     from grounded_evals.agent.handler import run_agent_turn
 
@@ -575,7 +575,7 @@ def export(session: str, fmt: str, output: str | None) -> None:
 @click.option("--output", "-o", default=None,
               help="Output file (default: SME_error_analysis.md)")
 def export_md(session: str, output: str | None) -> None:
-    """Export SME_error_analysis.md for Kiro Power consumption.
+    """Export SME_error_analysis.md for systematic judge curation.
 
     \b
     Produces a human-readable, LLM-optimized handoff document containing:
@@ -1130,7 +1130,7 @@ def mlflow_export(session: str, results: str, experiment: str | None,
 @click.option("--output-dir", "-o", default=".", show_default=True,
               help="Directory to write output files to")
 def generate_ears(session: str, output_dir: str) -> None:
-    """Generate Kiro requirements.md + baseline + improvement report from a GEDD session."""
+    """Generate judge spec + baseline + improvement report from a GEDD session."""
     from uuid import UUID
 
     from grounded_evals.ears.baseline import BaselineGenerator
@@ -1186,7 +1186,7 @@ def generate_ears(session: str, output_dir: str) -> None:
 
     # Render outputs
     parser = EARSParser()
-    gedd_md = parser.kiro_requirements_md(gedd_doc)
+    gedd_md = parser.judge_spec_md(gedd_doc)
     baseline_md = parser.pretty_print(baseline_doc)
 
     # Format improvement report as markdown
@@ -1196,7 +1196,7 @@ def generate_ears(session: str, output_dir: str) -> None:
     out_dir = Path(output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    reqs_path = out_dir / "requirements.md"
+    reqs_path = out_dir / "judge-spec.md"
     baseline_path = out_dir / "baseline-requirements.md"
     report_path = out_dir / "improvement-report.md"
 
@@ -1205,7 +1205,7 @@ def generate_ears(session: str, output_dir: str) -> None:
     report_path.write_text(report_md)
 
     # Print summary
-    click.echo(f"\nKiro requirements.md generated for: {gedd_doc.agent_name}")
+    click.echo(f"\nJudge spec generated for: {gedd_doc.agent_name}")
     click.echo(f"  Requirements : {len(gedd_doc.requirements)} (domain-driven)")
     click.echo(f"  Baseline     : {len(baseline_doc.requirements)} (generic)")
     click.echo(f"  Improvement  : {report.overall_improvement:.1f}% overall")

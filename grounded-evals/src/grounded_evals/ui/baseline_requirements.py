@@ -1,4 +1,4 @@
-"""Upload and store a baseline Kiro requirements.md file."""
+"""Upload and store baseline evidence for the current assistant."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ def save_baseline_requirements(
     """Persist uploaded baseline requirements text and return its character count."""
     text = content.strip()
     if not text:
-        raise ValueError("requirements.md is empty")
+        raise ValueError("baseline evidence file is empty")
     target = app.storage.user if storage is None else storage
     target["baseline_requirements_md"] = text
     target["baseline_requirements_filename"] = filename or "requirements.md"
@@ -23,8 +23,8 @@ def save_baseline_requirements(
     return len(text)
 
 
-def render_baseline_requirements_upload(label: str = "Upload baseline requirements.md") -> None:
-    """Render a NiceGUI upload control for an existing Kiro baseline requirements file."""
+def render_baseline_requirements_upload(label: str = "Upload baseline evidence") -> None:
+    """Render a NiceGUI upload control for baseline evidence."""
     storage = app.storage.user
 
     def handle_upload(event) -> None:
@@ -33,7 +33,7 @@ def render_baseline_requirements_upload(label: str = "Upload baseline requiremen
             text = raw.decode("utf-8", errors="replace") if isinstance(raw, bytes) else str(raw)
             count = save_baseline_requirements(text, getattr(event, "name", "requirements.md"))
             ui.notify(
-                f"Uploaded baseline requirements.md ({count:,} chars)",
+                f"Uploaded baseline evidence ({count:,} chars)",
                 type="positive",
             )
         except Exception as exc:

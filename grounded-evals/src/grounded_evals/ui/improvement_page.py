@@ -1,4 +1,4 @@
-"""NiceGUI page for judge-subagent EARS quality comparison."""
+"""NiceGUI page for judge-spec EARS quality comparison."""
 
 from __future__ import annotations
 
@@ -38,11 +38,11 @@ def improvement_page() -> None:
                     "Measurement"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">Judge-subagent requirements quality uplift</div>')
+                ui.html('<div class="dynamic-title">Judge spec quality uplift</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
-                    "Compare the baseline Kiro requirements against the GEDD-generated "
-                    "judge-subagent spec created from SME-curated query results and annotations."
+                    "Compare the baseline evidence against the GEDD-generated "
+                    "judge spec created from SME-curated query results and annotations."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
@@ -56,8 +56,8 @@ def improvement_page() -> None:
                 ui.html('<div class="empty-state-title">No measurement evidence yet</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Test the Kiro baseline agent with curated domain queries, then annotate "
-                    "failures before measuring judge-subagent requirements uplift."
+                    "Test the baseline agent with curated domain queries, then annotate "
+                    "failures before measuring judge-spec quality uplift."
                     "</div>"
                 )
                 ui.button("Open Coach", icon="auto_awesome", on_click=lambda: ui.navigate.to("/coach")).props(
@@ -81,7 +81,7 @@ def improvement_page() -> None:
             ui.html('<div class="dynamic-panel-title">Quality comparison</div>')
             ui.html(
                 '<div class="dynamic-panel-copy">'
-                "Baseline vs GEDD judge-subagent requirements across specificity, traceability, "
+                "Baseline vs GEDD judge spec across specificity, traceability, "
                 "testability, and domain coverage."
                 "</div>"
             )

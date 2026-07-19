@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 
 
 def export_error_analysis_md(storage: dict) -> str:
-    """Convert user storage state into SME_error_analysis.md for Kiro Power consumption."""
+    """Convert user storage state into SME_error_analysis.md for judge curation."""
     session = storage.get("session_data") or {}
     agent = session.get("agent_spec", {}) if isinstance(session, dict) else {}
     if not isinstance(agent, dict):
@@ -46,7 +46,7 @@ def export_error_analysis_md(storage: dict) -> str:
     lines.append("## Handoff Purpose\n")
     lines.append(
         "`SME_error_analysis.md` is the domain-expert-curated evidence file. "
-        "Use it to build the Kiro judge-subagent `requirements.md` and to generate the "
+        "Use it to build the judge spec and to generate the "
         "LLM-as-Judge response gate from the same failure evidence before customer-facing responses are shown.\n"
     )
 
@@ -78,9 +78,9 @@ def export_error_analysis_md(storage: dict) -> str:
         preview = system_prompt[:500] + ("..." if len(system_prompt) > 500 else "")
         lines.append(f"\n### System Prompt\n\n```\n{preview}\n```\n")
 
-    # Existing Kiro baseline requirements
+    # Existing baseline evidence
     if baseline_requirements.strip():
-        lines.append("## Baseline Kiro Requirements\n")
+        lines.append("## Baseline Evidence\n")
         lines.append(f"- **Filename:** {baseline_filename}")
         uploaded_at = storage.get("baseline_requirements_uploaded_at", "")
         if uploaded_at:
@@ -213,7 +213,7 @@ def export_error_analysis_md(storage: dict) -> str:
         lines.append("## EARS Requirements Mapping\n")
         lines.append(
             "Use these EARS patterns (Mavin et al. 2009) when converting "
-            "failure codes to Kiro spec requirements:\n"
+            "failure codes to judge criteria:\n"
         )
         lines.append("| Failure Code | EARS Pattern | Requirement Template |")
         lines.append("|-------------|--------------|---------------------|")

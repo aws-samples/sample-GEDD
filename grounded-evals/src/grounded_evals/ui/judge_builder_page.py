@@ -314,7 +314,7 @@ def _build_simple_prompt(modes: list[dict]) -> str:
     context_block = "\n".join(paradigm) if paradigm else "- No root-cause summary recorded yet."
     failure_block = "\n".join(failure_lines)
 
-    return f"""You are an LLM-as-Judge subagent for {agent_name}.
+    return f"""You are the LLM-as-Judge gate for {agent_name}.
 
 Product context:
 {agent_desc}
@@ -406,8 +406,8 @@ def judge_builder_page() -> None:
                 ui.html('<div class="empty-state-title">Create the LLM-as-Judge response gate</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Curate failure evidence first. The judge subagent uses the same SME-derived "
-                    "failure modes as the Kiro judge-subagent requirements.md."
+                    "Curate failure evidence first. The judge gate uses the same SME-derived "
+                    "failure modes as the judge spec."
                     "</div>"
                 )
                 with ui.row().classes("justify-center gap-2").style("margin-top:16px"):
@@ -433,8 +433,8 @@ def judge_builder_page() -> None:
                 ui.html('<div class="dynamic-title">Pre-customer response gate from annotated failure modes</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
-                    "Review SME-curated failure modes, generate the LLM-as-Judge subagent gate, "
-                    "edit if needed, then save or download it alongside the Kiro judge requirements.md."
+                    "Review SME-curated failure modes, generate the LLM-as-Judge gate, "
+                    "edit if needed, then save or download it alongside the judge spec."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
@@ -507,7 +507,7 @@ def judge_builder_page() -> None:
             ):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:2px"):
-                        ui.html('<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">LLM-as-Judge subagent prompt</div>')
+                        ui.html('<div style="font-size:0.95rem;font-weight:700;color:var(--text-primary)">LLM-as-Judge gate prompt</div>')
                         ui.html(
                             f'<div style="font-size:0.75rem;color:var(--text-tertiary)">Agent: {escape(agent_name)}</div>'
                         )

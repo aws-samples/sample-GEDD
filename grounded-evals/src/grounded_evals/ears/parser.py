@@ -22,8 +22,8 @@ class ParseError(ValueError):
 class EARSParser:
     """Round-trip the project EARS document shape to and from Markdown."""
 
-    def kiro_requirements_md(self, document: EARSDocument) -> str:
-        """Render a Kiro-ready requirements.md document."""
+    def judge_spec_md(self, document: EARSDocument) -> str:
+        """Render an evidence-backed LLM-as-Judge specification document."""
         lines: list[str] = [
             "# Requirements Document",
             "",
@@ -50,7 +50,7 @@ class EARSParser:
 
         lines.extend(["## Requirements", ""])
         for index, requirement in enumerate(document.sorted_requirements(), start=1):
-            title = self._kiro_requirement_title(requirement.name)
+            title = self._judge_requirement_title(requirement.name)
             lines.extend(
                 [
                     f"### Requirement {index}: {title}",
@@ -64,7 +64,7 @@ class EARSParser:
 
             criteria = requirement.acceptance_criteria or [requirement.ears_statement]
             for criterion_index, criterion in enumerate(criteria, start=1):
-                rendered = self._render_kiro_criterion(criterion)
+                rendered = self._render_judge_criterion(criterion)
                 rendered_lines = rendered.splitlines() or [rendered]
                 lines.append(f"{criterion_index}. {rendered_lines[0]}")
                 for continuation in rendered_lines[1:]:
@@ -206,7 +206,7 @@ class EARSParser:
     def _parse_requirements(self, markdown: str) -> list[EARSRequirement]:
         section = self._extract_section(markdown, "Requirements")
         if "#### Acceptance Criteria" in section or "**User Story:**" in section:
-            return self._parse_kiro_requirements(section)
+            return self._parse_judge_spec_requirements(section)
 
         return self._parse_project_requirements(section)
 
@@ -241,7 +241,7 @@ class EARSParser:
             )
         return requirements
 
-    def _parse_kiro_requirements(self, section: str) -> list[EARSRequirement]:
+    def _parse_judge_spec_requirements(self, section: str) -> list[EARSRequirement]:
         headings = list(re.finditer(r"^###\s+(.+)$", section, flags=re.MULTILINE))
         requirements: list[EARSRequirement] = []
         for index, heading in enumerate(headings):
@@ -275,7 +275,7 @@ class EARSParser:
                     severity=severity,
                     frequency=frequency,
                     dimension=dimension,
-                    traceability_links=self._parse_kiro_traceability(body),
+                    traceability_links=self._parse_judge_spec_traceability(body),
                 )
             )
         return requirements
@@ -359,7 +359,7 @@ class EARSParser:
             )
         return links
 
-    def _parse_kiro_traceability(self, body: str) -> list[TraceabilityLink]:
+    def _parse_judge_spec_traceability(self, body: str) -> list[TraceabilityLink]:
         links: list[TraceabilityLink] = []
         for line in body.splitlines():
             match = re.match(r"^- Traceability:\s*([^:]+):\s*(.+)$", line.strip())
@@ -375,7 +375,7 @@ class EARSParser:
                     link_type=link_type,
                     target_id=uuid4(),
                     target_label=label.strip(),
-                    description="Parsed from Kiro requirements.md evidence section.",
+                    description="Parsed from judge spec evidence section.",
                 )
             )
         return links
@@ -392,10 +392,10 @@ class EARSParser:
         except (TypeError, ValueError):
             return default
 
-    def _kiro_requirement_title(self, name: str) -> str:
+    def _judge_requirement_title(self, name: str) -> str:
         return re.sub(r"^(?:REQ|BASE)-\d+:\s*", "", name).strip() or name
 
-    def _render_kiro_criterion(self, criterion: str) -> str:
+    def _render_judge_criterion(self, criterion: str) -> str:
         text = criterion.strip()
         if "\n" in text:
             return text

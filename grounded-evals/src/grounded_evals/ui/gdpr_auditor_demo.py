@@ -1,4 +1,4 @@
-"""AWS cloud GDPR demo that generates requirements.md and an LLM Judge."""
+"""AWS cloud GDPR demo that generates a judge spec and LLM Judge."""
 
 from __future__ import annotations
 
@@ -1175,7 +1175,7 @@ GDPR_AUDITOR_SESSION = {
             "AWS cloud GDPR compliance assistant for platform, security, data, and privacy "
             "teams. The 50-query output demo uses synthetic AWS scenarios across S3, "
             "CloudWatch, CloudTrail, DynamoDB, Redshift, Rekognition, Bedrock, and "
-            "cross-region data flows to generate Kiro requirements.md and an LLM Judge "
+            "cross-region data flows to generate a judge spec and an LLM Judge "
             "from observed cloud privacy risk."
         ),
         "capabilities": [
@@ -1470,7 +1470,7 @@ GDPR_AUDITOR_METHODOLOGY = {
         "Open Coding: PM/DPO reviews AWS cloud privacy traces and names the failure in human language.",
         "Axial Coding: PM/DPO groups those tags into legal basis, sensitive data, logging and minimization, rights, DPIA, responsibility split, transfers, incident response, and recordkeeping causes.",
         "Theoretical Saturation: final 8 traces repeat existing codes, adding 0 new categories.",
-        "Output 1: Kiro requirements.md turns the saturated AWS cloud GDPR codebook into EARS acceptance criteria.",
+        "Output 1: the judge spec turns the saturated AWS cloud GDPR codebook into EARS acceptance criteria.",
         "Output 2: the LLM Judge prompt uses the saturated AWS cloud GDPR codebook as audit gates.",
     ],
     "axial_categories": {

@@ -268,5 +268,5 @@ That's the bounded context for agent character — and only you can build it.
 
 ---
 
-*Built with [GEDD](https://github.com/aws-samples/sample-GEDD) — Grounded Eval-Driven Development.*
+*Built with [GEDD](https://github.com/aws-samples/sample-GEDD) — Grounded Evidence Driven Development.*
 *Try it: `pip install grounded-evals` then invoke `/gedd` in Claude Code.*

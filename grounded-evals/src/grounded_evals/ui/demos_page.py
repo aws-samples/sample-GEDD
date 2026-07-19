@@ -358,7 +358,7 @@ def _build_domain_registry():
         {
             "id": "inductive_pm_workbench", "name": "AAA Game Localization Outputs", "icon": "translate",
             "operator": "Orion Forge Localization",
-            "tagline": "50 LQA traces -> annotations -> Kiro judge requirements.md + LLM-as-Judge gate",
+            "tagline": "50 LQA traces -> annotations -> judge spec + LLM-as-Judge gate",
             "domain": "AAA Game Localization / Two outputs", "risk_level": "critical",
             "regulations": ["LQA", "Runtime tokens", "Regional compliance"],
             "loader": load_inductive_pm_demo,
@@ -966,7 +966,7 @@ def _render_domain(domain: dict):
     def make_loader(d=domain):
         def _load():
             d["loader"](app.storage.user)
-            ui.notify(f'{d["name"]} loaded for judge-subagent spec and response gate.', type="positive")
+            ui.notify(f'{d["name"]} loaded for judge spec and response gate.', type="positive")
             ui.navigate.to("/coding")
         return _load
 
@@ -1076,7 +1076,7 @@ def demos_page():
                 ui.html(
                     '<div class="ds-page-subtitle">'
                     'Each demo starts with baseline evidence and SME annotations, then produces '
-                    'SME_error_analysis.md, Kiro judge-subagent requirements.md, and an LLM-as-Judge gate.'
+                    'SME_error_analysis.md, a judge spec, and an LLM-as-Judge gate.'
                     '</div>'
                 )
             ui.html(f'<div class="ds-page-count">{len(domains)} evidence demos</div>')

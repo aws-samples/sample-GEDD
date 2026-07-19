@@ -1,6 +1,6 @@
 # GEDD — Domain Expert's Guide
 
-A step-by-step walkthrough of **Grounded Eval-Driven Development** for the people who actually know what "good" looks like: product managers, subject-matter experts, customer success leads, compliance reviewers, anyone whose judgment the AI agent ultimately has to satisfy.
+A step-by-step walkthrough of **Grounded Evidence Driven Development** for the people who actually know what "good" looks like: product managers, subject-matter experts, customer success leads, compliance reviewers, anyone whose judgment the AI agent ultimately has to satisfy.
 
 You don't need to write code. You don't need to know what an embedding is. You bring **domain judgment**; GEDD turns that into a deployable evaluation system in roughly 90 minutes.
 

@@ -2,7 +2,7 @@
 
 ## Title
 
-Grounded Eval-Driven Development Approach for Product Managers and Domain Experts building AI Agents
+Grounded Evidence Driven Development Approach for Product Managers and Domain Experts building AI Agents
 
 ---
 
@@ -12,7 +12,7 @@ Every product manager knows the cardinal rule: understand the problem before bui
 
 This is the most expensive mistake in AI agent development. You're measuring your agent against criteria you *imagined* rather than criteria you *discovered*. It's the evaluation equivalent of building a Segway — technically impressive, solving a problem nobody actually has.
 
-**Grounded Eval-Driven Development (GEDD)** is a problem-space framework for AI evaluation — purpose-built for product managers and domain experts who need to curate golden datasets for their AI products. It applies the same discipline you already use in product discovery (observe → understand → validate → build) to the problem of evaluating AI agents. Using qualitative research techniques from social science (Open Coding, Axial Coding, and the Paradigm Model), GEDD keeps you in the problem space until you've *earned the right* to write a rubric — by observing real agent behavior, inductively coding failure patterns from data, and mapping the causal relationships that explain why your agent fails under specific conditions.
+**Grounded Evidence Driven Development (GEDD)** is a problem-space framework for AI evaluation — purpose-built for product managers and domain experts who need to curate golden datasets for their AI products. It applies the same discipline you already use in product discovery (observe → understand → validate → build) to the problem of evaluating AI agents. Using qualitative research techniques from social science (Open Coding, Axial Coding, and the Paradigm Model), GEDD keeps you in the problem space until you've *earned the right* to write a rubric — by observing real agent behavior, inductively coding failure patterns from data, and mapping the causal relationships that explain why your agent fails under specific conditions.
 
 The people who know the domain — not the engineers writing the code — are the ones who must curate what "good" looks like. A golden dataset built by someone who doesn't deeply understand the customer's context, language, and edge cases is just a collection of guesses wearing a spreadsheet. GEDD gives domain experts a structured, repeatable methodology to translate their expertise into golden datasets that actually reflect how users interact with the product and where the agent breaks down.
 

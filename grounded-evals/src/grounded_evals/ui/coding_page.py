@@ -1,4 +1,4 @@
-"""Annotation page for evidence that generates judge-subagent requirements and a gate."""
+"""Annotation page for evidence that generates a judge spec and gate."""
 
 import asyncio
 import html as _html
@@ -607,7 +607,7 @@ def coding_page():
                 ui.html(
                     '<div class="coding-hero-copy">'
                     "Review the customer-facing answer, tag the product failure in SME/PM language, "
-                    "set severity, then export SME_error_analysis.md for the Kiro judge-subagent spec and LLM-as-Judge gate."
+                    "set severity, then export SME_error_analysis.md for the judge spec and LLM-as-Judge gate."
                     '</div>'
                 )
             with ui.row().classes("items-center gap-2 flex-wrap"):
@@ -625,7 +625,7 @@ def coding_page():
             for label, icon in [
                 ("SME evidence", "fact_check"),
                 ("Annotations", "rate_review"),
-                ("Kiro judge spec", "description"),
+                ("Judge spec", "description"),
                 ("LLM-as-Judge gate", "gavel"),
             ]:
                 ui.html(
@@ -647,7 +647,7 @@ def coding_page():
                 ui.html('<div class="empty-state-title">No baseline responses yet</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Start with Coach to define the domain, upload the baseline requirements.md, "
+                    "Start with Coach to define the domain, upload baseline evidence, "
                     "curate queries, and bring responses here for SME annotation."
                     "</div>"
                 )
@@ -672,7 +672,7 @@ def coding_page():
                 ui.html(
                     '<div style="font-size:0.88rem; font-weight:700; color:var(--text-primary); '
                     'margin-bottom:6px">'
-                    'Continuous Learning Demo - judge requirements.md + LLM-as-Judge gate'
+                    'Continuous Learning Demo - judge spec + LLM-as-Judge gate'
                     '</div>'
                 )
                 ui.html(
@@ -682,7 +682,7 @@ def coding_page():
                     f'<strong>{uncoded_count}</strong> are uncoded — try annotating them yourself.<br>'
                     '<span style="color:var(--accent-bright)">The lifecycle:</span> '
                     'Review failures → Name the pattern → Set severity → '
-                    'Generate Kiro judge requirements.md + LLM-as-Judge gate'
+                    'Generate judge spec + LLM-as-Judge gate'
                     '</div>'
                 )
 
@@ -1454,7 +1454,7 @@ def coding_page():
                             "font-size:0.86rem; font-weight:700; color:var(--text-primary)"
                         )
                         ui.label(
-                            "Generated directly from the same annotations that feed the Kiro judge-subagent requirements.md."
+                            "Generated directly from the same annotations that feed the judge spec."
                         ).style("font-size:0.72rem; color:var(--text-tertiary); line-height:1.45")
                     ui.badge(f"{len(ann_list)} annotations · {mode_count} modes").props("outline")
 

@@ -19,7 +19,7 @@ from pathlib import Path
 ROUTES = [
     "/",
     "/demos",
-    "/mass-effect-localization-demo",
+    "/aaa-game-localization-demo",
     "/coach",
     "/eval",
     "/coding",
@@ -35,38 +35,38 @@ CONTENT_CHECKS = {
         "GEDD Coach",
         "SME evidence to LLM-as-Judge response gates",
         "Open Coach",
-        "judge-subagent requirements.md",
+        "systematic judge spec",
     ],
     "/demos": [
-        "Demos for Kiro judge specs and response gates",
-        "Load a 50-query annotation demo",
-        "scenarios",
+        "SME evidence to LLM-as-Judge response gates",
+        "Load localization output demo",
+        "evidence demos",
     ],
-    "/mass-effect-localization-demo": [
-        "Mass Effect localization quality gates for a Kiro judge subagent",
-        "Mass Effect Localization Specialist",
+    "/aaa-game-localization-demo": [
+        "AAA game SME evidence to LLM-as-Judge response gates",
+        "AAA game localization demo",
         "Baseline",
-        "requirements.md",
+        "judge spec",
         "Response Gate",
     ],
     "/coach": [
-        "SME evidence to LLM-as-Judge response gates",
+        "Grounded Evidence Driven Development",
         "Coach workbench",
         "Start with your domain expertise",
     ],
     "/coding": [
         "No baseline responses yet",
         "Open Coach",
-        "requirements.md",
+        "baseline evidence",
     ],
     "/requirements": [
-        "Kiro judge-subagent requirements.md from SME evidence",
+        "Systematic LLM-as-Judge spec from grounded evidence",
         "No requirements evidence yet",
         "Open Coach",
     ],
     "/judge": ["Create the LLM-as-Judge response gate", "Open Annotations", "Coach"],
     "/report": ["Evidence handoff is not ready", "SME_error_analysis.md", "Build a judge first"],
-    "/improvement": ["Judge-subagent requirements quality uplift", "No measurement evidence yet", "Open Coach"],
+    "/improvement": ["Judge spec quality uplift", "No measurement evidence yet", "Open Coach"],
 }
 
 
@@ -174,8 +174,8 @@ async def check_browser(base_url: str, screenshot_dir: Path) -> list[CheckResult
         page = await browser.new_page(viewport={"width": 1440, "height": 1000})
         for route, selector_text in [
             ("/", "Open Coach"),
-            ("/demos", "Demos for Kiro judge specs and response gates"),
-            ("/mass-effect-localization-demo", "Mass Effect localization quality gates for a Kiro judge subagent"),
+            ("/demos", "SME evidence to LLM-as-Judge response gates"),
+            ("/aaa-game-localization-demo", "AAA game SME evidence to LLM-as-Judge response gates"),
             ("/coach", "Coach workbench"),
             ("/coding", "No baseline responses yet"),
             ("/requirements", "No requirements evidence yet"),

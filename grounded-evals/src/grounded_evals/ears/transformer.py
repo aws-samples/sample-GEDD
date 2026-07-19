@@ -59,30 +59,30 @@ class EARSTransformer:
             statement = (
                 f"WHEN {agent_name} produces a candidate customer-facing response "
                 f"matching '{code.label}'\n"
-                "THE JUDGE SUBAGENT SHALL classify the response as a "
+                "THE JUDGE SHALL classify the response as a "
                 "release-blocking domain failure before it is shown to a customer."
             )
             criteria = [
                 (
                     f"WHEN {agent_name} produces a candidate customer-facing response "
                     f"matching '{code.label}'\n"
-                    "THE JUDGE SUBAGENT SHALL classify the response as a "
+                    "THE JUDGE SHALL classify the response as a "
                     "release-blocking domain failure before it is shown to a customer."
                 ),
                 (
                     f"WHEN the LLM-as-Judge evaluates a candidate response for "
                     f"'{code.label}'\n"
-                    "THE JUDGE SUBAGENT SHALL return pass_fail, failure_code, severity, "
+                    "THE JUDGE SHALL return pass_fail, failure_code, severity, "
                     "rationale, evidence_references, recommended_action, and customer_visible_block."
                 ),
                 (
                     f"IF the LLM-as-Judge returns fail for '{code.label}'\n"
-                    "THEN THE JUDGE SUBAGENT SHALL block the customer-visible response until it is "
+                    "THEN THE JUDGE SHALL block the customer-visible response until it is "
                     "corrected or explicitly approved by a human reviewer."
                 ),
                 (
                     f"WHILE the finding for '{code.label}' remains unresolved\n"
-                    "THE JUDGE SUBAGENT SHALL retain traceability to the source annotation, "
+                    "THE JUDGE SHALL retain traceability to the source annotation, "
                     "code definition, golden prompt evidence, and reviewer rationale."
                 ),
             ]
@@ -109,7 +109,7 @@ class EARSTransformer:
                     pattern=EARSPattern.UNWANTED,
                     user_story=(
                         f"As a domain expert or product manager, I want '{code.label}' "
-                        "failures to be blocked by a Kiro LLM-as-Judge subagent, so "
+                        "failures to be blocked by a systematic LLM-as-Judge, so "
                         "customer-facing agent responses cannot bypass SME quality gates."
                     ),
                     acceptance_criteria=criteria,
@@ -140,12 +140,12 @@ class EARSTransformer:
                     name="REQ-1: Maintain Evaluation Traceability",
                     pattern=EARSPattern.UBIQUITOUS,
                     user_story=(
-                        "As a product owner, I need judge-subagent requirements to stay "
+                        "As a product owner, I need judge criteria to stay "
                         "connected to SME evaluation evidence."
                     ),
                     acceptance_criteria=[
                         (
-                            "Given an evaluation dataset, every judge-subagent requirement "
+                            "Given an evaluation dataset, every judge criterion "
                             "references the evidence that motivated it."
                         ),
                         (
@@ -155,7 +155,7 @@ class EARSTransformer:
                     ],
                     ears_statement=(
                         f"The {agent_name} response-gating process shall retain traceability "
-                        "between judge-subagent requirements, golden prompts, SME annotations, and judge criteria."
+                        "between judge criteria, golden prompts, SME annotations, and evidence-backed requirements."
                     ),
                     priority_score=1.0,
                     dimension="traceability",
@@ -164,11 +164,11 @@ class EARSTransformer:
             requirements.append(self._judge_release_gate(agent_name, requirements))
 
         return EARSDocument(
-            title=f"Kiro LLM-as-Judge Subagent Requirements for {agent_name}",
+            title=f"Systematic LLM-as-Judge Specification for {agent_name}",
             agent_name=agent_name,
             introduction=(
                 "Generated from GEDD error analysis and SME/PM annotations. This "
-                "Kiro-ready requirements.md specifies the LLM-as-Judge subagent "
+                "judge specification defines the systematic LLM-as-Judge "
                 "that evaluates candidate customer-facing responses before customers "
                 "see them. Requirements use EARS acceptance criteria and are "
                 "prioritized by observed severity, frequency, and product-risk dimension."
@@ -177,9 +177,9 @@ class EARSTransformer:
             requirements=requirements,
             non_functional_requirements=[
                 (
-                    "Before design starts, Kiro Analyze Requirements should be "
-                    "used to check logical inconsistencies, ambiguities, conflicting "
-                    "constraints, and gaps."
+                    "Before promotion, the judge specification should be reviewed "
+                    "for logical inconsistencies, ambiguities, conflicting constraints, "
+                    "and evidence gaps."
                 ),
                 (
                     "The LLM-as-Judge prompt shall be regenerated whenever failure "
@@ -218,22 +218,22 @@ class EARSTransformer:
         criteria = [
             (
                 "WHEN a candidate customer-facing response is submitted for evaluation\n"
-                "THE JUDGE SUBAGENT SHALL run an LLM-as-Judge prompt derived from annotated "
+                "THE JUDGE SHALL run an LLM-as-Judge prompt derived from annotated "
                 "failure modes, EARS requirements, and domain definitions."
             ),
             (
                 "WHEN the LLM-as-Judge completes evaluation\n"
-                "THE JUDGE SUBAGENT SHALL return pass_fail, failure_code, severity, rationale, "
+                "THE JUDGE SHALL return pass_fail, failure_code, severity, rationale, "
                 "evidence_references, recommended_action, and customer_visible_block."
             ),
             (
                 "IF any critical or unresolved domain failure is detected\n"
-                "THEN THE JUDGE SUBAGENT SHALL block the response from customer visibility "
+                "THEN THE JUDGE SHALL block the response from customer visibility "
                 "until remediation or documented human override."
             ),
             (
                 "WHILE requirements, annotations, or failure code definitions change\n"
-                "THE JUDGE SUBAGENT SHALL refresh the judge prompt and calibration examples "
+                "THE JUDGE SHALL refresh the judge prompt and calibration examples "
                 "before promotion."
             ),
         ]
@@ -242,8 +242,8 @@ class EARSTransformer:
             name="LLM-as-Judge Release Gate",
             pattern=EARSPattern.COMPLEX,
             user_story=(
-                "As a release owner, I want Kiro requirements to define the "
-                "LLM-as-Judge subagent gate, so candidate customer-facing responses "
+                "As a release owner, I want GEDD evidence to define the "
+                "LLM-as-Judge gate, so candidate customer-facing responses "
                 "have an executable SME acceptance signal before they are shown."
             ),
             acceptance_criteria=criteria,

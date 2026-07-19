@@ -223,8 +223,8 @@ def _render_workflow() -> None:
         ),
         (
             "03",
-            "Judge-subagent spec",
-            "Observed defects become EARS requirements for the Kiro LLM-as-Judge subagent.",
+            "Judge spec",
+            "Observed defects become EARS requirements for the systematic LLM-as-Judge gate.",
         ),
         (
             "04",
@@ -276,10 +276,10 @@ def _render_scenario_tab() -> None:
     with ui.element("div").classes("aaa-game-artifact-grid"):
         with ui.element("div").classes("aaa-game-artifact-panel"):
             ui.html('<div class="aaa-game-panel-label">Specialist outcome</div>')
-            ui.html('<div class="aaa-game-panel-title">Kiro judge-subagent requirements</div>')
+            ui.html('<div class="aaa-game-panel-title">Systematic judge spec</div>')
             ui.html(
                 '<div class="aaa-game-panel-copy">'
-                "The requirements specify how the judge subagent evaluates assistant answers. They encode AAA game "
+                "The judge spec defines how the LLM-as-Judge evaluates assistant answers. It encodes AAA game "
                 "lore glossary fidelity, runtime token preservation, ability-system terminology, "
                 "choice-state safety, RTL controller validation, and store copy boundaries."
                 "</div>"
@@ -327,11 +327,11 @@ def _render_evidence_tab() -> None:
 
 def _render_requirements_tab() -> None:
     with ui.element("section").classes("dynamic-panel accent-violet"):
-        ui.html('<div class="dynamic-panel-title">Output 1: Kiro judge-subagent requirements.md</div>')
+        ui.html('<div class="dynamic-panel-title">Output 1: Systematic judge spec</div>')
         ui.html(
             '<div class="dynamic-panel-copy">'
-            "The requirements define the LLM-as-Judge subagent using the AAA game localization codebook "
-            "and linked LQA evidence. Loading the workspace makes the full document available in requirements.md."
+            "The judge spec defines the LLM-as-Judge gate using the AAA game localization codebook "
+            "and linked LQA evidence. Loading the workspace makes the full document available."
             "</div>"
         )
         with ui.element("div").classes("aaa-game-code-list"):
@@ -355,12 +355,12 @@ def _render_baseline_tab() -> None:
     if len(AAA_GAME_BASELINE_REQUIREMENTS_MD) > len(preview):
         preview += "\n\n..."
     with ui.element("section").classes("dynamic-panel accent-blue"):
-        ui.html('<div class="dynamic-panel-title">Baseline requirements.md</div>')
+        ui.html('<div class="dynamic-panel-title">Baseline evidence</div>')
         ui.html(
             '<div class="dynamic-panel-copy">'
-            "This is the starting Kiro-style requirements file for the AAA game localization "
-            "assistant under test. GEDD uses SME annotations to create the separate judge-subagent "
-            "requirements.md and response gates for lore drift, runtime tokens, controller prompts, product-scope copy, "
+            "This is the starting baseline requirements file for the AAA game localization "
+            "assistant under test. GEDD uses SME annotations to create the separate judge spec "
+            "and response gates for lore drift, runtime tokens, controller prompts, product-scope copy, "
             "and regional compliance."
             "</div>"
         )
@@ -399,8 +399,8 @@ def aaa_game_demo_page() -> None:
                 ui.html(
                     '<div class="dynamic-copy">'
                     "A localization specialist reviews baseline assistant responses, names the "
-                    "AAA game-specific risks, and turns that evidence into a Kiro judge-subagent "
-                    "requirements.md plus an LLM-as-Judge gate before customer-facing answers are shown."
+                    "AAA game-specific risks, and turns that evidence into a systematic judge spec "
+                    "plus an LLM-as-Judge gate before customer-facing answers are shown."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):

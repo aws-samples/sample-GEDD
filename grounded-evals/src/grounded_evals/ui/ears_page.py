@@ -1,4 +1,4 @@
-"""NiceGUI page for Kiro-ready judge-subagent requirements."""
+"""NiceGUI page for systematic LLM-as-Judge specifications."""
 
 from __future__ import annotations
 
@@ -96,12 +96,12 @@ def _build_requirements_markdown(session: Session, codebook: list[dict] | None =
         for code in session.codes
     }
     document = EARSTransformer().transform(session, metrics, paradigm=None)
-    return EARSParser().kiro_requirements_md(document)
+    return EARSParser().judge_spec_md(document)
 
 
 @ui.page("/requirements")
 def ears_requirements_page() -> None:
-    page_layout("Kiro Judge Spec", current_path="/requirements")
+    page_layout("Judge Spec", current_path="/requirements")
     storage = app.storage.user
     session = _session_from_storage(storage)
     codebook = storage.get("codebook", []) or []
@@ -114,21 +114,21 @@ def ears_requirements_page() -> None:
                 ui.html(
                     '<div class="dynamic-kicker">'
                     '<span class="material-icons" style="font-size:0.95rem">description</span>'
-                    "Kiro output"
+                    "Judge output"
                     "</div>"
                 )
-                ui.html('<div class="dynamic-title">Kiro judge-subagent requirements.md from SME evidence</div>')
+                ui.html('<div class="dynamic-title">Systematic LLM-as-Judge spec from grounded evidence</div>')
                 ui.html(
                     '<div class="dynamic-copy">'
-                    "GEDD converts annotated baseline failures into Kiro-ready user stories "
-                    "and EARS acceptance criteria for the LLM-as-Judge subagent that gates "
+                    "GEDD converts annotated baseline failures into evidence-backed user stories "
+                    "and EARS acceptance criteria for the LLM-as-Judge gate that checks "
                     "customer-facing responses. Every requirement traces back to SME evidence."
                     "</div>"
                 )
             with ui.element("aside").classes("dynamic-side-panel"):
                 ui.html('<div class="dynamic-side-label">Requirement source</div>')
                 ui.html(f'<div class="dynamic-side-value">{len(session.codes)}</div>')
-                ui.html('<div class="dynamic-side-copy">SME-derived failure modes available for judge-subagent specification.</div>')
+                ui.html('<div class="dynamic-side-copy">SME-derived failure modes available for judge specification.</div>')
 
         with ui.element("section").classes("metric-strip"):
             for value, label in [
@@ -147,7 +147,7 @@ def ears_requirements_page() -> None:
                 ui.html('<div class="empty-state-title">No requirements evidence yet</div>')
                 ui.html(
                     '<div class="empty-state-copy">'
-                    "Complete Coach and SME annotations first. The judge-subagent requirements file is generated "
+                    "Complete Coach and SME annotations first. The judge spec is generated "
                     "from failure codes, severity, memos, and curated baseline evidence."
                     "</div>"
                 )
@@ -161,12 +161,12 @@ def ears_requirements_page() -> None:
             with ui.element("div").classes("dynamic-panel accent-teal"):
                 with ui.row().classes("items-center justify-between gap-3 flex-wrap"):
                     with ui.column().style("gap:2px"):
-                        ui.html('<div class="dynamic-panel-title">Generated judge requirements.md</div>')
-                        ui.html('<div class="dynamic-panel-copy">Kiro-ready markdown preview for the LLM-as-Judge subagent.</div>')
+                        ui.html('<div class="dynamic-panel-title">Generated judge spec</div>')
+                        ui.html('<div class="dynamic-panel-copy">Evidence-backed markdown preview for the LLM-as-Judge gate.</div>')
                     ui.button(
                         "Download",
                         icon="download",
-                        on_click=lambda: ui.download(markdown.encode(), "requirements.md"),
+                        on_click=lambda: ui.download(markdown.encode(), "judge-spec.md"),
                     ).props("color=primary no-caps")
                 with ui.element("div").classes("document-preview").style("margin-top:12px"):
                     ui.markdown(markdown)

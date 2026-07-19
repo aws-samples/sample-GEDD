@@ -1,58 +1,55 @@
-# GEDD - SME evidence to LLM-as-Judge response gates
+# GEDD
+
+Grounded Evidence Driven Development for systematic LLM-as-Judge curation.
 
 [![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/aws-samples/sample-GEDD?style=social)](https://github.com/aws-samples/sample-GEDD/stargazers)
 
-Coach leads SMEs and product managers from baseline evidence to a judge-subagent `requirements.md`, and an LLM-as-Judge gate that checks customer-facing responses before customers see them.
+GEDD helps domain experts, SMEs, and product managers curate the evidence needed to build a domain-specific LLM-as-Judge. It turns baseline agent behavior into a structured judge spec, a reusable judge prompt, and a measurable response gate.
 
-The product has one main path:
+The core idea is simple: the judge should come from grounded evidence, not generic assumptions. Domain owners define the query set, review baseline responses, name the failure modes, and decide which failures should block customer-facing answers.
 
 ```text
-Domain Expert Intake -> Baseline Kiro requirements.md -> Curated Query Set -> Kiro Baseline Test -> SME Annotations -> SME_error_analysis.md -> Kiro Judge-Subagent requirements.md + LLM-as-Judge Gate + Measurement
+Domain context
+  -> curated query set
+  -> baseline responses
+  -> SME annotations
+  -> failure codebook
+  -> systematic LLM-as-Judge
+  -> response gate before customers see answers
 ```
-
-Start in `Coach`. The app uses progressive disclosure: the SME sees one current step, one Coach prompt, and one allowed action. Coach first asks for the SME's domain, then asks for the baseline Kiro `requirements.md`, then leads query curation, baseline testing, annotations, and output generation in order.
-
-| Output | File | Why it matters |
-|---|---|---|
-| SME Evidence Handoff | `SME_error_analysis.md` | The domain-expert-curated source artifact for Kiro and the judge subagent |
-| Kiro Judge-Subagent Spec | `requirements.md` | Converts SME-annotated baseline failures into Kiro-ready user stories and EARS acceptance criteria for the LLM-as-Judge subagent |
-| LLM-as-Judge Gate | `llm-judge.md` or judge prompt markdown | Converts the same failure modes into a pre-customer response gate |
-| Measurement Report | app view or markdown export | Compares generic baseline requirements against the GEDD judge-subagent spec for coverage, traceability, testability, and response-quality signals |
-
-GEDD is not a generic model leaderboard or demo gallery. Its first job is domain query curation. Its second job is SME-guided error analysis of the Kiro baseline agent. GEDD packages that work as `SME_error_analysis.md`; Kiro then uses the file to create the judge-subagent `requirements.md` and judge rules that gate customer-facing responses.
-
-The current UI is intentionally simple: the homepage has one action, `Open Coach`. The Coach is the product surface. Demos, generated outputs, and reference seeds stay secondary until Coach makes them relevant.
 
 ![GEDD Coach and annotation workflow](grounded-evals/docs/GEDD_optimized.gif)
 
-The longer methodology essay is in [METHODOLOGY.md](METHODOLOGY.md). This README is the practical product and engineering guide.
+## What GEDD Produces
 
-## Product Shape
+| Artifact | Purpose |
+|---|---|
+| `SME_error_analysis.md` | Evidence handoff with domain context, query coverage, baseline responses, annotations, failure codes, memos, and traceability |
+| Judge spec | A structured description of what the LLM-as-Judge must detect, block, escalate, and explain |
+| LLM-as-Judge prompt | A domain-specific judge prompt grounded in SME-defined failure modes |
+| Response gate | A pass/fail decision contract that runs before an answer becomes customer-visible |
+| Measurement report | A before/after quality view across specificity, traceability, testability, domain coverage, and response accuracy |
 
-GEDD works in two places:
+GEDD is not a model leaderboard. It is the evidence pipeline for building a judge that understands a specific domain.
 
-| Surface | Use it when | Output |
+## Workflow
+
+Coach guides the SME through six steps:
+
+| Step | What happens | Output |
 |---|---|---|
-| Web UI Coach | SMEs need a guided step-by-step workflow for domain intake, query curation, baseline testing, error analysis, and annotations | Curated evidence plus downloadable Kiro judge-subagent `requirements.md`, LLM-as-Judge gate, and improvement measurement |
-| Kiro Power | You want Kiro to consume GEDD's curated evidence inside the IDE | Generated `.kiro/specs/{agent-name}/requirements.md` for the judge subagent and `.kiro/specs/{agent-name}/llm-judge.md` |
+| 1. Define the domain | Capture users, risks, constraints, permissions, vocabulary, and known edge cases | Domain expert profile |
+| 2. Capture baseline evidence | Upload, paste, or describe the current agent behavior contract, prompt, policy, or traces | Baseline context |
+| 3. Curate queries | Build happy path, edge, adversarial, ambiguous, recovery, persona, and red-flag prompts | SME-owned query set |
+| 4. Test the baseline | Run or paste baseline responses for the curated queries | Response evidence |
+| 5. Annotate failures | Label verdicts, failure codes, severity, confidence, missing rules, and memos | Failure codebook |
+| 6. Generate the judge | Produce the evidence handoff, judge spec, LLM-as-Judge prompt, and measurement | Systematic judge package |
 
-GEDD provides the evidence layer. The domain expert curates that evidence through:
-
-- Agent purpose, target users, capabilities, and task boundary
-- Curated domain queries or imported baseline traces
-- SME verdicts: correct, partial, incorrect
-- Failure codes in the SME's own domain vocabulary
-- Severity, confidence, and memos
-- Optional saturation and axial-coding evidence
-
-The core idea is simple: Kiro should not invent judge rules from generic assumptions. GEDD provides SME-curated evidence from baseline behavior, and every important SME annotation should become a Kiro judge-subagent requirement, a judge rule, or both.
+The result is a judge that reflects observed behavior and SME judgment. A fluent answer can still fail if it violates the domain evidence.
 
 ## Quick Start
-
-Start the web app:
 
 ```bash
 cd grounded-evals
@@ -68,85 +65,58 @@ Open:
 http://127.0.0.1:8080/
 ```
 
-The homepage intentionally shows only `Open Coach`. You can also go directly to `http://127.0.0.1:8080/coach`.
+Local runs start in guest mode unless you configure `ADMIN_PASSWORD` or Cognito. If port `8080` is busy, use `--port 8081`.
 
-Local runs start in guest mode unless `ADMIN_PASSWORD` or Cognito environment variables are configured. If port `8080` is busy, use `--port 8081`.
+For full environment setup, Bedrock or Anthropic configuration, AWS deployment, and troubleshooting, use [SETUP.md](SETUP.md).
 
-To use an existing Kiro baseline, click `Open Coach`, answer the domain prompt, then use the baseline step to upload the current `.kiro/specs/{agent-name}/requirements.md` file. GEDD stores it as baseline evidence and embeds it in `SME_error_analysis.md` under `Baseline Kiro Requirements`.
-
-## First Run For A Domain Expert
-
-Open the app and click `Open Coach`. Coach leads the SME through six small decisions. Downstream pages appear only when the current project state makes them relevant.
-
-| Step | What the SME does | Why it exists | App output |
-|---|---|---|---|
-| 1. Identify the SME domain | Tell Coach the domain, users, risks, permissions, constraints, and known edge cases | Prevents Kiro from inventing generic requirements without domain context | Domain expert profile |
-| 2. Upload the baseline Kiro spec | Upload `.kiro/specs/{agent-name}/requirements.md`, or capture the baseline prompt/spec context | Establishes what the baseline agent was built from before GEDD evidence is added | Baseline Kiro Requirements section in `SME_error_analysis.md` |
-| 3. Curate the query set | Approve happy path, edge, adversarial, ambiguous, multi-turn, recovery, persona, and red-flag queries | Creates the SME-owned test set that exposes real domain behavior | Coverage-backed query set |
-| 4. Test the Kiro baseline agent | Run or paste baseline responses for those queries | Converts the initial Kiro spec into observable behavior that can be reviewed | Baseline response traces |
-| 5. Annotate with SME judgment | Label verdict, failure code, severity, confidence, missing domain rule, and memo | Turns SME expertise into structured error analysis instead of loose feedback | Codebook and annotated failures |
-| 6. Generate the handoff and outputs | Export `SME_error_analysis.md`, then create the Kiro judge-subagent `requirements.md`, LLM-as-Judge gate, and measurement | Gives Kiro and the judge one shared source of truth before customer-facing responses are shown | `SME_error_analysis.md`, Kiro judge `requirements.md`, LLM-as-Judge gate, measurement report |
-
-The product rule is: no judge-subagent requirements before SME evidence. Kiro's requirements-first workflow and EARS acceptance criteria work best when every gate traces back to an observed baseline failure, an SME-approved query, or a domain rule the SME explicitly named.
-
-## Web UI Workflow
-
-The application is organized around Coach, not demo browsing. `Home` and `Coach` are always visible. `Annotations`, `Evidence`, `Judge Spec`, and `Judge` appear only after Coach has enough evidence for that surface.
+## App Surfaces
 
 | Route | UI label | Purpose |
 |---|---|---|
-| `/` | Home | Minimal entry screen with one action: `Open Coach` |
-| `/coach` | Coach | One current step, one Coach prompt, and one allowed action for domain intake, baseline upload, query curation, and SME-guided evidence collection |
-| `/coding` | Annotations | Review baseline responses and label verdict, failure code, severity, confidence, missing rule, and memo |
-| `/report` | Evidence | Export `SME_error_analysis.md` and inspect the curated evidence handoff |
-| `/requirements` | Judge Spec | Generate the Kiro judge-subagent `requirements.md` from SME evidence using EARS-style acceptance criteria |
-| `/judge` | Judge | Generate the LLM-as-Judge response gate from the same failure modes |
-| `/improvement` | Measurement | Compare baseline requirements against the GEDD judge-subagent requirements |
-| `/demos` | Reference seeds | Load example evidence sessions; not the primary product path |
+| `/` | Home | Product entry point |
+| `/coach` | Coach | Guided evidence curation workflow |
+| `/aaa-game-localization-demo` | AAA Game Localization | An anonymized localization scenario showing the full evidence-to-judge flow |
+| `/coding` | Annotations | SME verdicts, failure codes, severity, confidence, and memos |
+| `/report` | Evidence | Export and inspect `SME_error_analysis.md` |
+| `/requirements` | Judge Spec | Generate the structured judge specification |
+| `/judge` | Judge | Generate the LLM-as-Judge response gate |
+| `/improvement` | Measurement | Compare baseline and GEDD-generated judge quality |
+| `/demos` | Reference seeds | Load example evidence sessions |
 
-The app navigation intentionally keeps this narrow. The SME does not need to choose a workflow page up front. Coach sends them to Annotations only after baseline responses exist, and sends them to Evidence only after SME annotations exist. Demos are available separately at `/demos`, but they are reference seed sessions, not the product workflow.
+The core path is Coach. Other pages appear when enough evidence exists for them.
 
-## SME_error_analysis.md
+## Example Scenario
 
-The primary GEDD handoff is `SME_error_analysis.md`. It contains the domain profile, curated query set, baseline response evidence, SME annotations, failure codebook, memos, saturation evidence, and any generated judge prompt. Kiro can use this single file to build the judge-subagent `requirements.md` file and the runnable response gate.
+The first-class demo is an anonymized AAA Game Localization Agent.
 
-## Kiro Judge-Subagent requirements.md
+It shows how a localization SME turns LQA evidence into judge gates for:
 
-The Kiro requirements output follows Kiro's requirements-first spec format and is generated from `SME_error_analysis.md`. It specifies the LLM-as-Judge subagent, not the customer-facing assistant itself:
+- Franchise terminology and lore glossary drift
+- Runtime placeholders, tags, controller glyphs, and choice-state markup
+- Subtitle meaning, timing, and VO/text parity
+- RTL layout and input direction issues
+- Storefront, rating, product-scope, and regional compliance copy
+- Character voice and canon-role flattening
 
-```markdown
-# Requirements Document
+The demo produces the same artifacts as a real project: `SME_error_analysis.md`, judge spec, LLM-as-Judge prompt, response gate, and measurement report.
 
-## Introduction
+## Bring Your Own Agent
 
-## Requirements
+Use GEDD when you have a customer-facing assistant and need a grounded judge for its responses.
 
-### Requirement 1
-**User Story:** As a {target user}, I want {domain-safe behavior}, so that {risk is prevented}.
+You can start from:
 
-#### Acceptance Criteria
-1. WHEN {trigger}, THE SYSTEM SHALL {expected behavior}.
-2. IF {unwanted condition}, THEN THE SYSTEM SHALL {safe response}.
-3. WHILE {domain state}, THE SYSTEM SHALL {required invariant}.
-```
+- A system prompt or product brief
+- A policy, rubric, SOP, or current behavior contract
+- A set of production or synthetic traces
+- A SME-owned golden query set
+- A demo seed adapted to your domain
 
-GEDD uses EARS patterns so requirements stay testable:
+If you already have traces, paste or import them and use GEDD as an annotation and judge-generation surface. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).
 
-| Evidence | EARS pattern | Example shape |
-|---|---|---|
-| Always-active rule | Ubiquitous | `THE SYSTEM SHALL ...` |
-| Triggering user event | Event-driven | `WHEN ..., THE SYSTEM SHALL ...` |
-| Domain state | State-driven | `WHILE ..., THE SYSTEM SHALL ...` |
-| Observed failure | Unwanted behavior | `IF ..., THEN THE SYSTEM SHALL ...` |
-| State plus trigger | Complex | `WHILE ..., WHEN ..., THE SYSTEM SHALL ...` |
+## Judge Gate Contract
 
-Most high-value judge requirements come from unwanted behavior: an SME saw the agent fail, named the failure, and GEDD turns that customer-response risk into an acceptance criterion.
-
-## LLM-as-Judge Gate
-
-The second GEDD output is an LLM-as-Judge prompt that enforces the same domain-expert-curated failures captured in the judge-subagent `requirements.md`.
-
-The judge should return a structured response-gating decision before the answer is shown to a customer:
+GEDD-generated judges are expected to return a structured gate decision before an answer becomes customer-visible:
 
 ```json
 {
@@ -154,75 +124,76 @@ The judge should return a structured response-gating decision before the answer 
   "failure_code": "domain failure label or null",
   "severity": "low | medium | high | critical | catastrophic",
   "rationale": "why the response passes or fails",
-  "evidence_references": ["query id", "requirement id"],
+  "evidence_references": ["query id", "failure code", "judge criterion"],
   "recommended_action": "allow | revise_response | request_human_review",
   "customer_visible_block": true
 }
 ```
 
-The judge is intentionally domain-specific. It should not start with generic helpfulness; it should check the failure modes SMEs actually observed.
+The judge should prioritize SME-defined failure modes over generic helpfulness. It should explain what evidence drove the decision and whether a customer-visible response should be blocked.
 
-## Kiro Power
+## Development
 
-The repository includes a Kiro Power in [`power-gedd/`](power-gedd/). It brings the GEDD workflow into Kiro by treating GEDD evidence as the source of truth.
+Run the test suite:
 
-Install it in Kiro:
-
-```text
-Powers panel → Add Custom Power → Import from folder → power-gedd/
+```bash
+cd grounded-evals
+python3 -m pytest tests
 ```
 
-Use it when you want Kiro to create judge-subagent specs from GEDD's domain-expert-curated baseline evidence:
+Compile-check the app:
 
-```text
-Use GEDD to create the LLM-as-Judge subagent requirements.md from SME-curated evidence and generate the response gate.
+```bash
+cd grounded-evals
+python3 -m compileall src
 ```
 
-Power structure:
+Deploy the UI after AWS infrastructure is configured:
 
-```text
-power-gedd/
-├── POWER.md
-└── steering/
-    ├── annotation-workflow.md
-    ├── session-import.md
-    ├── pattern-discovery.md
-    ├── requirements-generation.md
-    ├── judge-generation.md
-    ├── design-generation.md
-    └── tasks-generation.md
+```bash
+cd grounded-evals
+./scripts/deploy-ui.sh
 ```
 
-Optional Kiro follow-ons such as `design.md` and `tasks.md` can come later, but they are not the core GEDD product. The core product is `SME_error_analysis.md` feeding the judge-subagent `requirements.md` plus the LLM-as-Judge gate.
+Local authentication behavior:
 
-## Bring Your Own Agent
-
-Use GEDD when you have a real or proposed agent and need a domain expert to turn baseline behavior into measured judge-subagent requirements.
-
-| Step | What to do | Output |
-|---|---|---|
-| 1. Domain intake | Tell Coach which domain the SME owns, who uses the agent, what risks matter, and what constraints cannot be violated | Domain expert profile |
-| 2. Upload baseline spec | Upload the existing `.kiro/specs/{agent-name}/requirements.md`, or capture baseline prompt/spec context | Baseline Kiro requirements evidence |
-| 3. Curate queries | Generate or paste happy path, edge, ambiguous, adversarial, multi-turn, recovery, persona, and red-flag queries | Curated query set |
-| 4. Test baseline | Run the Kiro baseline agent created from the initial `requirements.md`, or paste existing baseline traces | Baseline response queue |
-| 5. Annotate | Review each baseline response in `Annotations` and capture verdict, code, severity, confidence, missing rule, and memo | Human labels and codebook |
-| 6. Generate outputs | Export `SME_error_analysis.md`, generate judge-subagent `requirements.md`, generate the response gate, and measure uplift | Evidence handoff, judge spec, judge prompt, improvement report |
-
-If you already have production traces, use the app as an annotation surface rather than generating new responses. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).
-
-## Reference Seeds
-
-Reference seeds live at `/demos`. They exist to show what good evidence looks like before teams bring their own traces.
-
-| Reference seed | What it demonstrates |
+| Configuration | Behavior |
 |---|---|
-| AAA game localization | Runtime strings, storefront copy, subtitles, RTL input prompts, region rules, culturalization, paid-currency copy, live-event dates, and glossary consistency |
-| AWS Cloud GDPR auditor | S3 and CloudWatch retention, CloudTrail logging, Bedrock prompt reuse, Rekognition review, DSAR deletion, shared responsibility, transfer risk, and breach escalation |
+| No `ADMIN_PASSWORD`, no Cognito | Guest mode for local development |
+| `ADMIN_PASSWORD` set | Simple password login |
+| Cognito environment variables set | Cognito OAuth flow for protected routes |
 
-They produce the same evidence handoff and downstream outputs as any custom project: `SME_error_analysis.md`, Kiro judge-subagent `requirements.md`, and an LLM-as-Judge gate. They are intentionally separate from the main Coach product path.
+See [SETUP.md](SETUP.md) for AWS, Bedrock, Cognito, AgentCore, and deployment details.
 
-## License And Security
+## Repository Layout
 
-License: MIT-0. See [LICENSE](LICENSE).
+```text
+.
+|-- grounded-evals/          # Python package, NiceGUI app, CLI, tests, infra scripts
+|-- METHODOLOGY.md           # Grounded-theory and evaluation methodology
+|-- SETUP.md                 # Engineering setup and deployment guide
+`-- README.md                # Product and contributor entry point
+```
 
-Security issue reporting: see [CONTRIBUTING.md](CONTRIBUTING.md#security-issue-notifications).
+Key app modules:
+
+```text
+grounded-evals/src/grounded_evals/
+|-- agent/                   # Coach prompt and agent turn handling
+|-- ears/                    # EARS-style judge spec generation and measurement
+|-- guide/                   # Session model, markdown export, session I/O
+|-- judge_builder/           # Judge prompt and rubric generation
+|-- open_coding/             # Failure-code discovery helpers
+|-- axial_coding/            # Pattern and root-cause mapping
+`-- ui/                      # NiceGUI pages and demo datasets
+```
+
+## More Detail
+
+- [SETUP.md](SETUP.md): local setup, model provider configuration, auth, AWS deployment, troubleshooting
+- [METHODOLOGY.md](METHODOLOGY.md): grounded theory, coding workflow, judge spec generation, judge calibration
+- [CONTRIBUTING.md](CONTRIBUTING.md): contribution and security reporting guidance
+
+## License
+
+MIT-0. See [LICENSE](LICENSE).

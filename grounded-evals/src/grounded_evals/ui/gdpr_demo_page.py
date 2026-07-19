@@ -224,7 +224,7 @@ def _render_workflow() -> None:
         (
             "03",
             "Domain specs",
-            "Observed failures become EARS acceptance criteria for a Kiro requirements.md handoff.",
+            "Observed failures become EARS acceptance criteria for a judge-spec handoff.",
         ),
         (
             "04",
@@ -263,7 +263,7 @@ def _render_scenario_tab() -> None:
                 on_click=lambda: _load_and_open("/coding"),
             ).props("outline no-caps")
             ui.button(
-                "Open requirements.md",
+                "Open Judge Spec",
                 icon="description",
                 on_click=lambda: _load_and_open("/requirements"),
             ).props("outline no-caps")
@@ -327,11 +327,11 @@ def _render_evidence_tab() -> None:
 
 def _render_requirements_tab() -> None:
     with ui.element("section").classes("dynamic-panel accent-violet"):
-        ui.html('<div class="dynamic-panel-title">Output 1: Kiro requirements.md</div>')
+        ui.html('<div class="dynamic-panel-title">Output 1: Judge spec</div>')
         ui.html(
             '<div class="dynamic-panel-copy">'
-            "The requirements are generated from the GDPR codebook and linked query evidence. "
-            "Loading the workspace makes the full document available in the requirements.md view."
+            "The judge spec is generated from the GDPR codebook and linked query evidence. "
+            "Loading the workspace makes the full document available in the Judge Spec view."
             "</div>"
         )
         with ui.element("div").classes("gdpr-code-list"):
@@ -379,7 +379,7 @@ def gdpr_demo_page() -> None:
                 ui.html(
                     '<div class="dynamic-copy">'
                     "A GDPR compliance specialist reviews a cloud assistant, names the domain "
-                    "failure modes, and turns that evidence into Kiro requirements.md plus an "
+                    "failure modes, and turns that evidence into a judge spec plus an "
                     "LLM-as-a-judge release gate."
                     "</div>"
                 )
@@ -402,7 +402,7 @@ def gdpr_demo_page() -> None:
         with ui.tabs().classes("gdpr-demo-tabs") as tabs:
             scenario = ui.tab("Scenario")
             evidence = ui.tab("Evidence")
-            requirements = ui.tab("requirements.md")
+            requirements = ui.tab("Judge Spec")
             judge = ui.tab("LLM Judge")
 
         with ui.tab_panels(tabs, value=scenario).classes("gdpr-demo-tab-panels"):

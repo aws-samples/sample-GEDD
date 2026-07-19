@@ -1,4 +1,4 @@
-"""Localization demo that generates judge-subagent requirements and a gate."""
+"""Localization demo that generates a judge spec and response gate."""
 
 from __future__ import annotations
 
@@ -790,7 +790,7 @@ INDUCTIVE_PM_METHODOLOGY = {
         "Open Coding: PM reviews localization traces and names failure modes from the data.",
         "Axial Coding: PM groups codes by runtime, semantic, compliance, locale UI/data, regional, terminology, subtitle, and morphology causes.",
         "Theoretical Saturation: final 8 traces repeat existing codes, adding 0 new categories.",
-        "Output 1: Kiro judge-subagent requirements.md turns the saturated codebook into EARS acceptance criteria.",
+        "Output 1: the judge spec turns the saturated codebook into EARS acceptance criteria.",
         "Output 2: the LLM-as-Judge gate uses the saturated localization codebook before responses become customer-visible.",
     ],
     "axial_categories": {

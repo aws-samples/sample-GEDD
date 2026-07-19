@@ -157,7 +157,7 @@ The two-layer architecture is the only approach that achieves high validity, hig
 
 ## Implementation
 
-The architecture is implemented in GEDD (Grounded Eval-Driven Development), an open-source tool that provides:
+The architecture is implemented in GEDD (Grounded Evidence Driven Development), an open-source tool that provides:
 
 1. **Structured elicitation** — a conversational interface (`/gedd` in Claude Code) that guides domain experts through golden dataset creation using Open Coding methodology
 2. **Judge generation** — automatic creation of LLM-as-judge scorers from expert error codes via MLflow's `make_judge()` API

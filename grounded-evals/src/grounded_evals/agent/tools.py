@@ -103,7 +103,7 @@ TOOLS = [
             "properties": {
                 "step": {
                     "type": "integer",
-                    "description": "1=Domain Intake, 2=Baseline Kiro Requirements, 3=Query Curation, 4=Kiro Baseline Test, 5=SME Error Analysis, 6=Improve requirements.md and Judge",
+                    "description": "1=Domain Intake, 2=Baseline Evidence, 3=Query Curation, 4=Baseline Agent Test, 5=SME Error Analysis, 6=Systematic Judge Generation",
                 },
             },
             "required": ["step"],

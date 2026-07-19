@@ -115,14 +115,14 @@ def test_table_cell_escaping():
 
 def test_export_includes_uploaded_baseline_requirements():
     storage = {
-        "session_data": {"agent_spec": {"name": "KiroBot"}, "golden_prompts": []},
+        "session_data": {"agent_spec": {"name": "JudgeBot"}, "golden_prompts": []},
         "baseline_requirements_md": "# Requirements Document\n\n## Requirements\n\n### Requirement 1",
         "baseline_requirements_filename": "requirements.md",
         "baseline_requirements_uploaded_at": "2026-07-05T19:30:00+00:00",
     }
     md = export_error_analysis_md(storage)
 
-    assert "## Baseline Kiro Requirements" in md
+    assert "## Baseline Evidence" in md
     assert "- **Filename:** requirements.md" in md
     assert "2026-07-05T19:30:00+00:00" in md
     assert "# Requirements Document" in md

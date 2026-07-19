@@ -427,7 +427,7 @@ def test_sme_flow_starts_with_domain_then_baseline_upload():
     assert [step["title"] for step in steps[:3]] == [
         "Set the domain and baseline",
         "Curate domain queries",
-        "Test the Kiro baseline",
+        "Test the baseline",
     ]
     assert steps[0]["status"] == "current"
     assert steps[1]["status"] == "todo"
@@ -528,7 +528,7 @@ def test_inductive_pm_demo_loads_50_query_localization_outputs():
     assert "localization" in storage["_generated_judge_prompt"].lower()
 
 
-def test_requirements_page_hydrates_demo_codebook_into_kiro_requirements():
+def test_requirements_page_hydrates_demo_codebook_into_judge_spec():
     from grounded_evals.ui.ears_page import _build_requirements_markdown, _session_from_storage
     from grounded_evals.ui.inductive_pm_demo import load_inductive_pm_demo
 
@@ -541,7 +541,7 @@ def test_requirements_page_hydrates_demo_codebook_into_kiro_requirements():
     assert "# Requirements Document" in markdown
     assert "Placeholder And Markup Corruption" in markdown
     assert "LLM-as-Judge Release Gate" in markdown
-    assert "THE JUDGE SUBAGENT SHALL return pass_fail, failure_code, severity" in markdown
+    assert "THE JUDGE SHALL return pass_fail, failure_code, severity" in markdown
     assert "customer_visible_block" in markdown
     assert "open coding" in storage["_generated_judge_prompt"].lower()
 

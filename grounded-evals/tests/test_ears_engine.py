@@ -49,7 +49,7 @@ def test_ears_transformer_parser_and_measurement_round_trip() -> None:
     }
 
     gedd_doc = EARSTransformer().transform(session, metrics, paradigm=None)
-    markdown = EARSParser().kiro_requirements_md(gedd_doc)
+    markdown = EARSParser().judge_spec_md(gedd_doc)
     parsed = EARSParser().parse(markdown)
     baseline = BaselineGenerator().generate(session.agent_spec)
     report = MeasurementEngine().measure(baseline, parsed, session)
@@ -61,7 +61,7 @@ def test_ears_transformer_parser_and_measurement_round_trip() -> None:
     assert "#### Acceptance Criteria" in markdown
     assert "WHEN TestBot produces a candidate customer-facing response" in markdown
     assert (
-        "THE JUDGE SUBAGENT SHALL classify the response as a release-blocking domain failure"
+        "THE JUDGE SHALL classify the response as a release-blocking domain failure"
         in markdown
     )
     assert "LLM-as-Judge Release Gate" in markdown

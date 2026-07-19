@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "grounded-evals"
 version = "0.1.0"
-description = "GEDD — A Systematic Evidence Driven LLM As a Judge + SPEC Framework for Continuous Learning"
+description = "GEDD - Grounded Evidence Driven Development for systematic LLM-as-Judge curation"
 requires-python = ">=3.11"
 dependencies = [
     "anthropic[bedrock]>=0.104.1",

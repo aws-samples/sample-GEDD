@@ -1,4 +1,4 @@
-"""GEDD - generate Kiro judge-subagent requirements.md and a response gate."""
+"""GEDD - curate a systematic LLM-as-Judge from grounded evidence."""
 
 import asyncio
 import html as _html
@@ -43,7 +43,7 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
 # This is the default for local dev / demo runs with `grounded-evals serve`.
 GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
 UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
-APP_RELEASE = "2026-07-13-aaa-game-localization-anonymized"
+APP_RELEASE = "2026-07-19-grounded-evidence-judge"
 
 
 def _cognito_hosted_domain() -> str:
@@ -222,12 +222,6 @@ def _user_state() -> dict:
         s["annotations"] = []
         s["messages"] = []
         s["prompt_variants"] = []
-    for message in s.get("messages", []):
-        if isinstance(message, dict) and isinstance(message.get("content"), str):
-            message["content"] = message["content"].replace(
-                "I am your GEDD Coach for Kiro LLM-as-Judge subagent specs.",
-                "I am your GEDD Coach for LLM-as-Judge response gates.",
-            )
     if 'codebook' not in s:
         s['codebook'] = []
     if 'coding_annotations' not in s:
@@ -372,11 +366,11 @@ def main_page() -> None:
 
     coach_prompts = {
         1: "Use the chat: what domain are you the expert in, who uses this agent, and what can go wrong?",
-        2: "Attach the baseline Kiro requirements.md, or describe the baseline requirements if the file is not available.",
+        2: "Attach or describe the baseline behavior contract, prompt, policy, rubric, or trace evidence.",
         3: "Ask Coach to draft the first query batch, then approve, edit, or add SME-owned queries.",
-        4: "Run the approved queries against the baseline Kiro agent, then paste the responses here.",
+        4: "Run the approved queries against the baseline agent, then paste the responses here.",
         5: "Open Annotations and label each baseline response with SME vocabulary and missing domain rules.",
-        6: "Open Evidence and use SME_error_analysis.md as the source for the Kiro judge-subagent requirements.md and LLM-as-Judge gate.",
+        6: "Open Evidence and use SME_error_analysis.md as the source for the judge spec and LLM-as-Judge gate.",
     }
 
     def current_coach_view() -> tuple[int, tuple[str, str, str, str, str]]:
@@ -400,9 +394,9 @@ def main_page() -> None:
             ),
             (
                 "2",
-                "Baseline requirements",
-                "Upload the existing Kiro requirements.md or capture the baseline spec context in chat.",
-                "Baseline Kiro requirements",
+                "Baseline evidence",
+                "Upload or describe the current prompt, policy, behavior contract, rubric, or trace evidence.",
+                "Baseline behavior context",
                 coach_status(has_baseline_spec, has_domain and not has_baseline_spec),
             ),
             (
@@ -415,7 +409,7 @@ def main_page() -> None:
             (
                 "4",
                 "Baseline test",
-                "Run or paste responses from the Kiro baseline agent created from the initial requirements.md.",
+                "Run or paste responses from the current baseline agent.",
                 "Baseline response traces",
                 coach_status(has_baseline_evidence, has_queries and not has_baseline_evidence),
             ),
@@ -429,8 +423,8 @@ def main_page() -> None:
             (
                 "6",
                 "Outputs",
-                "Export SME_error_analysis.md, then generate the Kiro judge-subagent requirements.md and LLM-as-Judge gate.",
-                "Judge-subagent requirements.md + response gate + measurement",
+                "Export SME_error_analysis.md, then generate the judge spec and LLM-as-Judge gate.",
+                "Judge spec + response gate + measurement",
                 coach_status(bool(cur_s.get("_generated_judge_prompt")), has_evidence_handoff),
             ),
         ]
@@ -485,12 +479,12 @@ def main_page() -> None:
                 "Coach"
                 "</div>"
             )
-            ui.html('<div class="coach-product-title">SME evidence to LLM-as-Judge response gates</div>')
+            ui.html('<div class="coach-product-title">Grounded Evidence Driven Development</div>')
             ui.html(
                 '<div class="coach-product-copy">'
-                "Coach leads SMEs and product managers from baseline evidence to a "
-                "judge-subagent requirements.md, and an LLM-as-Judge gate that checks "
-                "customer-facing responses before customers see them."
+                "Coach leads SMEs and product managers from baseline behavior to a "
+                "systematic LLM-as-Judge and response gate that checks customer-facing "
+                "answers before customers see them."
                 "</div>"
             )
             coach_stage_container = ui.element("div")
@@ -532,7 +526,7 @@ def main_page() -> None:
                     )
                     ui.html(
                         '<div class="coach-chat-copy">'
-                        "Use the chat to curate SME evidence before generating the judge-subagent requirements.md and response gate."
+                        "Use the chat to curate grounded evidence before generating the judge spec and response gate."
                         "</div>"
                     )
                 ui.html(
@@ -556,15 +550,15 @@ def main_page() -> None:
                     step = current_coach_view()[0]
                     if step == 1:
                         welcome = (
-                            '<div class="msg-ai"><strong>I am your GEDD Coach for LLM-as-Judge response gates.</strong><br><br>'
+                            '<div class="msg-ai"><strong>I am your GEDD Coach for systematic LLM-as-Judge curation.</strong><br><br>'
                             'First we anchor the work in your domain before designing the response gate.<br><br>'
                             '<strong>What domain are you the expert in, who uses this agent, and what can go wrong if it answers badly?</strong></div>'
                         )
                     elif step == 2:
                         welcome = (
                             '<div class="msg-ai"><strong>The domain is set.</strong><br><br>'
-                            'Now attach the baseline Kiro requirements.md that created the current agent. '
-                            'If the file is not available, describe the baseline spec or prompt in the chat.</div>'
+                            'Now attach or describe the current behavior contract, prompt, policy, rubric, or trace evidence. '
+                            'This becomes the baseline we test against.</div>'
                         )
                     elif step == 3:
                         welcome = (
@@ -575,7 +569,7 @@ def main_page() -> None:
                     elif step == 4:
                         welcome = (
                             '<div class="msg-ai"><strong>The query set is ready.</strong><br><br>'
-                            'Run those queries against the Kiro baseline agent created from the initial requirements.md, '
+                            'Run those queries against the baseline agent, '
                             'then paste the baseline responses here.</div>'
                         )
                     elif step == 5:
@@ -587,8 +581,8 @@ def main_page() -> None:
                     else:
                         welcome = (
                             '<div class="msg-ai"><strong>Annotated evidence is ready.</strong><br><br>'
-                            'Open Evidence to export SME_error_analysis.md, then use it for the Kiro judge-subagent requirements.md, '
-                            'the LLM-as-Judge gate, and measurement.</div>'
+                            'Open Evidence to export SME_error_analysis.md, then use it for the judge spec, '
+                            'LLM-as-Judge gate, and measurement.</div>'
                         )
                     ui.html(welcome)
 
@@ -654,26 +648,11 @@ def main_page() -> None:
 
     send_btn.on_click(send_message)
     user_input.on("keydown.enter", send_message)
-    ui.run_javascript(
-        """
-        const replaceOldCoachMessage = () => {
-          document.querySelectorAll('.msg-ai').forEach((el) => {
-            el.innerHTML = el.innerHTML.replace(
-              'I am your GEDD Coach for Kiro LLM-as-Judge subagent specs.',
-              'I am your GEDD Coach for LLM-as-Judge response gates.'
-            );
-          });
-        };
-        replaceOldCoachMessage();
-        setTimeout(replaceOldCoachMessage, 100);
-        setTimeout(replaceOldCoachMessage, 500);
-        """
-    )
 
 
 def run() -> None:
     ui.run(
-        title="GEDD - SME evidence to LLM-as-Judge response gates",
+        title="GEDD - Grounded Evidence Driven Development",
         host=os.environ.get("HOST", "127.0.0.1"),
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",

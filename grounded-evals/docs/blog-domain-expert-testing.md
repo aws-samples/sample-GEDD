@@ -16,7 +16,7 @@ Why? Because building evaluation datasets requires:
 
 So what happens? Engineers write the test cases. Engineers decide what "correct" means. And the domain expert — the tax accountant, the insurance adjuster, the pharmacist — reviews a spreadsheet after the fact and says "that one's wrong" with no structured way to capture *why*.
 
-GEDD (Grounded Eval-Driven Development) flips this. It puts the domain expert in the driver's seat from minute one.
+GEDD (Grounded Evidence Driven Development) flips this. It puts the domain expert in the driver's seat from minute one.
 
 ---
 
@@ -196,4 +196,4 @@ That's the bounded context for agent character — and only you can build it.
 
 ---
 
-*Built with [GEDD](https://github.com/aws-samples/sample-GEDD) — Grounded Eval-Driven Development. Try it: `pip install grounded-evals && grounded-evals chat`*
+*Built with [GEDD](https://github.com/aws-samples/sample-GEDD) — Grounded Evidence Driven Development. Try it: `pip install grounded-evals && grounded-evals chat`*
