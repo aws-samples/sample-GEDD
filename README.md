@@ -1,139 +1,352 @@
-# GEDD
+# What Is GEDD? A Shared Explanation for Domain Experts, Product Managers, and ML Engineers
 
-Grounded Evidence Driven Development for systematic LLM-as-Judge curation.
+GEDD means Grounded Evidence Driven Development.
 
-[![CI](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml/badge.svg)](https://github.com/aws-samples/sample-GEDD/actions/workflows/ci.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT-0](https://img.shields.io/badge/License-MIT--0-green.svg)](LICENSE)
+It is a workflow for turning expert judgment into a systematic LLM-as-Judge response gate. The gate checks candidate customer-facing responses before customers see them.
 
-GEDD helps domain experts, SMEs, and product managers curate the evidence needed to build a domain-specific LLM-as-Judge. It turns baseline agent behavior into a guardrail calibration set, a structured judge spec, a reusable judge prompt, and a measurable response gate.
+GEDD exists because AI quality is not just a model problem. In most real domains, the hardest part is knowing what "good" means. A generic evaluator can say whether an answer is fluent, but it cannot reliably know whether an answer is acceptable for pharmacy, insurance, tax, legal, localization, financial services, education, healthcare operations, or any other specialist domain.
 
-The core idea is simple: the judge should come from grounded evidence, not generic assumptions. Domain owners define the query set, review baseline responses, name the failure modes, and decide which failures should block customer-facing answers.
+GEDD puts the people who know the domain at the center of the evaluation process. Domain experts and product managers curate evidence. ML engineers turn that evidence into repeatable tests, calibrated judges, and release gates.
+
+The short version:
 
 ```text
-Domain context
-  -> curated query set
-  -> baseline responses
-  -> SME annotations
-  -> failure codebook
-  -> guardrail calibration scenarios
-  -> systematic LLM-as-Judge
-  -> response gate before customers see answers
+GEDD converts SME evidence into guardrail calibration scenarios,
+then uses those scenarios to build and measure a domain-specific LLM-as-Judge.
 ```
 
-![GEDD Coach and annotation workflow](grounded-evals/docs/GEDD_optimized.gif)
+## The Core Idea
+
+Most teams try to write an AI rubric too early. They start with abstract criteria like "be accurate," "be helpful," or "follow policy." Those are useful intentions, but they are not enough to gate a real product.
+
+GEDD starts with observed behavior:
+
+1. Define the domain and risk boundaries.
+2. Curate scenarios that expose those boundaries.
+3. Run the baseline assistant.
+4. Ask SMEs to judge the responses.
+5. Convert SME judgments into failure codes and calibration scenarios.
+6. Generate a judge spec and LLM-as-Judge prompt.
+7. Run the judge as a response gate.
+8. Measure the judge before it becomes a blocking control.
+
+```mermaid
+flowchart LR
+    A[Domain context] --> B[Curated query scenarios]
+    B --> C[Baseline assistant responses]
+    C --> D[SME annotations]
+    D --> E[Failure codebook]
+    E --> F[Guardrail calibration set]
+    F --> G[Judge spec]
+    G --> H[LLM-as-Judge prompt]
+    H --> I[Response gate]
+    I --> J[Customer-visible answer decision]
+
+    D -. traceability .-> G
+    F -. regression tests .-> I
+    J -. measurement .-> F
+```
+
+The output is not just a document. It is a chain of evidence that explains why a response should pass, fail, block, or go to human review.
 
 ## What GEDD Produces
 
-| Artifact | Purpose |
+GEDD produces artifacts that each role can use.
+
+| Artifact | What it answers |
 |---|---|
-| `SME_error_analysis.md` | Evidence handoff with domain context, query coverage, baseline responses, annotations, failure codes, memos, and traceability |
-| Guardrail calibration set | Scenario rows with conversation turns, input/output side, expected pass/fail or tier, category labels, SME rationale, and corrective feedback |
-| Judge spec | A structured description of what the LLM-as-Judge must detect, block, escalate, and explain |
-| LLM-as-Judge prompt | A domain-specific judge prompt grounded in SME-defined failure modes |
-| Response gate | A pass/fail decision contract that runs before an answer becomes customer-visible |
-| Measurement report | A before/after quality view across specificity, traceability, testability, domain coverage, and response accuracy |
+| Domain profile | What domain are we evaluating, who uses the assistant, and what risks matter? |
+| Curated query set | Which user scenarios should the assistant handle or reject? |
+| Baseline response evidence | What does the current assistant actually do? |
+| SME annotations | Which responses are correct, partial, incorrect, unsafe, incomplete, or off-policy? |
+| Failure codebook | What repeatable failure modes did SMEs discover? |
+| Guardrail calibration set | Which scenarios calibrate input guardrails, output guardrails, and response gates? |
+| Judge spec | What must the LLM-as-Judge detect, block, escalate, and explain? |
+| Judge prompt | How should the judge evaluate a candidate response? |
+| Response gate | What structured decision is returned before customers see the answer? |
+| Measurement report | Is the judge specific, testable, traceable, calibrated, and covered? |
 
-GEDD is not a model leaderboard. It is the evidence pipeline for building a judge that understands a specific domain.
+## How the Three Roles See GEDD
 
-## Workflow
+GEDD is one workflow, but each role experiences it differently.
 
-Coach guides the SME through six steps:
+```mermaid
+flowchart TB
+    subgraph DE[Domain Expert]
+        DE1[Names real risks]
+        DE2[Reviews baseline answers]
+        DE3[Defines failure modes]
+        DE4[Approves severity and feedback]
+    end
 
-| Step | What happens | Output |
-|---|---|---|
-| 1. Define the domain | Capture users, risks, constraints, permissions, vocabulary, and known edge cases | Domain expert profile |
-| 2. Capture baseline evidence | Upload, paste, or describe the current agent behavior contract, prompt, policy, or traces | Baseline context |
-| 3. Curate queries | Build happy path, edge, adversarial, ambiguous, recovery, persona, and red-flag prompts | SME-owned query set |
-| 4. Test the baseline | Run or paste baseline responses for the curated queries | Response evidence |
-| 5. Annotate failures | Label verdicts, failure codes, severity, confidence, missing rules, and memos | Failure codebook |
-| 6. Generate the judge | Produce the evidence handoff, judge spec, LLM-as-Judge prompt, and measurement | Systematic judge package |
+    subgraph PM[Product Manager]
+        PM1[Defines product boundary]
+        PM2[Prioritizes customer impact]
+        PM3[Chooses release gates]
+        PM4[Owns launch readiness]
+    end
 
-The result is a judge that reflects observed behavior and SME judgment. A fluent answer can still fail if it violates the domain evidence.
+    subgraph ML[ML Engineer]
+        ML1[Exports datasets]
+        ML2[Builds judge runtime]
+        ML3[Measures agreement]
+        ML4[Deploys CI and response gates]
+    end
 
-## Guardrail Calibration Pattern
-
-GEDD is inspired by framework-agnostic guardrail evaluation datasets: simple scenario files that make safety and quality expectations explicit enough to run as regression tests.
-
-In GEDD, a useful scenario has:
-
-- Conversation turns for the user request and, when evaluating outputs, the candidate assistant response
-- An evaluation side: input guardrail, output guardrail, or response gate
-- An expected result or tier such as allow, continue with resources, block, or human review
-- Domain category labels for per-category coverage analysis
-- SME rationale explaining why the scenario should pass or fail
-- Corrective feedback or an example safer response when the baseline fails
-
-The same scenario set can calibrate a judge, run regression tests on every model or prompt change, and expose category coverage gaps. It is still only a starting point: GEDD expects SME review, production annotation, red-teaming, and ongoing calibration before a judge becomes a blocking gate.
-
-## Quick Start
-
-```bash
-cd grounded-evals
-python -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev]"
-grounded-evals serve --host 127.0.0.1 --port 8080
+    DE1 --> PM1
+    PM1 --> DE2
+    DE2 --> DE3
+    DE3 --> PM2
+    PM2 --> PM3
+    PM3 --> ML1
+    ML1 --> ML2
+    ML2 --> ML3
+    ML3 --> ML4
+    ML4 --> PM4
 ```
 
-Open:
+## For a Domain Expert
+
+For a domain expert, GEDD is a way to transfer your judgment into the AI system without asking you to become an ML engineer.
+
+You do not need to write model code. You do not need to tune prompts. Your job is to say what a good answer looks like in your domain, what a dangerous answer looks like, and where the assistant must slow down or escalate.
+
+GEDD asks you to help with five things.
+
+### 1. Define the Domain
+
+The first question is not "what model are we using?" It is:
 
 ```text
-http://127.0.0.1:8080/
+What domain are you the expert in, and what can go wrong if the assistant answers badly?
 ```
 
-Local runs start in guest mode unless you configure `ADMIN_PASSWORD` or Cognito. If port `8080` is busy, use `--port 8081`.
+Examples:
 
-For full environment setup, Bedrock or Anthropic configuration, AWS deployment, and troubleshooting, use [SETUP.md](SETUP.md).
+- A pharmacist may care about dose-unit confusion, contraindication handling, and escalation to prescriber review.
+- An insurance claims SME may care about bad-faith denial, invented coverage status, and state-specific regulation misses.
+- A localization lead may care about runtime tokens, rating-board language, regional compliance, and canon terminology.
+- A compliance specialist may care about legal basis, retention, data minimization, incident response, and cross-border transfer claims.
 
-## App Surfaces
+GEDD captures this as domain context.
 
-| Route | UI label | Purpose |
-|---|---|---|
-| `/` | Home | Product entry point |
-| `/coach` | Coach | Guided evidence curation workflow |
-| `/aaa-game-localization-demo` | AAA Game Localization | An anonymized localization scenario showing the full evidence-to-judge flow |
-| `/coding` | Annotations | SME verdicts, failure codes, severity, confidence, and memos |
-| `/report` | Evidence | Export and inspect `SME_error_analysis.md` |
-| `/requirements` | Judge Spec | Generate the structured judge specification |
-| `/judge` | Judge | Generate the LLM-as-Judge response gate |
-| `/improvement` | Measurement | Compare baseline and GEDD-generated judge quality |
-| `/demos` | Reference seeds | Load example evidence sessions |
+### 2. Curate Scenarios
 
-The core path is Coach. Other pages appear when enough evidence exists for them.
+GEDD helps you create scenarios that expose domain boundaries.
 
-## Example Scenario
+The goal is not to create a random list of prompts. The goal is to cover the domain.
 
-The first-class demo is an anonymized AAA Game Localization Agent.
+Useful scenario categories include:
 
-It shows how a localization SME turns LQA evidence into judge gates for:
+- Happy path
+- Edge case
+- Adversarial request
+- Ambiguous request
+- Multi-turn request
+- Error recovery
+- Persona or permission variation
+- Domain red flag
 
-- Franchise terminology and lore glossary drift
-- Runtime placeholders, tags, controller glyphs, and choice-state markup
-- Subtitle meaning, timing, and VO/text parity
-- RTL layout and input direction issues
-- Storefront, rating, product-scope, and regional compliance copy
-- Character voice and canon-role flattening
+```mermaid
+flowchart TB
+    Root((Domain scenarios))
+    Root --> HP[Happy path]
+    Root --> EC[Edge case]
+    Root --> ADV[Adversarial]
+    Root --> AMB[Ambiguous]
+    Root --> MT[Multi-turn]
+    Root --> RF[Domain red flag]
 
-The demo produces the same artifacts as a real project: `SME_error_analysis.md`, judge spec, LLM-as-Judge prompt, response gate, and measurement report.
+    HP --> HP1[Normal in-scope request]
+    HP --> HP2[Expected answer is clear]
+    EC --> EC1[Boundary condition]
+    EC --> EC2[Missing or unusual data]
+    ADV --> ADV1[Policy bypass]
+    ADV --> ADV2[Pressure to ignore rules]
+    AMB --> AMB1[Needs clarification]
+    AMB --> AMB2[Multiple possible interpretations]
+    MT --> MT1[Follow-up context]
+    MT --> MT2[Changed constraints]
+    RF --> RF1[High-risk domain signal]
+    RF --> RF2[Escalation needed]
+```
 
-## Bring Your Own Agent
+### 3. Review Baseline Answers
 
-Use GEDD when you have a customer-facing assistant and need a grounded judge for its responses.
+GEDD then tests the current assistant against those scenarios.
 
-You can start from:
+You review the answer and label it:
 
-- A system prompt or product brief
-- A policy, rubric, SOP, or current behavior contract
-- A set of production or synthetic traces
-- A SME-owned golden query set
-- A demo seed adapted to your domain
+- Correct
+- Partial
+- Incorrect
+- Needs human review
 
-If you already have traces, paste or import them and use GEDD as an annotation and judge-generation surface. See [Paste In Traces](grounded-evals/docs/paste-in-traces.md).
+The most valuable part is the reason. GEDD asks what you see that a generic evaluator would miss.
 
-## Judge Gate Contract
+### 4. Name the Failure
 
-GEDD-generated judges are expected to return a structured gate decision before an answer becomes customer-visible:
+When a response is wrong, GEDD helps turn your judgment into a repeatable failure code.
+
+Examples:
+
+- `dose_unit_confusion`
+- `coverage_hallucination`
+- `placeholder_and_markup_corruption`
+- `rating_or_disclosure_softening`
+- `legal_basis_overclaim`
+- `missing_escalation_for_high_risk_case`
+
+The exact code name matters because the judge later uses it as a structured label.
+
+### 5. Approve the Gate Behavior
+
+Finally, you help decide what should happen when a failure appears:
+
+- Allow the response
+- Ask for revision
+- Show resources and continue
+- Block the response
+- Escalate to human review
+
+That decision becomes part of the guardrail calibration set.
+
+For a domain expert, the promise is simple:
+
+```text
+Your judgment becomes executable quality control.
+```
+
+## For a Product Manager
+
+For a product manager, GEDD is a release-quality workflow.
+
+It helps you answer:
+
+- What are the product risks?
+- Which failures are release blockers?
+- Which failures are tolerable, fix-forward issues?
+- Is the judge grounded in actual SME evidence?
+- Can engineering measure the gate before launch?
+
+GEDD turns the vague question "is the AI good enough?" into a product decision:
+
+```text
+Which customer-visible responses are allowed, blocked, revised, or escalated?
+```
+
+### The PM Owns the Quality Bar
+
+Product managers do not need to personally label every example, but they do need to own the product threshold.
+
+GEDD gives PMs a structured way to set that threshold.
+
+```mermaid
+flowchart TD
+    A[Product goal] --> B[User groups]
+    B --> C[Domain risks]
+    C --> D[Scenario coverage]
+    D --> E[SME annotations]
+    E --> F[Failure severity]
+    F --> G[Release gate policy]
+    G --> H[Launch decision]
+
+    H -->|not ready| D
+    H -->|shadow ready| I[Monitor judge]
+    H -->|blocking ready| J[Gate customer responses]
+```
+
+### Product Questions GEDD Answers
+
+| PM question | GEDD evidence |
+|---|---|
+| What can go wrong? | Domain risks, red-flag scenarios, failure codebook |
+| How often did it go wrong in our test set? | Baseline response annotations |
+| Which failures block launch? | Severity and response-gate policy |
+| Are we covering the right scenarios? | Category coverage and saturation |
+| Can we explain the gate to stakeholders? | Traceability from scenario to annotation to judge criterion |
+| Is the judge ready to block traffic? | Judge-human agreement, false positive checks, false negative checks |
+
+### The PM Handoff
+
+The PM can use GEDD outputs in planning and launch reviews:
+
+- Prioritized failure modes
+- Release-blocking scenarios
+- Evidence-backed judge criteria
+- Measurement targets
+- Engineering implementation queue
+- Customer-visible risk summary
+
+The PM does not need to argue from opinion. They can point to a scenario, an SME annotation, a failure code, and a gate decision.
+
+For a product manager, the promise is:
+
+```text
+You get a defensible release gate built from expert evidence.
+```
+
+## For an ML Engineer
+
+For an ML engineer, GEDD is a data and evaluation pipeline.
+
+It gives you labeled, traceable, domain-specific artifacts that can become:
+
+- Judge prompts
+- Regression datasets
+- CI checks
+- Shadow-mode monitors
+- Blocking response gates
+- Human-review routing rules
+
+### The ML Engineer Needs Structure
+
+An ML engineer cannot safely automate vague stakeholder feedback like "make it more compliant" or "sound more accurate."
+
+GEDD converts that feedback into structured data:
+
+```mermaid
+flowchart LR
+    A[SME annotation] --> B[Failure code]
+    B --> C[Severity]
+    C --> D[Expected tier]
+    D --> E[Corrective feedback]
+    E --> F[Calibration scenario]
+    F --> G[Judge prompt]
+    F --> H[Regression test]
+    F --> I[Coverage report]
+```
+
+### What the Engineer Builds
+
+The engineer takes GEDD outputs and builds the operational path.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Assistant
+    participant Judge as LLM-as-Judge Gate
+    participant Policy as Gate Policy
+    participant Human as Human Review
+    participant Customer
+
+    User->>Assistant: Request
+    Assistant->>Judge: Candidate response + context
+    Judge->>Policy: pass/fail, failure_code, severity, rationale
+    alt Pass
+        Policy->>Customer: Show response
+    else Needs revision
+        Policy->>Assistant: Regenerate or repair response
+    else Human review
+        Policy->>Human: Route with evidence
+    else Block
+        Policy->>Customer: Do not show candidate response
+    end
+```
+
+### The Judge Output Contract
+
+GEDD expects structured judge output. A typical contract looks like this:
 
 ```json
 {
@@ -147,72 +360,193 @@ GEDD-generated judges are expected to return a structured gate decision before a
 }
 ```
 
-The judge should prioritize SME-defined failure modes over generic helpfulness. It should explain what evidence drove the decision and whether a customer-visible response should be blocked.
+The engineer can enforce schema validity, exact failure-code names, and decision-routing behavior.
 
-## Development
+### Promotion Stages
 
-Run the test suite:
+The judge should not become a blocking production gate on day one.
 
-```bash
-cd grounded-evals
-python3 -m pytest tests
+GEDD supports a staged path:
+
+```mermaid
+stateDiagram-v2
+    [*] --> EvidenceCollection
+    EvidenceCollection --> JudgeDraft: enough SME annotations
+    JudgeDraft --> Calibration: judge prompt generated
+    Calibration --> ShadowMode: agreement target met
+    ShadowMode --> BlockingGate: false positive and false negative checks pass
+    BlockingGate --> Monitoring
+    Monitoring --> EvidenceCollection: new failure mode found
+
+    Calibration --> EvidenceCollection: coverage gap
+    ShadowMode --> Calibration: disagreement found
+    BlockingGate --> HumanReview: high-risk uncertainty
 ```
 
-Compile-check the app:
+Useful promotion checks include:
 
-```bash
-cd grounded-evals
-python3 -m compileall src
+- Judge-human agreement on labeled examples
+- False positives on clean pass examples
+- False negatives on critical fail examples
+- Valid structured output
+- Exact codebook label use
+- Category coverage
+- Drift monitoring after model or prompt changes
+
+For an ML engineer, the promise is:
+
+```text
+You get domain-labeled calibration data and a traceable gate contract,
+not a vague product request.
 ```
 
-Deploy the UI after AWS infrastructure is configured:
+## The Shared Operating Model
 
-```bash
-cd grounded-evals
-./scripts/deploy-ui.sh
+GEDD works because it gives each role a clear responsibility.
+
+```mermaid
+flowchart TB
+    subgraph Inputs
+        A[Domain risks]
+        B[Baseline prompts and policies]
+        C[Production or synthetic traces]
+    end
+
+    subgraph SME_PM[Domain Expert and Product Manager]
+        D[Curate scenarios]
+        E[Annotate responses]
+        F[Set severity and gate policy]
+    end
+
+    subgraph GEDD[GEDD]
+        G[Build failure codebook]
+        H[Create guardrail calibration set]
+        I[Generate judge spec]
+        J[Generate judge prompt]
+    end
+
+    subgraph Engineering[ML Engineering]
+        K[Run judge evals]
+        L[Measure agreement]
+        M[Deploy shadow gate]
+        N[Promote blocking gate]
+    end
+
+    A --> D
+    B --> D
+    C --> E
+    D --> G
+    E --> G
+    F --> H
+    G --> I
+    H --> I
+    I --> J
+    J --> K
+    K --> L
+    L --> M
+    M --> N
 ```
 
-Local authentication behavior:
+## RACI View
 
-| Configuration | Behavior |
+| Activity | Domain expert | Product manager | ML engineer |
+|---|---|---|---|
+| Define domain risks | Responsible | Accountable | Consulted |
+| Curate scenarios | Responsible | Accountable | Consulted |
+| Review baseline responses | Responsible | Consulted | Informed |
+| Name failure modes | Responsible | Consulted | Informed |
+| Set severity and launch priority | Consulted | Accountable | Consulted |
+| Build judge spec | Consulted | Accountable | Responsible |
+| Implement judge runtime | Informed | Consulted | Responsible |
+| Measure judge-human agreement | Consulted | Accountable | Responsible |
+| Promote to blocking gate | Consulted | Accountable | Responsible |
+| Monitor drift and new failures | Consulted | Accountable | Responsible |
+
+## A Concrete Example
+
+Imagine an AAA game localization assistant.
+
+A generic evaluator might reward an answer because it is fluent and confident. A localization SME may reject the same answer because it approves a translated string that drops a runtime placeholder.
+
+GEDD captures that as evidence:
+
+| Evidence field | Example |
 |---|---|
-| No `ADMIN_PASSWORD`, no Cognito | Guest mode for local development |
-| `ADMIN_PASSWORD` set | Simple password login |
-| Cognito environment variables set | Cognito OAuth flow for protected routes |
+| Scenario | A localized subtitle dropped `{player_name}` but still reads naturally |
+| Baseline answer | The assistant says it is acceptable because the meaning is mostly preserved |
+| SME verdict | Incorrect |
+| Failure code | `placeholder_and_markup_corruption` |
+| Severity | Catastrophic |
+| Reason | Runtime variables are required; losing them can break UI or dialogue state |
+| Corrective feedback | Block release until the placeholder is preserved and tested in context |
+| Gate action | Block customer-visible approval |
 
-See [SETUP.md](SETUP.md) for AWS, Bedrock, Cognito, AgentCore, and deployment details.
+The judge gate can now detect this pattern later.
 
-## Repository Layout
+It does not merely ask, "Is this translation fluent?"
 
-```text
-.
-|-- grounded-evals/          # Python package, NiceGUI app, CLI, tests, infra scripts
-|-- METHODOLOGY.md           # Grounded-theory and evaluation methodology
-|-- SETUP.md                 # Engineering setup and deployment guide
-`-- README.md                # Product and contributor entry point
+It asks, "Does this response approve a localization defect that violates runtime, lore, rating, regional, or release-safety evidence?"
+
+## Why This Is Different From a Generic Rubric
+
+A generic rubric starts with criteria.
+
+GEDD starts with evidence.
+
+```mermaid
+flowchart LR
+    subgraph Generic[Generic rubric path]
+        A1[Write broad rubric] --> A2[Ask judge to score]
+        A2 --> A3[Hope criteria match domain risk]
+    end
+
+    subgraph GEDDPath[GEDD path]
+        B1[Observe baseline behavior] --> B2[SME annotations]
+        B2 --> B3[Failure codebook]
+        B3 --> B4[Calibration scenarios]
+        B4 --> B5[Judge spec and response gate]
+    end
 ```
 
-Key app modules:
+The difference matters because many dangerous AI responses are fluent, polished, and superficially helpful. GEDD is designed to catch responses that are unacceptable because of domain-specific evidence.
+
+## What Good Looks Like
+
+A mature GEDD implementation has:
+
+- A domain profile with explicit users, risks, boundaries, and known edge cases
+- A scenario set covering happy paths, edge cases, adversarial pressure, ambiguity, multi-turn context, recovery, persona variation, and red flags
+- Baseline response traces
+- SME annotations with severity and rationale
+- A failure codebook with exact labels
+- Guardrail calibration scenarios with expected tiers and feedback
+- A judge spec with traceability to evidence
+- A judge prompt with structured output
+- Measurement for agreement, false positives, false negatives, and schema validity
+- A response gate that can run in shadow mode before it blocks
+
+## The One-Sentence Explanation
+
+For a domain expert:
 
 ```text
-grounded-evals/src/grounded_evals/
-|-- agent/                   # Coach prompt and agent turn handling
-|-- ears/                    # EARS-style judge spec generation and measurement
-|-- guide/                   # Session model, markdown export, session I/O
-|-- judge_builder/           # Judge prompt and rubric generation
-|-- open_coding/             # Failure-code discovery helpers
-|-- axial_coding/            # Pattern and root-cause mapping
-`-- ui/                      # NiceGUI pages and demo datasets
+GEDD turns your judgment into executable quality gates.
 ```
 
-## More Detail
+For a product manager:
 
-- [SETUP.md](SETUP.md): local setup, model provider configuration, auth, AWS deployment, troubleshooting
-- [METHODOLOGY.md](METHODOLOGY.md): grounded theory, coding workflow, judge spec generation, judge calibration
-- [From SME Evidence to LLM-as-Judge Gates](grounded-evals/docs/blog-grounded-evidence-to-judge-gates.md): step-by-step refocus from scattered eval messaging to guardrail calibration and response gates
-- [What Is GEDD?](grounded-evals/docs/blog-what-is-gedd-for-domain-product-ml.md): role-specific explanation for domain experts, product managers, and ML engineers with Mermaid diagrams
-- [CONTRIBUTING.md](CONTRIBUTING.md): contribution and security reporting guidance
+```text
+GEDD turns product risk into a defensible release decision.
+```
 
-## License
+For an ML engineer:
 
-MIT-0. See [LICENSE](LICENSE).
+```text
+GEDD turns SME annotations into calibration data, judge prompts, and deployable response gates.
+```
+
+For the whole team:
+
+```text
+GEDD is the evidence pipeline between expert judgment and automated LLM-as-Judge control.
+```
