@@ -1,4 +1,4 @@
-# What Is GEDD? A Shared Explanation for Domain Experts, Product Managers, and ML Engineers
+# Evals Are a Team Sport: GEDD, the Grounded Evidence Driven Development Framework, Creates an Offline-Online Continuous Improvement Loop for Your AI Product
 
 GEDD means Grounded Evidence Driven Development.
 
