@@ -234,26 +234,7 @@ The full test suite passed:
 246 passed
 ```
 
-We also scanned the repo for the old tool-specific language and brand-specific demo references to make sure the product surface stayed clean.
-
-## Step 10: Verify the Remote State
-
-One practical issue came up during the push: the GitHub directory page showed a stale branch listing for a while, even after the remote branch had moved.
-
-The reliable verification path was:
-
-```bash
-git ls-remote origin refs/heads/main
-```
-
-We also checked:
-
-- The GitHub commit API
-- The raw README endpoint
-- The deleted legacy-folder contents endpoint, which returned `404` after deletion
-- The rendered GitHub HTML payload, which eventually showed the current commit and file tree
-
-The lesson is simple: when a browser view disagrees with Git refs and raw content endpoints, verify the remote state directly before assuming the push failed.
+We also scanned the repo for old tool-specific language and brand-specific demo references to make sure the product surface stayed clean.
 
 ## The Final Shape
 
