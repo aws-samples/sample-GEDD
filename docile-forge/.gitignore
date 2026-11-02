@@ -1,0 +1,8 @@
+.env
+data/
+cache/
+cookbook/
+splits/
+.venv/
+__pycache__/
+presentation/
