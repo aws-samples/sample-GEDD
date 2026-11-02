@@ -1,0 +1,13 @@
+{
+  "tag": "glm_sft",
+  "n_train": 1400,
+  "epochs": 1,
+  "batch_size": 16,
+  "lora_rank": 16,
+  "learning_rate": 0.0001,
+  "max_seq_len": 6144,
+  "seed": 0,
+  "no_promote": false,
+  "max_usd": 42.0,
+  "dry_run": false
+}
