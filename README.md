@@ -1,70 +1,108 @@
-# Evals Are a Team Sport: GEDD, the Grounded Evidence Driven Development Framework, Creates an Offline-Online Continuous Improvement Loop for Your AI Product
+# GEDD: Grounded Evidence Driven Development
 
-GEDD means Grounded Evidence Driven Development.
+**Turn expert judgment into the three things an AI product needs to get better: the eval that measures it, the training data that improves it, and the gate that guards it.**
 
-It is a workflow for turning expert judgment into a systematic LLM-as-Judge response gate. The gate checks candidate customer-facing responses before customers see them.
+Most AI quality work stops at measurement: a rubric, a dashboard, a judge. GEDD starts from the same place, the people who know the domain, and carries their judgment all the way through: into a locked evaluation with a statistical bar, into SFT corrections, DPO preference pairs and RL rewards, and into an LLM-as-Judge response gate that decides what customers see. Every round of improvement comes back to the same evidence and has to prove itself the same way.
 
-GEDD exists because AI quality is not just a model problem. In most real domains, the hardest part is knowing what "good" means. A generic evaluator can say whether an answer is fluent, but it cannot reliably know whether an answer is acceptable for pharmacy, insurance, tax, legal, localization, financial services, education, healthcare operations, or any other specialist domain.
-
-GEDD puts the people who know the domain at the center of the evaluation process. Domain experts and product managers curate evidence. ML engineers turn that evidence into repeatable tests, calibrated judges, and release gates.
+GEDD exists because AI quality is not just a model problem. In most real domains, the hardest part is knowing what "good" means. A generic evaluator can say whether an answer is fluent, but it cannot reliably know whether an answer is acceptable for accounts payable, pharmacy, insurance, tax, legal, localization, financial services, education, healthcare operations, or any other specialist domain. And a generic model can't learn your domain's rules from a prompt alone.
 
 The short version:
 
 ```text
-GEDD converts SME evidence into guardrail calibration scenarios,
-then uses those scenarios to build and measure a domain-specific LLM-as-Judge.
+SME evidence  →  failure codebook  →  ① a locked eval      (measure)
+                                     ② training signals    (improve: SFT · DPO · RL)
+                                     ③ a response gate     (guard: post · revise · review · block)
+              ←  new failures from the gate and production feed the next round
 ```
+
+## Proof point: invoices, +9.8 points, 3× more touch-free documents
+
+[`docile-forge/`](docile-forge/) is a worked example on real scanned business documents (DocILE, ICDAR 2023): read 10 key fields off an invoice and return JSON.
+
+| | Base GLM 5.3 Flash | Best prompt | **Fine-tuned (SFT)** |
+| --- | --- | --- | --- |
+| Fields correct (5,000 held-out cases) | 78.5% | 81.1% | **88.4%** |
+| Invoices with all 10 fields right | 12.8% | 18.8% | **38.8%** |
+| Absent fields left blank, not invented | 65% | 78% | **87%** |
+| Gain vs baseline | | +2.6 | **+9.8**, McNemar p = 1e-76, layout-bootstrap 95% CI [+7.7, +12.2] |
+
+Two lessons that shaped this version of GEDD:
+
+1. **Prompting the rules traded one error for another; training on examples fixed both.** That's why GEDD's evidence now feeds training, not only the judge.
+2. **The remaining errors are judgment calls.** Of the 582 fields the fine-tune still gets "wrong", many are label gaps or defensible variants (a division vs its parent company as vendor). Exact-match metrics can't tell them apart; an SME can. That's the next GEDD round: [docile-forge/docs/roadmap-sft-dpo-gedd.md](docile-forge/docs/roadmap-sft-dpo-gedd.md).
 
 ## The Core Idea
 
-Most teams try to write an AI rubric too early. They start with abstract criteria like "be accurate," "be helpful," or "follow policy." Those are useful intentions, but they are not enough to gate a real product.
+Most teams try to write an AI rubric too early. They start with abstract criteria like "be accurate," "be helpful," or "follow policy." Those are useful intentions, but they are not enough to gate a real product, and they give a model nothing to learn from.
 
 GEDD starts with observed behavior:
 
 1. Define the domain and risk boundaries.
-2. Curate scenarios that expose those boundaries.
-3. Run the baseline assistant.
-4. Ask SMEs to judge the responses.
+2. Curate scenarios that expose those boundaries, and **lock a held-out test set**.
+3. Run the baseline system.
+4. Ask SMEs to judge the responses, and **correct the wrong ones**.
 5. Convert SME judgments into failure codes and calibration scenarios.
-6. Generate a judge spec and LLM-as-Judge prompt.
-7. Run the judge as a response gate.
-8. Measure the judge before it becomes a blocking control.
+6. **Measure:** score every system on the locked set; call a gain real only if two tests agree.
+7. **Improve:** turn the evidence into training signals (SFT corrections, DPO pairs, RL rewards) and re-train.
+8. **Guard:** generate a judge spec and LLM-as-Judge, or fine-tune a small judge, and run it as a response gate.
+9. Measure the judge before it becomes a blocking control, and feed what it catches into the next round.
 
 ```mermaid
 flowchart LR
-    A[Domain context] --> B[Curated query scenarios]
-    B --> C[Baseline assistant responses]
-    C --> D[SME annotations]
+    A[Domain context] --> B[Curated scenarios + locked test set]
+    B --> C[Baseline responses]
+    C --> D[SME annotations + corrections]
     D --> E[Failure codebook]
-    E --> F[Guardrail calibration set]
-    F --> G[Judge spec]
-    G --> H[LLM-as-Judge prompt]
-    H --> I[Response gate]
-    I --> J[Customer-visible answer decision]
-
-    D -. traceability .-> G
-    F -. regression tests .-> I
-    J -. measurement .-> F
+    E --> M[Measure: locked eval, two-test bar]
+    E --> T[Improve: SFT corrections, DPO pairs, RL rewards]
+    E --> G[Guard: judge spec, LLM-as-Judge, response gate]
+    T --> R[Re-trained model]
+    R --> M
+    R --> G
+    G --> P[Customer-visible decision]
+    P -. new failures .-> D
+    M -. regressions .-> D
 ```
 
-The output is not just a document. It is a chain of evidence that explains why a response should pass, fail, block, or go to human review.
+The output is not just a document. It is a chain of evidence that explains why a response should pass, fail, block, or go to human review — and why each new model version is better than the last.
 
 ## What GEDD Produces
 
 GEDD produces artifacts that each role can use.
 
-| Artifact | What it answers |
-|---|---|
-| Domain profile | What domain are we evaluating, who uses the assistant, and what risks matter? |
-| Curated query set | Which user scenarios should the assistant handle or reject? |
-| Baseline response evidence | What does the current assistant actually do? |
-| SME annotations | Which responses are correct, partial, incorrect, unsafe, incomplete, or off-policy? |
-| Failure codebook | What repeatable failure modes did SMEs discover? |
-| Guardrail calibration set | Which scenarios calibrate input guardrails, output guardrails, and response gates? |
-| Judge spec | What must the LLM-as-Judge detect, block, escalate, and explain? |
-| Judge prompt | How should the judge evaluate a candidate response? |
-| Response gate | What structured decision is returned before customers see the answer? |
-| Measurement report | Is the judge specific, testable, traceable, calibrated, and covered? |
+| Artifact | What it answers | Used to |
+|---|---|---|
+| Domain profile | What domain are we evaluating, who uses the assistant, and what risks matter? | scope |
+| Curated query set + locked test set | Which scenarios should the system handle or reject? Which cases are never trained on? | measure |
+| Baseline response evidence | What does the current system actually do? | measure |
+| SME annotations | Which responses are correct, partial, incorrect, unsafe, incomplete, or off-policy? | measure · improve |
+| SME corrections | What should the response have been? | **improve: SFT targets** |
+| Failure codebook | What repeatable failure modes did SMEs discover, and how severe is each? | all three |
+| Preference pairs | Which of two responses is better, and which failure code does the worse one carry? | **improve: DPO / ORPO** |
+| Severity-weighted reward | How much does each failure cost the business? | **improve: RL** |
+| Guardrail calibration set | Which scenarios calibrate input guardrails, output guardrails, and response gates? | guard |
+| Judge spec + judge prompt | What must the LLM-as-Judge detect, block, escalate, and explain? | guard |
+| Response gate | What structured decision is returned before customers see the answer? | guard |
+| Measurement report | Is the gain real (McNemar + group bootstrap)? Is the judge calibrated, traceable and covered? | measure · guard |
+
+## From Evidence to Training Signal
+
+The same SME judgment that calibrates a judge is the best training data you'll ever get. GEDD maps each kind of evidence to the training technique that uses it:
+
+| SME evidence | Training signal | Technique | What it fixes |
+|---|---|---|---|
+| "This is the right answer" (correction) | Supervised target | **SFT** | Formats, conventions, house rules the model has never seen |
+| "A is acceptable, B is not, because `failure_code`" | Chosen / rejected pair | **DPO** (or ORPO) | Choice errors: which number, which entity, answer vs abstain |
+| "This failure is catastrophic, that one is minor" | Severity-weighted reward | **RL** with a verifiable reward | Optimises business cost, not string match |
+| "Post / revise / review / block" decisions | K-way labels | **Decision tuning** of a small judge | A calibrated, cheap gate that runs on every response |
+| "This label is wrong" (label gap) | Corrected dataset | Data fix before any training | Stops the model learning annotation mistakes |
+
+**Rules for hill-climbing with GEDD:**
+
+- **Never train on the locked test set.** Mine pairs and pick checkpoints on a dev split, split by the same grouping as the test set (customer, template, building, layout).
+- **Same bar every round.** A new version counts only if it beats the previous one on the locked set with *both* an exact McNemar test (p < 0.05) *and* a group-level bootstrap interval that excludes zero.
+- **Report trade-offs by failure code.** A round that cuts invented values by raising missed ones has to say so.
+- **Report the business metric.** For document workflows that's whole-document success, not field accuracy: fields compound.
 
 ## How the Three Roles See GEDD
 
@@ -88,7 +126,7 @@ flowchart TB
 
     subgraph ML[ML Engineer]
         ML1[Exports datasets]
-        ML2[Builds judge runtime]
+        ML2[Trains models and judge on the evidence]
         ML3[Measures agreement]
         ML4[Deploys CI and response gates]
     end
@@ -211,10 +249,12 @@ Finally, you help decide what should happen when a failure appears:
 
 That decision becomes part of the guardrail calibration set.
 
+Your corrections do double duty: they calibrate the gate **and** become training data. When you explain why answer A is acceptable and answer B is not, that pair teaches the next model version directly.
+
 For a domain expert, the promise is simple:
 
 ```text
-Your judgment becomes executable quality control.
+Your judgment becomes executable quality control, and the curriculum the model learns from.
 ```
 
 ## For a Product Manager
@@ -266,6 +306,8 @@ flowchart TD
 | Are we covering the right scenarios? | Category coverage and saturation |
 | Can we explain the gate to stakeholders? | Traceability from scenario to annotation to judge criterion |
 | Is the judge ready to block traffic? | Judge-human agreement, false positive checks, false negative checks |
+| Did the new model version actually improve? | Locked-set gap with McNemar p and group bootstrap interval |
+| Where should we invest the next training round? | Remaining errors by failure code and severity |
 
 ### The PM Handoff
 
@@ -283,7 +325,7 @@ The PM does not need to argue from opinion. They can point to a scenario, an SME
 For a product manager, the promise is:
 
 ```text
-You get a defensible release gate built from expert evidence.
+You get a defensible release gate and an improvement roadmap, both built from expert evidence.
 ```
 
 ## For an ML Engineer
@@ -292,7 +334,10 @@ For an ML engineer, GEDD is a data and evaluation pipeline.
 
 It gives you labeled, traceable, domain-specific artifacts that can become:
 
-- Judge prompts
+- SFT datasets from SME corrections
+- DPO / ORPO preference pairs labelled with failure codes
+- Severity-weighted rewards for RL
+- Judge prompts, or a decision-tuned judge model
 - Regression datasets
 - CI checks
 - Shadow-mode monitors
@@ -377,6 +422,8 @@ stateDiagram-v2
     ShadowMode --> BlockingGate: false positive and false negative checks pass
     BlockingGate --> Monitoring
     Monitoring --> EvidenceCollection: new failure mode found
+    EvidenceCollection --> Training: corrections and preference pairs
+    Training --> Calibration: new model version proves its gain
 
     Calibration --> EvidenceCollection: coverage gap
     ShadowMode --> Calibration: disagreement found
@@ -396,7 +443,7 @@ Useful promotion checks include:
 For an ML engineer, the promise is:
 
 ```text
-You get domain-labeled calibration data and a traceable gate contract,
+You get domain-labeled training data, calibration data and a traceable gate contract,
 not a vague product request.
 ```
 
@@ -459,6 +506,9 @@ flowchart TB
 | Build judge spec | Consulted | Accountable | Responsible |
 | Implement judge runtime | Informed | Consulted | Responsible |
 | Measure judge-human agreement | Consulted | Accountable | Responsible |
+| Correct responses and rank pairs | Responsible | Consulted | Informed |
+| Train the next model version (SFT / DPO / RL) | Informed | Accountable | Responsible |
+| Prove the gain on the locked set | Consulted | Accountable | Responsible |
 | Promote to blocking gate | Consulted | Accountable | Responsible |
 | Monitor drift and new failures | Consulted | Accountable | Responsible |
 
@@ -524,29 +574,32 @@ A mature GEDD implementation has:
 - A judge prompt with structured output
 - Measurement for agreement, false positives, false negatives, and schema validity
 - A response gate that can run in shadow mode before it blocks
+- A locked test set and a dev split, grouped so near-duplicates can't leak
+- Training data derived from the evidence: SFT corrections, preference pairs, severity weights
+- A significance report for every model version: McNemar + group bootstrap, by failure code
 
 ## The One-Sentence Explanation
 
 For a domain expert:
 
 ```text
-GEDD turns your judgment into executable quality gates.
+GEDD turns your judgment into executable quality gates and the examples the model learns from.
 ```
 
 For a product manager:
 
 ```text
-GEDD turns product risk into a defensible release decision.
+GEDD turns product risk into a defensible release decision and a measurable improvement plan.
 ```
 
 For an ML engineer:
 
 ```text
-GEDD turns SME annotations into calibration data, judge prompts, and deployable response gates.
+GEDD turns SME annotations into training data, calibration data, judge prompts, and deployable response gates.
 ```
 
 For the whole team:
 
 ```text
-GEDD is the evidence pipeline between expert judgment and automated LLM-as-Judge control.
+GEDD is the evidence pipeline that turns expert judgment into a model that keeps getting better — and the proof that it did.
 ```

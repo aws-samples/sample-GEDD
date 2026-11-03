@@ -149,6 +149,9 @@ judgment into calibrated scenarios and an LLM-as-Judge response gate. The plan f
 The fine-tune makes the model better at the house rules; GEDD makes the house rules explicit, measurable and owned by
 the people who know them.
 
+The full round-2 plan (error breakdown, which of SFT / DPO / RL / decision tuning fixes what, costs and guardrails)
+is in [docs/roadmap-sft-dpo-gedd.md](docs/roadmap-sft-dpo-gedd.md).
+
 ## Cost
 
 Total Fireworks spend was kept under a hard $50 cap. `04_sft.py` estimates the whole run before starting and stops
