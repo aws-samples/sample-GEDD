@@ -10,6 +10,8 @@ p = 1e-76, layout-cluster bootstrap 95% CI [+7.7, +12.2]). On layouts it never s
 still real (+4.7, CI [+1.8, +8.1]). Prompting with the labelling rules gained only +2.2 to +2.6, and traded one kind of
 error for another. Total Fireworks spend: about $40.
 
+**Why it matters:** an invoice skips human review only if every field is right. The fine-tune raises fully correct documents from 12.8% to **38.8%** (3x). See [docs/market-and-why-accuracy.md](docs/market-and-why-accuracy.md) for the market and value case.
+
 ## Data
 
 [DocILE](https://docile.rossum.ai/) (Šimsa et al., [ICDAR 2023](https://arxiv.org/abs/2302.05658)) is a benchmark of real
