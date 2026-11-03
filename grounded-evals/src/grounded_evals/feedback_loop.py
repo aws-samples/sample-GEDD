@@ -26,11 +26,10 @@ import asyncio
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from grounded_evals.judge_builder.calibrate import _cohens_kappa_binary
-
 
 # ── Data classes ──────────────────────────────────────────────────────────────
 
@@ -137,8 +136,8 @@ def compute_eval_health(state: dict) -> EvalHealthScore:
             try:
                 dt = datetime.fromisoformat(last_ts)
                 if dt.tzinfo is None:
-                    dt = dt.replace(tzinfo=timezone.utc)
-                eval_age_days = (datetime.now(timezone.utc) - dt).days
+                    dt = dt.replace(tzinfo=UTC)
+                eval_age_days = (datetime.now(UTC) - dt).days
             except Exception:
                 pass
     if eval_age_days is None:
@@ -173,8 +172,8 @@ def compute_eval_health(state: dict) -> EvalHealthScore:
         try:
             dt = datetime.fromisoformat(jb_generated_at)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
-            rubric_age_days = (datetime.now(timezone.utc) - dt).days
+                dt = dt.replace(tzinfo=UTC)
+            rubric_age_days = (datetime.now(UTC) - dt).days
         except Exception:
             pass
     if not judge_prompt:

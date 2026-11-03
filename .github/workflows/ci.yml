@@ -13,8 +13,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
           cache: pip
@@ -22,35 +22,41 @@ jobs:
           cd grounded-evals
           pip install -e ".[dev]"
       - run: cd grounded-evals && python -m pytest tests/ -q --tb=short
-      - run: cd grounded-evals && ruff check tests/ --ignore E501,E741,F401 || echo "::warning::Ruff found lint issues"
-      - run: cd grounded-evals && ruff format --check tests/ || true
+      # Lint is a gate for src/ and tests/ (line length and a few legacy rules ignored for now).
+      - run: cd grounded-evals && ruff check src/ tests/ --ignore E501,E741,F401
+      # Formatting is advisory until the codebase has been formatted once.
+      - name: ruff format (advisory)
+        continue-on-error: true
+        run: cd grounded-evals && ruff format --check src/ tests/
 
   security-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
       - name: Check for secrets
-        uses: trufflesecurity/trufflehog@v3.95.9
+        uses: trufflesecurity/trufflehog@27b0417c16317ca9a472a9a8092acce143b49c55 # v3.95.9
         with:
           extra_args: --only-verified
 
   cdk-synth:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
-          node-version: "20"
-      - run: npm install -g aws-cdk
+          node-version: "22"
+      - run: npm install -g aws-cdk@2
       - run: |
           cd grounded-evals
           pip install -e ".[dev,deploy]"

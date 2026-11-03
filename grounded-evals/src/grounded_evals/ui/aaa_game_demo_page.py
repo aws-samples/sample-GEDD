@@ -8,12 +8,6 @@ import html as _html
 from nicegui import app, ui
 
 from grounded_evals.guide.session import Session
-from grounded_evals.ui.ears_page import (
-    _build_requirements_markdown,
-    _codes_from_codebook,
-    _link_annotations_to_prompts,
-)
-from grounded_evals.ui.layout import page_layout
 from grounded_evals.ui.aaa_game_localization_demo import (
     AAA_GAME_BASELINE_REQUIREMENTS_MD,
     AAA_GAME_LOCALIZATION_ANNOTATIONS,
@@ -25,7 +19,12 @@ from grounded_evals.ui.aaa_game_localization_demo import (
     AAA_GAME_LOCALIZATION_SESSION,
     load_aaa_game_localization_demo,
 )
-
+from grounded_evals.ui.ears_page import (
+    _build_requirements_markdown,
+    _codes_from_codebook,
+    _link_annotations_to_prompts,
+)
+from grounded_evals.ui.layout import page_layout
 
 AAA_GAME_DEMO_CSS = """
 .aaa-game-demo-tabs {

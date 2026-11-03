@@ -7,18 +7,19 @@ import os
 import secrets
 import urllib.parse
 import urllib.request
+from pathlib import Path as _Path
 
 from fastapi import Request
 from fastapi.responses import RedirectResponse
 from nicegui import app, ui
 from starlette.middleware.base import BaseHTTPMiddleware
 
+import grounded_evals.ui.aaa_game_demo_page  # noqa: F401
 import grounded_evals.ui.analysis_page  # noqa: F401
 import grounded_evals.ui.coding_page  # noqa: F401
 import grounded_evals.ui.demos_page  # noqa: F401
 import grounded_evals.ui.ears_page  # noqa: F401
 import grounded_evals.ui.eval_page  # noqa: F401
-import grounded_evals.ui.aaa_game_demo_page  # noqa: F401
 
 # Import new pages (registers their @ui.page routes)
 import grounded_evals.ui.home_page  # noqa: F401
@@ -26,7 +27,7 @@ import grounded_evals.ui.improvement_page  # noqa: F401
 import grounded_evals.ui.judge_builder_page  # noqa: F401
 import grounded_evals.ui.report_page  # noqa: F401
 from grounded_evals.agent import StateBundle, run_agent_turn
-from grounded_evals.agentcore_client import get_agentcore_client
+from grounded_evals.agentcore_client import agentcore_configured, get_agentcore_client
 from grounded_evals.guide.session import Session
 from grounded_evals.ui.baseline_requirements import render_baseline_requirements_upload
 from grounded_evals.ui.layout import BRAND_CSS, page_layout
@@ -37,12 +38,34 @@ COGNITO_CLIENT_ID = os.environ.get("COGNITO_CLIENT_ID", "")
 COGNITO_DOMAIN = os.environ.get("COGNITO_DOMAIN", "")
 COGNITO_REGION = os.environ.get("AWS_REGION", "us-east-1")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").rstrip("/")
-# Fallback password if Cognito not configured — must be set explicitly; no hardcoded default
+# Fallback password, used only when Cognito is NOT configured. Must be set explicitly; no default.
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")
-# Guest mode: no auth required when neither Cognito nor ADMIN_PASSWORD is configured.
-# This is the default for local dev / demo runs with `grounded-evals serve`.
-GUEST_MODE = not ADMIN_PASSWORD and not COGNITO_USER_POOL_ID
-UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/_nicegui", "/favicon.ico", "/health"}
+AUTH_CONFIGURED = bool(ADMIN_PASSWORD or COGNITO_USER_POOL_ID)
+# Guest mode (no login) is for local runs only. It is allowed on a loopback bind, or on any bind when the
+# operator explicitly opts in with GEDD_ALLOW_GUEST=1. Otherwise the server refuses to start (fail closed).
+ALLOW_GUEST = os.environ.get("GEDD_ALLOW_GUEST", "").strip().lower() in {"1", "true", "yes"}
+GUEST_MODE = not AUTH_CONFIGURED
+LOOPBACK_HOSTS = {"127.0.0.1", "localhost", "::1"}
+# Paths reachable without login. Exact matches only, plus NiceGUI's own asset/websocket prefix.
+UNRESTRICTED_PATHS = {"/login", "/auth/callback", "/favicon.ico", "/health"}
+UNRESTRICTED_PREFIXES = ("/_nicegui/",)
+
+
+def is_unrestricted_path(path: str) -> bool:
+    return path in UNRESTRICTED_PATHS or path.startswith(UNRESTRICTED_PREFIXES)
+
+
+def check_bind_safety(host: str, *, auth_configured: bool | None = None, allow_guest: bool | None = None) -> None:
+    """Refuse to serve an unauthenticated app beyond loopback unless the operator explicitly opted in."""
+    auth_configured = AUTH_CONFIGURED if auth_configured is None else auth_configured
+    allow_guest = ALLOW_GUEST if allow_guest is None else allow_guest
+    if auth_configured or allow_guest or host in LOOPBACK_HOSTS:
+        return
+    raise SystemExit(
+        f"Refusing to start GEDD on {host!r} without authentication. Configure Cognito "
+        "(COGNITO_USER_POOL_ID, COGNITO_CLIENT_ID, COGNITO_DOMAIN) or ADMIN_PASSWORD, bind to 127.0.0.1, "
+        "or set GEDD_ALLOW_GUEST=1 to knowingly expose an unauthenticated, LLM-backed app on this network."
+    )
 APP_RELEASE = "2026-07-19-grounded-evidence-judge"
 
 
@@ -53,13 +76,12 @@ def _cognito_hosted_domain() -> str:
 
 
 def _public_base_url(request: Request | None = None) -> str:
+    # Behind a proxy, set PUBLIC_BASE_URL. Client-supplied X-Forwarded-Host is not trusted for OAuth redirects.
     if PUBLIC_BASE_URL:
         return PUBLIC_BASE_URL
     if request is None:
         return ""
-    forwarded_proto = request.headers.get("x-forwarded-proto", request.url.scheme)
-    forwarded_host = request.headers.get("x-forwarded-host", request.headers.get("host", ""))
-    return f"{forwarded_proto}://{forwarded_host}".rstrip("/")
+    return str(request.base_url).rstrip("/")
 
 
 def _cognito_login_redirect(request: Request) -> RedirectResponse:
@@ -95,11 +117,11 @@ def _exchange_cognito_code(code: str, redirect_uri: str) -> dict:
 
 
 def _cognito_auth(email: str, password: str) -> bool:
-    """Authenticate user against Cognito User Pool via SRP."""
+    """Authenticate against Cognito, or against ADMIN_PASSWORD only when Cognito is not configured."""
     if not COGNITO_USER_POOL_ID or not COGNITO_CLIENT_ID:
-        if not ADMIN_PASSWORD:
+        if not ADMIN_PASSWORD or not password:
             return False
-        return password == ADMIN_PASSWORD
+        return secrets.compare_digest(password.encode(), ADMIN_PASSWORD.encode())
     import boto3
     client = boto3.client("cognito-idp", region_name=COGNITO_REGION)
     try:
@@ -109,10 +131,9 @@ def _cognito_auth(email: str, password: str) -> bool:
             AuthParameters={"USERNAME": email, "PASSWORD": password},
         )
         return True
-    except client.exceptions.NotAuthorizedException:
-        return bool(ADMIN_PASSWORD and password == ADMIN_PASSWORD)
-    except client.exceptions.UserNotFoundException:
-        return bool(ADMIN_PASSWORD and password == ADMIN_PASSWORD)
+    except (client.exceptions.NotAuthorizedException, client.exceptions.UserNotFoundException):
+        # No ADMIN_PASSWORD fallback when Cognito is configured: Cognito is the only source of truth.
+        return False
     except Exception as e:
         import warnings
         warnings.warn(f"Cognito auth error (non-credential): {e}", stacklevel=2)
@@ -121,7 +142,7 @@ def _cognito_auth(email: str, password: str) -> bool:
 
 class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
-        if any(request.url.path.startswith(p) for p in UNRESTRICTED_PATHS):
+        if is_unrestricted_path(request.url.path):
             response = await call_next(request)
             response.headers["Cache-Control"] = "no-store, max-age=0"
             return response
@@ -151,7 +172,7 @@ def health():
 app.add_middleware(AuthMiddleware)
 
 # Serve docs directory for demo gif and static assets
-from pathlib import Path as _Path
+
 _docs_dir = _Path(__file__).parent.parent.parent / "docs"
 if not _docs_dir.exists():
     _docs_dir = _Path("/app/docs")
@@ -266,7 +287,7 @@ def _save_user_session(session: Session) -> None:
 
 
 
-USE_AGENTCORE = bool(os.environ.get("AGENTCORE_AGENT_ID") or os.environ.get("AGENTCORE_AGENT_ARN"))
+USE_AGENTCORE = agentcore_configured()
 _agentcore = None  # lazily initialized on first use to avoid startup failures
 
 
@@ -651,9 +672,11 @@ def main_page() -> None:
 
 
 def run() -> None:
+    host = os.environ.get("HOST", "127.0.0.1")
+    check_bind_safety(host)
     ui.run(
         title="GEDD - Grounded Evidence Driven Development",
-        host=os.environ.get("HOST", "127.0.0.1"),
+        host=host,
         port=int(os.environ.get("PORT", "8080")),
         reload=os.environ.get("NICEGUI_RELOAD", "true").lower() == "true",
         storage_secret=os.environ.get("STORAGE_SECRET") or secrets.token_hex(32),

@@ -115,7 +115,7 @@ For error analysis, the PM needs to:
 
 ## LLM Configuration
 
-- **Auth**: AWS IAM via boto3 credential chain (Cloud Desktop role)
+- **Auth**: AWS IAM via boto3 credential chain (IAM role from the standard AWS credential chain)
 - **Region**: us-east-1
 - **Model**: `us.anthropic.claude-haiku-4-5-20251001-v1:0`
 - **Fallback**: Set `ANTHROPIC_API_KEY` for direct Anthropic API access (local dev)

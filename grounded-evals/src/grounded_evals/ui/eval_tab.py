@@ -449,7 +449,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                             ui.label("Use an existing Harness ARN").style(
                                 "font-size:0.78rem; font-weight:600; color:var(--text-primary); margin-bottom:6px"
                             )
-                            arn_status_ctr = ui.column().classes("w-full")
+                            ui.column().classes("w-full")
                             with ui.row().classes("gap-2 items-center").style("flex-wrap:wrap"):
                                 arn_input = ui.input(
                                     "Harness ARN",
@@ -617,7 +617,7 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
             )
 
         # Group models by provider for visual clarity
-        MODEL_GROUPS = [
+        MODEL_GROUPS = [  # noqa: N806 (constant table)
             ("Claude", [m for m in AVAILABLE_MODELS if "claude" in m["id"]]),
             ("Amazon Nova", [m for m in AVAILABLE_MODELS if "nova" in m["id"]]),
             ("Other", [m for m in AVAILABLE_MODELS if "claude" not in m["id"] and "nova" not in m["id"]]),
@@ -866,10 +866,10 @@ def render(session: Session, annotations_list: list[dict], prompt_variants: list
                             return
                         with ui.row().classes("gap-4 items-center").style("margin-bottom:10px"):
                             for label, val, col in [
-                                (f"↑ Improved", improved, "var(--green-bright)"),
-                                (f"↓ Regressed", regressed, "var(--red)"),
-                                (f"~ Changed", changed, "var(--yellow)"),
-                                (f"= Same", unchanged, "var(--text-muted)"),
+                                ("↑ Improved", improved, "var(--green-bright)"),
+                                ("↓ Regressed", regressed, "var(--red)"),
+                                ("~ Changed", changed, "var(--yellow)"),
+                                ("= Same", unchanged, "var(--text-muted)"),
                             ]:
                                 ui.html(
                                     f'<span style="font-size:1rem; font-weight:700; color:{col}">{val}</span>'

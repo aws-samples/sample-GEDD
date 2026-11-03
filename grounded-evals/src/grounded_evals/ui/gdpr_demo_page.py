@@ -26,7 +26,6 @@ from grounded_evals.ui.gdpr_auditor_demo import (
 )
 from grounded_evals.ui.layout import page_layout
 
-
 GDPR_DEMO_CSS = """
 .gdpr-demo-tabs {
   margin-top: 18px;

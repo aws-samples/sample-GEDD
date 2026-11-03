@@ -91,7 +91,9 @@ def serve(host: str, port: int, reload: bool) -> None:
 
     from nicegui import ui
 
-    import grounded_evals.app  # noqa: F401 — registers all pages
+    import grounded_evals.app as gedd_app  # registers all pages
+
+    gedd_app.check_bind_safety(host)
     ui.run(
         host=host,
         port=port,
@@ -1335,7 +1337,7 @@ def parse_ears(input_file: str, output: str) -> None:
             sys.exit(1)
 
 
-def _format_improvement_report(report: "ImprovementReport") -> str:
+def _format_improvement_report(report: ImprovementReport) -> str:
     """Format an ImprovementReport as a readable Markdown document.
 
     Args:

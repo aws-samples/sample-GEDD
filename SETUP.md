@@ -8,7 +8,7 @@ Before a public beta or production launch, run the [launch checklist](grounded-e
 
 ## Prerequisites
 
-- Python 3.12+
+- Python 3.11+
 - AWS account with [Amazon Bedrock model access](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access.html) enabled
 - AWS credentials configured (`aws configure` or environment variables)
 
@@ -85,7 +85,7 @@ The eval runner supports these Bedrock models out of the box (select up to 3 for
 
 ## Authentication
 
-For local exploration, the app starts in guest mode when neither Cognito nor `ADMIN_PASSWORD` is configured.
+For local exploration, the app starts in guest mode (no login) when neither Cognito nor `ADMIN_PASSWORD` is configured **and** it is bound to loopback (`127.0.0.1`, the default). On any other bind address the app refuses to start without authentication, unless you set `GEDD_ALLOW_GUEST=1` to knowingly expose an unauthenticated, LLM-backed app on that network.
 
 For workshop use, set a simple password login:
 
@@ -109,8 +109,9 @@ export COGNITO_CLIENT_ID=your-client-id
 | `AWS_REGION` | AWS region for Bedrock | `us-east-1` |
 | `BEDROCK_MODEL_ID` | Model ID for coaching agent | `us.anthropic.claude-haiku-4-5-20251001-v1:0` |
 | `ANTHROPIC_API_KEY` | Direct Anthropic API key (bypasses Bedrock) | — |
-| `ADMIN_PASSWORD` | Enables simple password login when set | — (guest mode when Cognito is also unset) |
-| `HOST` | Server bind address | `0.0.0.0` |
+| `ADMIN_PASSWORD` | Simple password login, used only when Cognito is not configured | — (guest mode on loopback when Cognito is also unset) |
+| `HOST` | Server bind address | `127.0.0.1` (the container image sets `0.0.0.0`; auth is required there) |
+| `GEDD_ALLOW_GUEST` | Allow guest mode on a non-loopback bind (not recommended) | unset (refuse to start) |
 | `PORT` | Server port | `8080` |
 | `COGNITO_USER_POOL_ID` | Cognito User Pool (production auth) | — |
 | `COGNITO_CLIENT_ID` | Cognito App Client ID | — |
@@ -217,7 +218,22 @@ pip install -r requirements.txt
 cdk deploy --all
 ```
 
-Stacks: Network (VPC, ALB, CloudFront) → ECR → ECS Fargate (UI) → Cognito (auth) → AgentCore (agent runtime).
+Stacks: EdgeWaf (CloudFront WAF, always in `us-east-1`) → Network (VPC, internal ALB, CloudFront) → ECR → Cognito (auth) → AgentCore (agent runtime) → ECS Fargate (UI).
+
+Run `cdk bootstrap` once per account for your region **and** `us-east-1` (the CloudFront WAF lives there). You need Node.js and the AWS CDK CLI (`npm install -g aws-cdk@2`).
+
+**How traffic flows.** Viewers reach CloudFront over HTTPS. CloudFront reaches the app through a **VPC origin**: the ALB is internal, sits in private subnets, has no public address, and its security group admits only CloudFront's origin-facing prefix list. Per-client rate limiting and AWS managed rules run on the CloudFront-scope WAF.
+
+**Users are invite-only.** Self sign-up is disabled so nobody on the internet can create an account and spend your Bedrock budget. Create each user as an administrator:
+
+```bash
+POOL_ID=$(aws cloudformation describe-stacks --stack-name AgentPlayground-Cognito \
+  --query "Stacks[0].Outputs[?OutputKey=='UserPoolId'].OutputValue" --output text)
+aws cognito-idp admin-create-user --user-pool-id "$POOL_ID" \
+  --username person@example.com --user-attributes Name=email,Value=person@example.com Name=email_verified,Value=true
+```
+
+Cognito emails a temporary password; MFA (TOTP) is available to every user. Consider an AWS Budgets alert on Bedrock spend.
 
 The Network stack outputs `CloudFrontUrl`, for example `https://dxxxxx.cloudfront.net`. Use that as the public web app URL.
 
@@ -231,7 +247,11 @@ For a custom CloudFront hostname, provide a certificate from `us-east-1`:
 
 Then create a DNS `CNAME` or Route 53 alias from your hostname to the emitted `CloudFrontDomainName`.
 
-The `--cert` flag configures an HTTPS listener on the ALB for direct-origin deployments. For the default CloudFront URL, you don't need an ALB certificate because CloudFront terminates public HTTPS.
+Without `--cert`, the CloudFront-to-ALB hop is HTTP inside AWS's private network (VPC origin). To encrypt that hop too, pass an ACM certificate in your region with `--cert` and the matching hostname with `--cloudfront-origin-domain`; the ALB then listens on HTTPS :443 with a TLS 1.3 policy and CloudFront connects HTTPS-only.
+
+ECS Exec is off by default; enable it for debugging with `-c enable_ecs_exec=true`.
+
+After deploying, smoke-test with `python scripts/release_check.py --base-url <CloudFrontUrl> --expect-auth`.
 
 ---
 

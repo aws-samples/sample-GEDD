@@ -1,4 +1,4 @@
-"""VPC, ALB, CloudFront, WAF, and Security Groups for Agent Playground."""
+"""VPC, internal ALB behind a CloudFront VPC origin, WAF, and security groups."""
 
 from aws_cdk import CfnOutput, Duration, Stack
 from aws_cdk import aws_certificatemanager as acm
@@ -7,7 +7,10 @@ from aws_cdk import aws_cloudfront_origins as origins
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_elasticloadbalancingv2 as elbv2
 from aws_cdk import aws_wafv2 as wafv2
+from aws_cdk import custom_resources as cr
 from constructs import Construct
+
+CLOUDFRONT_ORIGIN_FACING_PREFIX_LIST = "com.amazonaws.global.cloudfront.origin-facing"
 
 
 class NetworkStack(Stack):
@@ -21,6 +24,7 @@ class NetworkStack(Stack):
         cloudfront_domain_names: list[str] | None = None,
         cloudfront_certificate_arn: str = "",
         cloudfront_origin_domain_name: str = "",
+        web_acl_arn: str = "",
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -38,14 +42,34 @@ class NetworkStack(Stack):
         )
 
         # ── Security Groups ───────────────────────────────────────────────────
+        # The ALB is internal and reachable only from CloudFront (VPC origin). Its security group admits
+        # CloudFront's origin-facing managed prefix list, never 0.0.0.0/0.
+        self.certificate_arn = certificate_arn
+        self.origin_port = 443 if certificate_arn else 80
         self.alb_sg = ec2.SecurityGroup(
             self, "AlbSg", vpc=self.vpc,
-            description="ALB - HTTPS inbound only",
+            description="Internal ALB - ingress from CloudFront VPC origin only",
             allow_all_outbound=False,
             disable_inline_rules=True,
         )
-        self.alb_sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(443), "HTTPS")
-        self.alb_sg.add_ingress_rule(ec2.Peer.any_ipv4(), ec2.Port.tcp(80), "HTTP (redirect)")
+        cloudfront_prefix_list = cr.AwsCustomResource(
+            self, "CloudFrontOriginFacingPrefixList",
+            on_update=cr.AwsSdkCall(
+                service="EC2",
+                action="describeManagedPrefixLists",
+                parameters={"Filters": [{"Name": "prefix-list-name", "Values": [CLOUDFRONT_ORIGIN_FACING_PREFIX_LIST]}]},
+                physical_resource_id=cr.PhysicalResourceId.of(CLOUDFRONT_ORIGIN_FACING_PREFIX_LIST),
+                output_paths=["PrefixLists.0.PrefixListId"],
+            ),
+            # ec2:DescribeManagedPrefixLists does not support resource-level permissions.
+            policy=cr.AwsCustomResourcePolicy.from_sdk_calls(resources=cr.AwsCustomResourcePolicy.ANY_RESOURCE),
+            install_latest_aws_sdk=False,
+        )
+        self.alb_sg.add_ingress_rule(
+            ec2.Peer.prefix_list(cloudfront_prefix_list.get_response_field("PrefixLists.0.PrefixListId")),
+            ec2.Port.tcp(self.origin_port),
+            "CloudFront origin-facing (VPC origin)",
+        )
 
         self.ecs_sg = ec2.SecurityGroup(
             self, "EcsSg", vpc=self.vpc,
@@ -68,7 +92,8 @@ class NetworkStack(Stack):
         # ── Application Load Balancer ─────────────────────────────────────────
         self.alb = elbv2.ApplicationLoadBalancer(
             self, "Alb", vpc=self.vpc,
-            internet_facing=True,
+            internet_facing=False,
+            vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PRIVATE_WITH_EGRESS),
             security_group=self.alb_sg,
         )
         self.alb.set_attribute("idle_timeout.timeout_seconds", "3600")
@@ -85,23 +110,8 @@ class NetworkStack(Stack):
                 sampled_requests_enabled=True,
             ),
             rules=[
-                # Rate limiting: 1000 requests per 5 min per IP
-                wafv2.CfnWebACL.RuleProperty(
-                    name="RateLimit",
-                    priority=1,
-                    action=wafv2.CfnWebACL.RuleActionProperty(block={}),
-                    statement=wafv2.CfnWebACL.StatementProperty(
-                        rate_based_statement=wafv2.CfnWebACL.RateBasedStatementProperty(
-                            limit=1000,
-                            aggregate_key_type="IP",
-                        ),
-                    ),
-                    visibility_config=wafv2.CfnWebACL.VisibilityConfigProperty(
-                        cloud_watch_metrics_enabled=True,
-                        metric_name="RateLimit",
-                        sampled_requests_enabled=True,
-                    ),
-                ),
+                # Per-client rate limiting lives on the CloudFront-scope WebACL (see EdgeWafStack),
+                # where WAF sees real client IPs. Behind CloudFront this ACL only sees CloudFront addresses.
                 # AWS Managed Rules: Common Rule Set
                 wafv2.CfnWebACL.RuleProperty(
                     name="AWSManagedCommonRules",
@@ -179,17 +189,23 @@ class NetworkStack(Stack):
             "b689b0a8-53d0-40ab-baf2-68738e2966ac",
         )
 
-        if cloudfront_origin_domain_name:
-            cloudfront_origin = origins.HttpOrigin(
-                cloudfront_origin_domain_name,
+        # VPC origin: CloudFront reaches the internal ALB over AWS's private network; the ALB has no public
+        # address. With an ALB certificate (--cert, plus --cloudfront-origin-domain matching it) the hop is
+        # also TLS-encrypted end to end.
+        if certificate_arn:
+            cloudfront_origin = origins.VpcOrigin.with_application_load_balancer(
+                self.alb,
+                domain_name=cloudfront_origin_domain_name or None,
                 protocol_policy=cloudfront.OriginProtocolPolicy.HTTPS_ONLY,
+                https_port=443,
                 read_timeout=Duration.seconds(60),
                 keepalive_timeout=Duration.seconds(60),
             )
         else:
-            cloudfront_origin = origins.LoadBalancerV2Origin(
+            cloudfront_origin = origins.VpcOrigin.with_application_load_balancer(
                 self.alb,
                 protocol_policy=cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+                http_port=80,
                 read_timeout=Duration.seconds(60),
                 keepalive_timeout=Duration.seconds(60),
             )
@@ -209,6 +225,8 @@ class NetworkStack(Stack):
             "price_class": cloudfront.PriceClass.PRICE_CLASS_100,
             "enable_ipv6": True,
         }
+        if web_acl_arn:
+            distribution_props["web_acl_id"] = web_acl_arn
 
         if cloudfront_certificate_arn and cloudfront_domain_names:
             distribution_props["certificate"] = acm.Certificate.from_certificate_arn(
@@ -225,7 +243,7 @@ class NetworkStack(Stack):
         )
 
         # ── Outputs ───────────────────────────────────────────────────────────
-        CfnOutput(self, "AlbDns", value=self.alb.load_balancer_dns_name)
+        CfnOutput(self, "AlbDns", value=self.alb.load_balancer_dns_name, description="Internal ALB (not publicly reachable)")
         CfnOutput(self, "CloudFrontDomainName", value=self.distribution.distribution_domain_name)
         CfnOutput(self, "CloudFrontUrl", value=f"https://{self.distribution.distribution_domain_name}")
         if cloudfront_domain_names:

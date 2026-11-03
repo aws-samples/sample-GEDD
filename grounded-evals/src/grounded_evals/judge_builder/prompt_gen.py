@@ -157,7 +157,7 @@ def _build_score_keys(rubric: JudgeRubric) -> tuple[str, str]:
 
 def _build_geval_criteria_section(rubric: JudgeRubric) -> str:
     """Build G-EVAL style criteria with explicit sub-questions per criterion."""
-    _GEVAL_QUESTIONS = {
+    _GEVAL_QUESTIONS = {  # noqa: N806 (constant table)
         "accuracy": [
             "Does the response make any factual claims that can be verified?",
             "Are any specific numbers, policies, dates, or names stated?",
@@ -215,7 +215,7 @@ def _build_geval_criteria_section(rubric: JudgeRubric) -> str:
         lines += [
             "",
             "**After reasoning, assign a score 1–5:**",
-            f"  5=Excellent, 4=Good, 3=Acceptable, 2=Poor, 1=Failing",
+            "  5=Excellent, 4=Good, 3=Acceptable, 2=Poor, 1=Failing",
             "",
         ]
     return "\n".join(lines)

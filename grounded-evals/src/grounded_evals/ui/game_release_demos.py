@@ -4,7 +4,6 @@ from uuid import uuid4
 
 from grounded_evals.ui.domain_demos import _clear_and_load
 
-
 GAME_PRODUCER_SESSION = {
     "agent_spec": {
         "name": "ProducerGate",
