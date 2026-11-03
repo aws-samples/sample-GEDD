@@ -1,72 +1,124 @@
-# GEDD: Grounded Evidence Driven Development
+# GEDD: a Product Manager's step-by-step guide to an AI system that beats off-the-shelf
 
-**Turn expert judgment into the three things an AI product needs to get better: the eval that measures it, the training data that improves it, and the gate that guards it.**
+**GEDD (Grounded Evidence Driven Development)** is a five-step process a product manager runs with their domain experts and ML engineers to answer one question with evidence: *does our system beat the off-the-shelf model on the task our users actually care about?*
 
-Most AI quality work stops at measurement: a rubric, a dashboard, a judge. GEDD starts from the same place, the people who know the domain, and carries their judgment all the way through: into a locked evaluation with a statistical bar, into SFT corrections, DPO preference pairs and RL rewards, and into an LLM-as-Judge response gate that decides what customers see. Every round of improvement comes back to the same evidence and has to prove itself the same way.
-
-GEDD exists because AI quality is not just a model problem. In most real domains, the hardest part is knowing what "good" means. A generic evaluator can say whether an answer is fluent, but it cannot reliably know whether an answer is acceptable for accounts payable, pharmacy, insurance, tax, legal, localization, financial services, education, healthcare operations, or any other specialist domain. And a generic model can't learn your domain's rules from a prompt alone.
-
-The short version:
+It uses [Fireworks](https://fireworks.ai) for the model work: serverless inference to run baselines, and serverless fine-tuning (SFT, DPO, RL) when a better prompt isn't enough. You don't need GPUs, and you don't need to fine-tune to succeed: a well-engineered harness that proves its gain on the same evaluation is a complete result.
 
 ```text
-SME evidence  →  failure codebook  →  ① a locked eval      (measure)
-                                     ② training signals    (improve: SFT · DPO · RL)
-                                     ③ a response gate     (guard: post · revise · review · block)
-              ←  new failures from the gate and production feed the next round
+1. Create your evaluation      →  a useful task, held-out cases, a success metric
+2. Establish the baseline      →  run the off-the-shelf and frontier models, save their scores
+3. Engineer your system        →  a harness, a fine-tune, or both
+4. Rerun the same evaluation   →  same held-out cases, same scoring
+5. Show the before & after     →  both scores, the gain, whether it's real, what it's worth
 ```
 
-## Proof point: invoices, +9.8 points, 3× more touch-free documents
+**The goal:** beat the frontier on your chosen task, and be able to prove it.
 
-[`docile-forge/`](docile-forge/) is a worked example on real scanned business documents (DocILE, ICDAR 2023): read 10 key fields off an invoice and return JSON.
+---
 
-| | Base GLM 5.3 Flash | Best prompt | **Fine-tuned (SFT)** |
-| --- | --- | --- | --- |
-| Fields correct (5,000 held-out cases) | 78.5% | 81.1% | **88.4%** |
-| Invoices with all 10 fields right | 12.8% | 18.8% | **38.8%** |
-| Absent fields left blank, not invented | 65% | 78% | **87%** |
-| Gain vs baseline | | +2.6 | **+9.8**, McNemar p = 1e-76, layout-bootstrap 95% CI [+7.7, +12.2] |
+## Step 1 · Create your evaluation
 
-Two lessons that shaped this version of GEDD:
+*Choose a useful task, held-out cases and a success metric.*
 
-1. **Prompting the rules traded one error for another; training on examples fixed both.** That's why GEDD's evidence now feeds training, not only the judge.
-2. **The remaining errors are judgment calls.** Of the 582 fields the fine-tune still gets "wrong", many are label gaps or defensible variants (a division vs its parent company as vendor). Exact-match metrics can't tell them apart; an SME can. That's the next GEDD round: [docile-forge/docs/roadmap-sft-dpo-gedd.md](docile-forge/docs/roadmap-sft-dpo-gedd.md).
+| | |
+|---|---|
+| **PM does** | Names the user and the job ("AP clerks key 10 fields off every invoice"), writes the one-paragraph business case with its assumptions, and picks the success metric the business would recognise. |
+| **Domain expert does** | Curates realistic cases (happy path, edge cases, red flags), labels the right answer, and names the failure modes that matter: the **failure codebook**. |
+| **GEDD artifact** | Domain profile · curated cases · SME labels · failure codebook · **a locked held-out test set** |
+| **Done when** | 100+ varied held-out cases, split by group (customer, template, document layout) so near-duplicates can't leak between training and test, and **locked**: never used for prompt design or training. |
 
-## The Core Idea
+## Step 2 · Establish the baseline
 
-Most teams try to write an AI rubric too early. They start with abstract criteria like "be accurate," "be helpful," or "follow policy." Those are useful intentions, but they are not enough to gate a real product, and they give a model nothing to learn from.
+*Run the off-the-shelf model, and a frontier model, on your evaluation. Save their scores.*
 
-GEDD starts with observed behavior:
+| | |
+|---|---|
+| **PM does** | Decides which models count as "off-the-shelf" for this product and approves the baseline cost. |
+| **ML engineer does** | Runs the same prompt at temperature 0 on every model, with one saved result row per case (including its group). |
+| **On Fireworks** | Serverless inference, OpenAI-compatible: swapping models is a one-string change. |
+| **Done when** | Every baseline has a score on the locked set, a cost, and saved per-case outputs. Look at the failures: they tell you whether the problem is reasoning (try a harness) or knowledge and conventions (try fine-tuning). |
 
-1. Define the domain and risk boundaries.
-2. Curate scenarios that expose those boundaries, and **lock a held-out test set**.
-3. Run the baseline system.
-4. Ask SMEs to judge the responses, and **correct the wrong ones**.
-5. Convert SME judgments into failure codes and calibration scenarios.
-6. **Measure:** score every system on the locked set; call a gain real only if two tests agree.
-7. **Improve:** turn the evidence into training signals (SFT corrections, DPO pairs, RL rewards) and re-train.
-8. **Guard:** generate a judge spec and LLM-as-Judge, or fine-tune a small judge, and run it as a response gate.
-9. Measure the judge before it becomes a blocking control, and feed what it catches into the next round.
+## Step 3 · Engineer your system
 
-```mermaid
-flowchart LR
-    A[Domain context] --> B[Curated scenarios + locked test set]
-    B --> C[Baseline responses]
-    C --> D[SME annotations + corrections]
-    D --> E[Failure codebook]
-    E --> M[Measure: locked eval, two-test bar]
-    E --> T[Improve: SFT corrections, DPO pairs, RL rewards]
-    E --> G[Guard: judge spec, LLM-as-Judge, response gate]
-    T --> R[Re-trained model]
-    R --> M
-    R --> G
-    G --> P[Customer-visible decision]
-    P -. new failures .-> D
-    M -. regressions .-> D
-```
+*Build a system that beats off-the-shelf. A harness is enough; fine-tuning is optional.*
 
-The output is not just a document. It is a chain of evidence that explains why a response should pass, fail, block, or go to human review — and why each new model version is better than the last.
+| Option | What it is | GEDD evidence it uses | On Fireworks |
+|---|---|---|---|
+| **Engineer a harness** | Wrap an open model with retrieval, tools, checks, or a better workflow and prompt | The codebook's rules become instructions and checks; the LLM-as-Judge built from SME labels becomes a **response gate** (post / revise / human review / block) | Serverless inference |
+| **Fine-tune** *(optional)* | Train an open model on task-specific examples, kept separate from the final evaluation | SME corrections → **SFT** examples · "A is acceptable, B is not, because `failure_code`" → **DPO** pairs · failure severity → **RL** reward | Serverless LoRA training: SFT, DPO, RL |
+| **Combine** | Route between models, or put a fine-tuned model inside your harness | All of the above | Both |
 
-## What GEDD Produces
+Start with the cheapest idea. Write down your guess about *why* the baseline fails before each attempt, and keep the attempts that don't work: they're evidence too.
+
+## Step 4 · Rerun the same evaluation
+
+*Use the same held-out cases and scoring for your system.*
+
+Same cases, same scorer, same settings as Step 2. Nothing about the evaluation changes between before and after. If you need to choose between versions while building, use a separate **dev split**, never the locked test set.
+
+## Step 5 · Show the before & after
+
+*Report both scores, the gain, and your reproducible evidence.*
+
+- **Both scores and the gap**, on the same cases.
+- **Is it real?** Two tests, and call a gain real only if both agree:
+  - **McNemar's test:** of the cases where exactly one system is right, does yours win far more often than a coin flip would? p < 0.05.
+  - **Group bootstrap:** resample your groups (customers, templates, layouts) 5,000 times; the 95% interval of the gain must exclude zero.
+- **What it's worth:** the business metric (for documents, *whole documents* right, not just fields) and the cost per case.
+- **What didn't work**, and what it cost.
+- **Where it might not hold:** report results on groups never seen in training separately.
+
+---
+
+## Make the comparison credible
+
+| Rule | In practice |
+|---|---|
+| **Keep the test fixed** | Same held-out cases and scoring for the baseline and every system. Aim for 100+ varied examples. |
+| **Make runs repeatable** | Version systems and experiments. Save prompts, settings and per-case outputs, so anyone can re-score without re-running. |
+| **Explain what improved** | Show both scores and the gain. For cost or speed wins, report quality too. |
+
+---
+
+## What a strong result looks like
+
+A worked example in this repo, [`docile-forge/`](docile-forge/), runs all five steps on real scanned invoices (DocILE, ICDAR 2023): read 10 key fields off each document and return JSON.
+
+![Before vs after](docile-forge/figures/leaderboard.png)
+
+| Step | What we did | Result |
+|---|---|---|
+| 1 · Evaluation | 500 held-out documents = 5,000 field cases from 204 vendor layouts; 124 documents on layouts never seen in training; exact match after normalisation; absent fields must be null | Locked before any work |
+| 2 · Baseline | GLM 5.3 Flash on Fireworks serverless, temperature 0 | **78.5%** of fields, $0.24 for 500 documents |
+| 3 · Engineer | Harness A: labelling rules in the prompt · Harness B: rules + OCR text · Fine-tune: vision LoRA SFT on 1,400 training invoices | |
+| 4 · Rerun | Same 5,000 cases, same scorer | Harness A 80.7% · Harness B 81.1% · **Fine-tune 88.4%** |
+| 5 · Before & after | McNemar + layout bootstrap | **+9.8 points**, p = 1e-76, 95% CI [+7.7, +12.2]; **+4.7** on unseen layouts (real); fully correct invoices **12.8% → 38.8%** (3×) |
+
+What didn't work is in the write-up too: the rules prompt fixed currency but made the model too eager to say "null", and the frontier comparison (Step 2) wasn't run for budget reasons. That caveat is stated, not hidden.
+
+**Next round:** GEDD's domain-expert review of the 582 remaining errors (real error, acceptable variant or label gap) feeds a second SFT round and DPO pairs. See [docile-forge/docs/roadmap-sft-dpo-gedd.md](docile-forge/docs/roadmap-sft-dpo-gedd.md).
+
+---
+
+## Score yourself
+
+The same bar a demanding reviewer (or a hackathon judge) applies:
+
+| Weight | Criterion | What good looks like | GEDD step |
+|---|---|---|---|
+| 40% | **Benchmark evaluation** | Reliable improvement over the baseline, on a fixed held-out set, with both tests agreeing | 1, 2, 4, 5 |
+| 25% | **Business value** | A clear user, a valuable problem, and the benefit in their terms, with the assumptions written down | 1, 5 |
+| 20% | **Technical execution** | A working, well-executed approach: harness, fine-tune, or both | 3 |
+| 10% | **Presentation & demo** | A clear explanation and a convincing result: one real case the baseline gets wrong and your system gets right | 5 |
+| 5% | **Documentation** | Readable code and a reproducible evaluation: run order, per-case outputs, costs | 4, 5 |
+
+---
+
+## Reference: the GEDD framework in depth
+
+The rest of this README is the detail behind the five steps: what each artifact is, how each role works, and how evidence becomes training data and a response gate.
+
+### What GEDD Produces
 
 GEDD produces artifacts that each role can use.
 
@@ -85,7 +137,7 @@ GEDD produces artifacts that each role can use.
 | Response gate | What structured decision is returned before customers see the answer? | guard |
 | Measurement report | Is the gain real (McNemar + group bootstrap)? Is the judge calibrated, traceable and covered? | measure · guard |
 
-## From Evidence to Training Signal
+### From Evidence to Training Signal
 
 The same SME judgment that calibrates a judge is the best training data you'll ever get. GEDD maps each kind of evidence to the training technique that uses it:
 
