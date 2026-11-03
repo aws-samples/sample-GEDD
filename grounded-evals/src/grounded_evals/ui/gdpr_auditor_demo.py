@@ -7,7 +7,6 @@ from uuid import uuid4
 
 from grounded_evals.ui.domain_demos import _clear_and_load
 
-
 DEMO_GENERATED_AT = "2026-06-13T15:00:00"
 
 

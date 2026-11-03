@@ -204,7 +204,7 @@ def print_results(results: list[CheckResult]) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run release checks against a deployed GEDD app.")
-    parser.add_argument("--base-url", default="https://d2esgpsbblnxif.cloudfront.net")
+    parser.add_argument("--base-url", required=True, help="Public URL of your deployment (the CloudFrontUrl stack output).")
     parser.add_argument("--browser", action="store_true", help="Run Playwright browser checks.")
     parser.add_argument("--expect-auth", action="store_true", help="Expect protected app routes to redirect to login.")
     parser.add_argument("--screenshot-dir", default="/tmp/gedd-release-screenshots")

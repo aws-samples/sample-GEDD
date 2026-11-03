@@ -13,6 +13,15 @@ from dataclasses import dataclass, field
 import boto3
 from botocore.exceptions import ClientError, NoCredentialsError
 
+# The CDK stack seeds the SSM parameter with this value until scripts/deploy-agent.sh writes the real ID.
+_UNSET_VALUES = {"", "PLACEHOLDER", "NONE", "NULL"}
+
+
+def agentcore_env(name: str) -> str:
+    """Read an AgentCore setting from the environment, treating the CDK placeholder as unset."""
+    value = os.environ.get(name, "").strip()
+    return "" if value.upper() in _UNSET_VALUES else value
+
 
 @dataclass
 class CoachResponse:
@@ -40,8 +49,8 @@ class AgentCoreClient:
         agent_runtime_arn: str | None = None,
         region: str | None = None,
     ):
-        self.agent_runtime_arn = agent_runtime_arn or os.environ.get("AGENTCORE_AGENT_ARN", "")
-        self.agent_runtime_id = os.environ.get("AGENTCORE_AGENT_ID", "")
+        self.agent_runtime_arn = agent_runtime_arn or agentcore_env("AGENTCORE_AGENT_ARN")
+        self.agent_runtime_id = agentcore_env("AGENTCORE_AGENT_ID")
         self.region = region or os.environ.get("AWS_REGION", "us-east-1")
         self._client = None
         self._control = None
@@ -194,8 +203,12 @@ class AgentCoreClient:
         return stripped
 
 
+def agentcore_configured() -> bool:
+    return bool(agentcore_env("AGENTCORE_AGENT_ID") or agentcore_env("AGENTCORE_AGENT_ARN"))
+
+
 def get_agentcore_client() -> AgentCoreClient | None:
     """Return an AgentCoreClient if configured, else None (local mode)."""
-    if os.environ.get("AGENTCORE_AGENT_ID") or os.environ.get("AGENTCORE_AGENT_ARN"):
+    if agentcore_configured():
         return AgentCoreClient()
     return None

@@ -10,7 +10,6 @@ from datetime import date
 from nicegui import app, ui
 
 from grounded_evals.feedback_loop import compute_eval_health
-
 from grounded_evals.ui.ears_page import (
     _build_requirements_markdown,
     _session_from_storage,

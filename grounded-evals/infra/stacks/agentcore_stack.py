@@ -11,21 +11,35 @@ class AgentCoreStack(Stack):
         super().__init__(scope, construct_id, **kwargs)
 
         # IAM role that the AgentCore runtime assumes
+        region = Stack.of(self).region
+        account = Stack.of(self).account
         self.runtime_role = iam.Role(
             self,
             "AgentCoreRuntimeRole",
-            assumed_by=iam.ServicePrincipal("bedrock.amazonaws.com"),
-            description="Role for Agent Playground AgentCore runtime",
+            # AgentCore Runtime assumes roles via its own service principal; confused-deputy conditions pin it
+            # to this account and its runtimes.
+            assumed_by=iam.ServicePrincipal(
+                "bedrock-agentcore.amazonaws.com",
+                conditions={
+                    "StringEquals": {"aws:SourceAccount": account},
+                    "ArnLike": {"aws:SourceArn": f"arn:aws:bedrock-agentcore:{region}:{account}:*"},
+                },
+            ),
+            description="Role for the GEDD AgentCore runtime",
         )
 
-        # Bedrock model invocation (for coach LLM calls and eval multi-model calls)
+        # Bedrock model invocation (coach LLM calls and eval multi-model calls), scoped to foundation models
+        # and this account's inference profiles; cross-region inference profiles route to any region's models.
         self.runtime_role.add_to_policy(
             iam.PolicyStatement(
                 actions=[
                     "bedrock:InvokeModel",
                     "bedrock:InvokeModelWithResponseStream",
                 ],
-                resources=["*"],
+                resources=[
+                    "arn:aws:bedrock:*::foundation-model/*",
+                    f"arn:aws:bedrock:{region}:{account}:inference-profile/*",
+                ],
             )
         )
 

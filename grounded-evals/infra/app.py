@@ -6,13 +6,16 @@ from stacks.agentcore_stack import AgentCoreStack
 from stacks.cognito_stack import CognitoStack
 from stacks.ecr_stack import EcrStack
 from stacks.ecs_stack import EcsStack
+from stacks.edge_waf_stack import EdgeWafStack
 from stacks.network_stack import NetworkStack
 
 app = cdk.App()
 
-env = cdk.Environment(
-    region=app.node.try_get_context("region") or "us-east-1",
-)
+import os
+
+region = app.node.try_get_context("region") or os.environ.get("CDK_DEFAULT_REGION") or "us-east-1"
+account = os.environ.get("CDK_DEFAULT_ACCOUNT") or None
+env = cdk.Environment(account=account, region=region)
 
 certificate_arn = app.node.try_get_context("certificate_arn") or ""
 cloudfront_certificate_arn = app.node.try_get_context("cloudfront_certificate_arn") or ""
@@ -23,12 +26,22 @@ cloudfront_domain_names = [
     for domain in cloudfront_domain_names_raw.split(",")
     if domain.strip()
 ]
-enable_app_auth = app.node.try_get_context("enable_app_auth") in (True, "true", "1", "yes")
+# Auth is always on in deployed stacks: the app refuses to start unauthenticated on a non-loopback bind.
+enable_ecs_exec = app.node.try_get_context("enable_ecs_exec") in (True, "true", "1", "yes")
 
 # ── Stacks ────────────────────────────────────────────────────────────────────
 
+# CloudFront-scope WAF must be created in us-east-1; it is referenced cross-region by the distribution.
+edge_waf = EdgeWafStack(
+    app, "AgentPlayground-EdgeWaf",
+    env=cdk.Environment(account=account, region="us-east-1"),
+    cross_region_references=True,
+)
+
 network = NetworkStack(
     app, "AgentPlayground-Network",
+    web_acl_arn=edge_waf.web_acl.attr_arn,
+    cross_region_references=True,
     certificate_arn=certificate_arn,
     cloudfront_domain_names=cloudfront_domain_names,
     cloudfront_certificate_arn=cloudfront_certificate_arn,
@@ -56,8 +69,10 @@ ecs = EcsStack(
     user_pool_client_id=cognito_stack.user_pool_client.user_pool_client_id,
     user_pool_domain=cognito_stack.domain.domain_name,
     public_base_url=f"https://{network.distribution.distribution_domain_name}",
-    agentcore_agent_id="",
-    enable_app_auth=enable_app_auth,
+    agentcore_agent_id_param=agentcore.agent_id_param,
+    certificate_arn=certificate_arn,
+    enable_app_auth=True,
+    enable_ecs_exec=enable_ecs_exec,
     env=env,
 )
 

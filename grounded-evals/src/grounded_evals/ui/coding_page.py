@@ -1475,7 +1475,10 @@ def coding_page():
                             "border-color:var(--border-default); font-size:0.7rem"
                         )
                 else:
-                    from grounded_evals.ui.judge_builder_page import _build_simple_prompt, _failure_modes
+                    from grounded_evals.ui.judge_builder_page import (
+                        _build_simple_prompt,
+                        _failure_modes,
+                    )
 
                     modes = _failure_modes()
                     existing_prompt = (
@@ -1780,8 +1783,9 @@ def coding_page():
                 with pre_label_result:
                     ui.html('<div style="font-size:0.75rem;color:var(--text-muted)">Running AI pre-labeling…</div>')
                 try:
-                    from grounded_evals.llm.client import get_default_client, get_model_id
                     import json as _json
+
+                    from grounded_evals.llm.client import get_default_client, get_model_id
                     client = get_default_client()
                     model_id = get_model_id()
                     code_list = "\n".join(f"- {c['name']}: {c.get('definition','')}" for c in codebook_data)
@@ -1802,7 +1806,8 @@ def coding_page():
                                 messages=[{"role": "user", "content": prompt}],
                             )
                             raw = msg.content[0].text
-                            js = raw.find('{'); je = raw.rfind('}') + 1
+                            js = raw.find('{')
+                            je = raw.rfind('}') + 1
                             data = _json.loads(raw[js:je]) if js >= 0 and je > js else {}
                             valid = [c for c in data.get('codes', []) if any(cb['name'] == c for cb in codebook_data)]
                             if valid:

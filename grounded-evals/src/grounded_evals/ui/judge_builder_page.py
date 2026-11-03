@@ -12,7 +12,6 @@ from nicegui import app, ui
 
 from grounded_evals.ui.layout import page_layout
 
-
 SEVERITY_RANK = {
     "catastrophic": 4,
     "critical": 3,

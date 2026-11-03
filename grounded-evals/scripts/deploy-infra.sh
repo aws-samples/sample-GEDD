@@ -4,8 +4,9 @@ set -euo pipefail
 # Deploy GEDD infrastructure (production)
 #
 # Usage:
-#   ./scripts/deploy-infra.sh                                      # CloudFront + HTTP ALB origin
-#   ./scripts/deploy-infra.sh --cert arn:aws:acm:...               # Direct ALB HTTPS listener
+#   ./scripts/deploy-infra.sh                                      # CloudFront -> VPC origin -> internal ALB (HTTP, private network)
+#   ./scripts/deploy-infra.sh --cert arn:aws:acm:... \
+#     --cloudfront-origin-domain origin.example.com                # ...with TLS on the origin hop (ALB HTTPS :443, TLS 1.3 policy)
 #   ./scripts/deploy-infra.sh --cloudfront-domain app.example.com \
 #     --cloudfront-cert arn:aws:acm:us-east-1:...:certificate/...  # CloudFront alias
 

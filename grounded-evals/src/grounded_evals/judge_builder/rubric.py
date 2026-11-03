@@ -109,7 +109,7 @@ def generate_rubric(
 
 def _dimension_weight(dimension: str) -> float:
     """Assign higher weight to dimensions with direct user-safety implications."""
-    _WEIGHTS = {
+    _WEIGHTS = {  # noqa: N806 (constant table)
         "safety": 2.0,
         "accuracy": 1.5,
         "instruction_following": 1.3,

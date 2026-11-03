@@ -21,17 +21,22 @@ class CognitoStack(Stack):
             self,
             "AgentPlaygroundUserPool",
             user_pool_name="agent-playground-users",
-            self_sign_up_enabled=True,
+            # Invite-only: an administrator creates users (see SETUP.md). Open self sign-up would let anyone
+            # on the internet create an account and spend this account's Bedrock budget.
+            self_sign_up_enabled=False,
             sign_in_aliases=cognito.SignInAliases(email=True),
             auto_verify=cognito.AutoVerifiedAttrs(email=True),
+            mfa=cognito.Mfa.OPTIONAL,
+            mfa_second_factor=cognito.MfaSecondFactor(otp=True, sms=False),
+            account_recovery=cognito.AccountRecovery.EMAIL_ONLY,
             password_policy=cognito.PasswordPolicy(
-                min_length=8,
+                min_length=12,
                 require_lowercase=True,
                 require_uppercase=True,
                 require_digits=True,
-                require_symbols=False,
+                require_symbols=True,
             ),
-            removal_policy=RemovalPolicy.DESTROY,
+            removal_policy=RemovalPolicy.RETAIN,
         )
 
         # Domain for hosted UI (unique per account)
@@ -42,15 +47,12 @@ class CognitoStack(Stack):
             ),
         )
 
-        # App client for SRP auth (no secret needed for client-side auth)
+        # App client: hosted-UI authorization-code flow (SRP only; no plaintext USER_PASSWORD_AUTH)
         self.user_pool_client = self.user_pool.add_client(
             "AppClient",
             user_pool_client_name="app-client",
             generate_secret=False,
-            auth_flows=cognito.AuthFlow(
-                user_srp=True,
-                user_password=True,
-            ),
+            auth_flows=cognito.AuthFlow(user_srp=True),
             o_auth=cognito.OAuthSettings(
                 flows=cognito.OAuthFlows(authorization_code_grant=True),
                 scopes=[

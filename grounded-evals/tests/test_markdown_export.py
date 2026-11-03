@@ -15,8 +15,8 @@ def test_empty_storage_produces_valid_md():
 
 def test_full_demo_export():
     from grounded_evals.ui.demo_data import (
-        DEMO_CODING_ANNOTATIONS,
         DEMO_CODEBOOK,
+        DEMO_CODING_ANNOTATIONS,
         DEMO_MEMOS,
         DEMO_PARADIGM_MODEL,
         DEMO_SESSION,

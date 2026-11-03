@@ -124,11 +124,11 @@ This is better than anything I would have written. It's grounded in actual failu
 grounded-evals mlflow \
   --session session.json \
   --results eval_results.json \
-  --tracking-uri arn:aws:sagemaker:us-east-1:384790854332:mlflow-tracking-server/gedd-evals
+  --tracking-uri arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-server/gedd-evals
 ```
 
 ```
-  Tracking: SageMaker @ arn:aws:sagemaker:us-east-1:384790854332:mlflow-tracking-ser...
+  Tracking: SageMaker @ arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-ser...
   Experiment: gedd-rxbot
   Dataset: 12 test cases
   Judge: gedd_quality (patterns: dosage_unit_confusion, interaction_underwarning)

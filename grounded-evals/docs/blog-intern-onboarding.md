@@ -168,11 +168,11 @@ Then the big moment — connecting to our team's SageMaker MLflow server:
 grounded-evals mlflow \
   --session energybot_session.json \
   --results eval_results.json \
-  --tracking-uri arn:aws:sagemaker:us-east-1:384790854332:mlflow-tracking-server/gedd-evals
+  --tracking-uri arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-server/gedd-evals
 ```
 
 ```
-  Tracking: SageMaker @ arn:aws:sagemaker:us-east-1:384790854332:mlflow-tracking-ser...
+  Tracking: SageMaker @ arn:aws:sagemaker:us-east-1:123456789012:mlflow-tracking-ser...
   Experiment: gedd-energybot
   Dataset: 9 test cases
   Judge: gedd_quality (patterns: nem_version_confusion, itc_outdated)

@@ -8,7 +8,7 @@ Changes from dev:
 - Auto-scaling with request-count metric
 """
 
-from aws_cdk import Duration, RemovalPolicy, Stack
+from aws_cdk import CfnOutput, Duration, RemovalPolicy, Stack
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_ecr as ecr
 from aws_cdk import aws_ecs as ecs
@@ -17,6 +17,7 @@ from aws_cdk import aws_elasticloadbalancingv2 as elbv2
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_logs as logs
 from aws_cdk import aws_secretsmanager as secretsmanager
+from aws_cdk import aws_ssm as ssm
 from constructs import Construct
 
 
@@ -34,8 +35,10 @@ class EcsStack(Stack):
         user_pool_client_id: str = "",
         user_pool_domain: str = "",
         public_base_url: str = "",
-        agentcore_agent_id: str = "",
-        enable_app_auth: bool = False,
+        agentcore_agent_id_param: ssm.IStringParameter | None = None,
+        certificate_arn: str = "",
+        enable_app_auth: bool = True,
+        enable_ecs_exec: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -54,7 +57,8 @@ class EcsStack(Stack):
         )
 
         self.admin_secret = None
-        if enable_app_auth:
+        # ADMIN_PASSWORD is only honoured when Cognito is not configured, so create it only in that case.
+        if enable_app_auth and not user_pool_id:
             self.admin_secret = secretsmanager.Secret(
                 self, "AdminSecret",
                 secret_name="agent-playground/admin-password",
@@ -167,7 +171,6 @@ class EcsStack(Stack):
             "PORT": "8080",
             "NICEGUI_RELOAD": "false",
             "AWS_REGION": region,
-            "AGENTCORE_AGENT_ID": agentcore_agent_id,
             "NICEGUI_STORAGE_PATH": "/mnt/storage",
         }
         if enable_app_auth:
@@ -183,6 +186,10 @@ class EcsStack(Stack):
         }
         if self.admin_secret:
             container_secrets["ADMIN_PASSWORD"] = ecs.Secret.from_secrets_manager(self.admin_secret)
+        if agentcore_agent_id_param is not None:
+            # Seeded with PLACEHOLDER by the AgentCore stack; scripts/deploy-agent.sh writes the real runtime ID.
+            # The app treats PLACEHOLDER as "not configured" and runs the coach locally.
+            container_secrets["AGENTCORE_AGENT_ID"] = ecs.Secret.from_ssm_parameter(agentcore_agent_id_param)
 
         container = task_def.add_container(
             "App",
@@ -234,24 +241,37 @@ class EcsStack(Stack):
             assign_public_ip=False,
             circuit_breaker=ecs.DeploymentCircuitBreaker(rollback=True),
             min_healthy_percent=100,
-            enable_execute_command=True,
+            enable_execute_command=enable_ecs_exec,
         )
         target_group.add_target(service)
 
         # ── ALB Listener ──────────────────────────────────────────────────────
-        elbv2.CfnListener(
-            self,
-            "AppHttpListener",
-            load_balancer_arn=alb.load_balancer_arn,
-            port=80,
-            protocol="HTTP",
-            default_actions=[
-                elbv2.CfnListener.ActionProperty(
-                    type="forward",
-                    target_group_arn=target_group.target_group_arn,
-                ),
-            ],
-        )
+        # The ALB is internal (CloudFront VPC origin only). With a certificate the origin hop is HTTPS;
+        # without one it is HTTP over AWS's private network between CloudFront and the VPC.
+        if certificate_arn:
+            elbv2.CfnListener(
+                self,
+                "AppHttpsListener",
+                load_balancer_arn=alb.load_balancer_arn,
+                port=443,
+                protocol="HTTPS",
+                ssl_policy="ELBSecurityPolicy-TLS13-1-2-2021-06",
+                certificates=[elbv2.CfnListener.CertificateProperty(certificate_arn=certificate_arn)],
+                default_actions=[
+                    elbv2.CfnListener.ActionProperty(type="forward", target_group_arn=target_group.target_group_arn),
+                ],
+            )
+        else:
+            elbv2.CfnListener(
+                self,
+                "AppHttpListener",
+                load_balancer_arn=alb.load_balancer_arn,
+                port=80,
+                protocol="HTTP",
+                default_actions=[
+                    elbv2.CfnListener.ActionProperty(type="forward", target_group_arn=target_group.target_group_arn),
+                ],
+            )
 
         # ── Auto-scaling ──────────────────────────────────────────────────────
         scaling = service.auto_scale_task_count(min_capacity=1, max_capacity=4)
@@ -261,3 +281,7 @@ class EcsStack(Stack):
             scale_in_cooldown=Duration.seconds(300),
             scale_out_cooldown=Duration.seconds(60),
         )
+
+        # ── Outputs (read by scripts/deploy-ui.sh) ────────────────────────────
+        CfnOutput(self, "ClusterName", value=cluster.cluster_name)
+        CfnOutput(self, "ServiceName", value=service.service_name)

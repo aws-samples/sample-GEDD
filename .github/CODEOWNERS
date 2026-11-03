@@ -1,5 +1,7 @@
-# Require review for infrastructure and security-sensitive changes
-/grounded-evals/infra/          @your-team/platform
-/grounded-evals/Dockerfile      @your-team/platform
-/.github/                       @your-team/platform
-/grounded-evals/src/grounded_evals/llm/   @your-team/platform
+# Require maintainer review for infrastructure and security-sensitive changes
+/grounded-evals/infra/                    @balasvce2017
+/grounded-evals/Dockerfile                @balasvce2017
+/grounded-evals/scripts/                  @balasvce2017
+/grounded-evals/src/grounded_evals/app.py @balasvce2017
+/grounded-evals/src/grounded_evals/llm/   @balasvce2017
+/.github/                                 @balasvce2017

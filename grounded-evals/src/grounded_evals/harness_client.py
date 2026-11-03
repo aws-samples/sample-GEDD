@@ -218,7 +218,7 @@ class HarnessClient:
             if code == "ThrottlingException":
                 raise RuntimeError("Rate limit hit. Slow down requests or increase quota.")
             if code in ("AccessDeniedException", "UnauthorizedException"):
-                raise RuntimeError(f"IAM permission denied: bedrock-agentcore:InvokeHarness")
+                raise RuntimeError("IAM permission denied: bedrock-agentcore:InvokeHarness")
             raise RuntimeError(f"AWS error ({code}): {msg}")
 
 

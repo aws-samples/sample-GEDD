@@ -7,7 +7,6 @@ from uuid import uuid4
 
 from grounded_evals.ui.domain_demos import _clear_and_load
 
-
 DEMO_GENERATED_AT = "2026-06-12T12:00:00"
 
 INDUCTIVE_PM_CODEBOOK = [

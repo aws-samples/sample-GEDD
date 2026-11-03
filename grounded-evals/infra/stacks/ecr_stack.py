@@ -14,6 +14,7 @@ class EcrStack(Stack):
             "AgentPlaygroundRepo",
             repository_name="agent-playground-ui",
             removal_policy=RemovalPolicy.RETAIN,
+            image_scan_on_push=True,
             lifecycle_rules=[
                 ecr.LifecycleRule(
                     description="Keep last 10 images",

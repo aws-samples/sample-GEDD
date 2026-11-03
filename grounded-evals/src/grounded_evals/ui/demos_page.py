@@ -339,7 +339,26 @@ DEMOS_CSS = """
 def _build_domain_registry():
     """Build list of domain judge-gate demos; add HRBot/EduBot if available."""
     from grounded_evals.ui.demo_data import load_demo_data
-    from grounded_evals.ui.support_bot_demo import load_support_bot_demo
+    from grounded_evals.ui.domain_demos import (
+        CLINICAL_CODEBOOK,
+        CLINICAL_CODING_ANNOTATIONS,
+        CLINICAL_EVAL_HISTORY,
+        CLINICAL_JUDGE_PROMPT,
+        CLINICAL_PARADIGM_MODEL,
+        LEX_CODEBOOK,
+        LEX_CODING_ANNOTATIONS,
+        LEX_EVAL_HISTORY,
+        LEX_JUDGE_PROMPT,
+        LEX_PARADIGM_MODEL,
+        WEALTH_CODEBOOK,
+        WEALTH_CODING_ANNOTATIONS,
+        WEALTH_EVAL_HISTORY,
+        WEALTH_JUDGE_PROMPT,
+        WEALTH_PARADIGM_MODEL,
+        load_clinical_demo,
+        load_lex_demo,
+        load_wealth_demo,
+    )
     from grounded_evals.ui.inductive_pm_demo import (
         INDUCTIVE_PM_CODEBOOK,
         INDUCTIVE_PM_EVAL_HISTORY,
@@ -347,12 +366,7 @@ def _build_domain_registry():
         INDUCTIVE_PM_SAMPLE_QUERIES,
         load_inductive_pm_demo,
     )
-    from grounded_evals.ui.domain_demos import (
-        load_clinical_demo, load_lex_demo, load_wealth_demo,
-        CLINICAL_CODEBOOK, CLINICAL_CODING_ANNOTATIONS, CLINICAL_PARADIGM_MODEL, CLINICAL_JUDGE_PROMPT, CLINICAL_EVAL_HISTORY,
-        LEX_CODEBOOK, LEX_CODING_ANNOTATIONS, LEX_PARADIGM_MODEL, LEX_JUDGE_PROMPT, LEX_EVAL_HISTORY,
-        WEALTH_CODEBOOK, WEALTH_CODING_ANNOTATIONS, WEALTH_PARADIGM_MODEL, WEALTH_JUDGE_PROMPT, WEALTH_EVAL_HISTORY,
-    )
+    from grounded_evals.ui.support_bot_demo import load_support_bot_demo
 
     domains = [
         {
@@ -464,7 +478,11 @@ def _build_domain_registry():
     # Optionally add HRBot + EduBot if available
     try:
         from grounded_evals.ui.domain_demos import (
-            load_hr_demo, HR_CODEBOOK, HR_PARADIGM_MODEL, HR_JUDGE_PROMPT, HR_EVAL_HISTORY,
+            HR_CODEBOOK,
+            HR_EVAL_HISTORY,
+            HR_JUDGE_PROMPT,
+            HR_PARADIGM_MODEL,
+            load_hr_demo,
         )
         domains.append({
             "id": "hr", "name": "HRBot", "icon": "people", "operator": "TalentPulse",
@@ -492,7 +510,11 @@ def _build_domain_registry():
 
     try:
         from grounded_evals.ui.domain_demos import (
-            load_edu_demo, EDU_CODEBOOK, EDU_PARADIGM_MODEL, EDU_JUDGE_PROMPT, EDU_EVAL_HISTORY,
+            EDU_CODEBOOK,
+            EDU_EVAL_HISTORY,
+            EDU_JUDGE_PROMPT,
+            EDU_PARADIGM_MODEL,
+            load_edu_demo,
         )
         domains.append({
             "id": "edu", "name": "EduBot", "icon": "school", "operator": "Athena Learning",
@@ -520,7 +542,11 @@ def _build_domain_registry():
 
     try:
         from grounded_evals.ui.domain_demos import (
-            load_crypto_demo, CRYPTO_CODEBOOK, CRYPTO_PARADIGM_MODEL, CRYPTO_JUDGE_PROMPT, CRYPTO_EVAL_HISTORY,
+            CRYPTO_CODEBOOK,
+            CRYPTO_EVAL_HISTORY,
+            CRYPTO_JUDGE_PROMPT,
+            CRYPTO_PARADIGM_MODEL,
+            load_crypto_demo,
         )
         domains.append({
             "id": "crypto", "name": "VaultEx AI", "icon": "currency_bitcoin", "operator": "VaultEx Exchange",
@@ -552,7 +578,11 @@ def _build_domain_registry():
 
     try:
         from grounded_evals.ui.domain_demos import (
-            load_game_demo, GAME_CODEBOOK, GAME_PARADIGM_MODEL, GAME_JUDGE_PROMPT, GAME_EVAL_HISTORY,
+            GAME_CODEBOOK,
+            GAME_EVAL_HISTORY,
+            GAME_JUDGE_PROMPT,
+            GAME_PARADIGM_MODEL,
+            load_game_demo,
         )
         domains.append({
             "id": "game", "name": "PixelGuard", "icon": "sports_esports", "operator": "NexusGames",
@@ -585,16 +615,46 @@ def _build_domain_registry():
     # ── New domain demos (batch 2) ────────────────────────────────────────────
     try:
         from grounded_evals.ui.new_domain_demos import (
-            load_adtech_demo, ADTECH_CODEBOOK, ADTECH_JUDGE_PROMPT, ADTECH_EVAL_HISTORY,
-            load_insure_demo, INSURE_CODEBOOK, INSURE_JUDGE_PROMPT, INSURE_EVAL_HISTORY,
-            load_prop_demo, PROP_CODEBOOK, PROP_JUDGE_PROMPT, PROP_EVAL_HISTORY,
-            load_rx_demo, RX_CODEBOOK, RX_JUDGE_PROMPT, RX_EVAL_HISTORY,
-            load_tax_demo, TAX_CODEBOOK, TAX_JUDGE_PROMPT, TAX_EVAL_HISTORY,
-            load_claims_demo, CLAIMS_CODEBOOK, CLAIMS_JUDGE_PROMPT, CLAIMS_EVAL_HISTORY,
-            load_food_demo, FOOD_CODEBOOK, FOOD_JUDGE_PROMPT, FOOD_EVAL_HISTORY,
-            load_auto_demo, AUTO_CODEBOOK, AUTO_JUDGE_PROMPT, AUTO_EVAL_HISTORY,
-            load_migrate_demo, MIGRATE_CODEBOOK, MIGRATE_JUDGE_PROMPT, MIGRATE_EVAL_HISTORY,
-            load_energy_demo, ENERGY_CODEBOOK, ENERGY_JUDGE_PROMPT, ENERGY_EVAL_HISTORY,
+            ADTECH_CODEBOOK,
+            ADTECH_EVAL_HISTORY,
+            ADTECH_JUDGE_PROMPT,
+            AUTO_CODEBOOK,
+            AUTO_EVAL_HISTORY,
+            AUTO_JUDGE_PROMPT,
+            CLAIMS_CODEBOOK,
+            CLAIMS_EVAL_HISTORY,
+            CLAIMS_JUDGE_PROMPT,
+            ENERGY_CODEBOOK,
+            ENERGY_EVAL_HISTORY,
+            ENERGY_JUDGE_PROMPT,
+            FOOD_CODEBOOK,
+            FOOD_EVAL_HISTORY,
+            FOOD_JUDGE_PROMPT,
+            INSURE_CODEBOOK,
+            INSURE_EVAL_HISTORY,
+            INSURE_JUDGE_PROMPT,
+            MIGRATE_CODEBOOK,
+            MIGRATE_EVAL_HISTORY,
+            MIGRATE_JUDGE_PROMPT,
+            PROP_CODEBOOK,
+            PROP_EVAL_HISTORY,
+            PROP_JUDGE_PROMPT,
+            RX_CODEBOOK,
+            RX_EVAL_HISTORY,
+            RX_JUDGE_PROMPT,
+            TAX_CODEBOOK,
+            TAX_EVAL_HISTORY,
+            TAX_JUDGE_PROMPT,
+            load_adtech_demo,
+            load_auto_demo,
+            load_claims_demo,
+            load_energy_demo,
+            load_food_demo,
+            load_insure_demo,
+            load_migrate_demo,
+            load_prop_demo,
+            load_rx_demo,
+            load_tax_demo,
         )
         _new_demos = [
             {"id": "adtech", "name": "AdTechBot", "icon": "campaign", "operator": "SignalWorks",
