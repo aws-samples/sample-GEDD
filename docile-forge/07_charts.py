@@ -38,23 +38,62 @@ def title(ax, t, sub=""):
 
 
 def leaderboard():
-    rows = [("Baseline (plain prompt)", BASE, MUTED), ("Harness A: rules in prompt", "glm_rules", MUTED),
-            ("Harness B: rules + OCR text", "glm_rules_ocr", MUTED), ("Vision LoRA fine-tune", SFT, BLUE)]
-    fig, ax = plt.subplots(figsize=(11, 4.6))
-    ys = range(len(rows))[::-1]
-    for y, (label, tag, c) in zip(ys, rows):
+    """Sample-deck style: every system, sorted, gap vs baseline with the significance verdict on the right."""
+    rep = json.loads((d.RESULTS / "report.json").read_text())
+    rows = [("Vision LoRA fine-tune (SFT on train docs)", SFT, BLUE, (SFT, BASE)),
+            ("Harness B: rules + OCR text", "glm_rules_ocr", MUTED, ("glm_rules_ocr", "glm")),
+            ("Harness A: rules in prompt", "glm_rules", MUTED, ("glm_rules", "glm")),
+            ("GLM 5.3 Flash (baseline)", BASE, None, None)]
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    ys = list(range(len(rows)))[::-1]
+    for y, (label, tag, c, pair) in zip(ys, rows):
         v = 100 * acc(tag)
-        ax.barh(y, v, height=0.56, color=c)
-        ax.text(v + 1, y, f"{v:.1f}%", va="center", fontsize=14, fontweight="bold" if tag == SFT else "normal", color=INK)
-    ax.set_yticks(list(ys), [r[0] for r in rows], fontsize=13)
+        if c is None:  # baseline: hatched, the reference every other row is measured against
+            ax.barh(y, v, height=0.58, color=SURFACE, edgecolor=ORANGE, hatch="///", lw=1.5)
+        else:
+            ax.barh(y, v, height=0.58, color=c)
+        ax.text(v + 1, y, f"{v:.1f}%", va="center", fontsize=14, fontweight="bold" if tag == SFT else "normal")
+        if pair:
+            r = next(x for x in rep["comparisons"] if x["a"] == pair[0] and x["b"] == pair[1] and x["subset"] == "all")
+            verdict = "significant" if r["significant"] else "n.s."
+            ax.text(103, y, f"{100 * r['bootstrap']['delta']:+.1f} pp  {verdict}", va="center", fontsize=13,
+                    fontweight="bold" if tag == SFT else "normal", color=INK if tag == SFT else INK2, clip_on=False)
+    ax.set_yticks(ys, [r[0] for r in rows], fontsize=13)
     ax.set_xlim(0, 100)
     ax.xaxis.grid(True, color=GRID, lw=1)
     ax.set_axisbelow(True)
     ax.tick_params(axis="y", length=0)
-    ax.set_xlabel("Fields correct, % of 5,000 (500 test documents)")
-    title(ax, "Fine-tuning beats every prompt", "GLM 5.3 Flash, same test set, temperature 0")
-    fig.tight_layout()
+    ax.set_xlabel("Fields correct on the DocILE test set (%)")
+    title(ax, "Before vs after: does SFT beat the baseline?", "5,000 field cases from 500 held-out documents · gap vs baseline on the right")
+    fig.subplots_adjust(left=0.31, right=0.8, top=0.82, bottom=0.14)
     fig.savefig(FIG / "leaderboard.png", dpi=200)
+
+
+def teammate():
+    if not (d.RESULTS / "teammate_ocr.json").exists():
+        return
+    """Teammate's OCR-input run. Separate chart: different input, test set and metric from ours."""
+    t = json.loads((d.RESULTS / "teammate_ocr.json").read_text())
+    ms = sorted(t["models"], key=lambda m: m["f1_fuzzy"], reverse=True)
+    fig, ax = plt.subplots(figsize=(12, 4.8))
+    ys, h = list(range(len(ms)))[::-1], 0.36
+    for y, m in zip(ys, ms):
+        ax.barh(y + h / 2 + 0.01, m["f1_fuzzy"], height=h, color=BLUE)
+        ax.barh(y - h / 2 - 0.01, m["f1_exact"], height=h, color=ORANGE)
+        ax.text(m["f1_fuzzy"] + 1, y + h / 2, f"{m['f1_fuzzy']:.1f}%", va="center", fontsize=12.5, fontweight="bold")
+        ax.text(m["f1_exact"] + 1, y - h / 2, f"{m['f1_exact']:.1f}%", va="center", fontsize=12.5, color=INK2)
+        ax.text(103, y, f"p50 {m['p50_s']:.2f}s · p95 {m['p95_s']:.2f}s", va="center", fontsize=12, color=INK2, clip_on=False)
+    ax.set_yticks(ys, [m["name"] + " (fine-tuned)" for m in ms], fontsize=13)
+    ax.set_xlim(0, 100)
+    ax.xaxis.grid(True, color=GRID, lw=1)
+    ax.set_axisbelow(True)
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("Field F1 on 200 held-out invoices (%)")
+    ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=BLUE), plt.Rectangle((0, 0), 1, 1, color=ORANGE)],
+              labels=["Fuzzy match", "Exact match"], frameon=False, loc="lower right")
+    title(ax, "OCR-text route: three fine-tuned open models", "Teammate's run · different input, test set and metric from the image run — compare rows, not charts")
+    fig.subplots_adjust(left=0.24, right=0.8, top=0.82, bottom=0.14)
+    fig.savefig(FIG / "teammate_ocr.png", dpi=200)
 
 
 def significance():
@@ -155,6 +194,64 @@ def loss():
 
 if __name__ == "__main__":
     FIG.mkdir(exist_ok=True)
-    for f in (leaderboard, significance, mcnemar, per_field, loss):
+    for f in (leaderboard, teammate, significance, mcnemar, per_field, loss):
         f()
     print("wrote", sorted(p.name for p in FIG.glob("*.png")))
+
+
+def doc_success():
+    """Whole-document success: what automation actually needs (every field right, no human touch)."""
+    rows = [("Baseline", BASE, None), ("Harness B: rules + OCR", "glm_rules_ocr", MUTED), ("Vision LoRA fine-tune", SFT, BLUE)]
+    fig, ax = plt.subplots(figsize=(12, 4.2))
+    ys = list(range(len(rows)))[::-1]
+    for y, (label, tag, c) in zip(ys, rows):
+        R = list(d.load_results(tag).values())
+        v = 100 * sum(all(f["score"] for f in r["fields"]) for r in R) / len(R)
+        if c is None:
+            ax.barh(y, v, height=0.58, color=SURFACE, edgecolor=ORANGE, hatch="///", lw=1.5)
+        else:
+            ax.barh(y, v, height=0.58, color=c)
+        ax.text(v + 1, y, f"{v:.1f}%", va="center", fontsize=15, fontweight="bold" if tag == SFT else "normal")
+    ax.set_yticks(ys, [r[0] for r in rows], fontsize=13)
+    ax.set_xlim(0, 100)
+    ax.xaxis.grid(True, color=GRID, lw=1)
+    ax.set_axisbelow(True)
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("Test documents with all 10 fields correct (%)")
+    title(ax, "Field accuracy compounds: 3x more invoices need no human touch", "500 held-out documents · a document is automatable only if every field is right")
+    fig.subplots_adjust(left=0.22, right=0.95, top=0.8, bottom=0.17)
+    fig.savefig(FIG / "doc_success.png", dpi=200)
+
+
+if __name__ == "__main__":
+    doc_success()
+
+
+def invoiceroute():
+    return  # teammate data not published
+    """Teammate's InvoiceRoute (OCR text -> JSON): DeepSeek V4.1 Flash baseline vs fine-tuned, 200 held-out docs."""
+    metrics = [("Field F1, fuzzy", 47.53, 78.33), ("Field F1, exact", 42.22, 70.17), ("Doc success (all fields exact)", 0.0, 4.5)]
+    fig, ax = plt.subplots(figsize=(12, 4.6))
+    ys, h = list(range(len(metrics)))[::-1], 0.36
+    for y, (m, b, f) in zip(ys, metrics):
+        ax.barh(y + h / 2 + 0.01, f, height=h, color=BLUE)
+        ax.barh(y - h / 2 - 0.01, max(b, 0.001), height=h, color=SURFACE, edgecolor=ORANGE, hatch="///", lw=1.5)
+        ax.text(f + 1, y + h / 2, f"{f:.1f}%", va="center", fontsize=13, fontweight="bold")
+        ax.text(b + 1, y - h / 2, f"{b:.1f}%", va="center", fontsize=13, color=INK2)
+        ax.text(103, y, f"{f - b:+.1f} pp", va="center", fontsize=14, fontweight="bold", clip_on=False)
+    ax.set_yticks(ys, [m[0] for m in metrics], fontsize=13)
+    ax.set_xlim(0, 100)
+    ax.xaxis.grid(True, color=GRID, lw=1)
+    ax.set_axisbelow(True)
+    ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("200 held-out documents, OCR text input (%)")
+    ax.legend(handles=[plt.Rectangle((0, 0), 1, 1, color=BLUE),
+                       plt.Rectangle((0, 0), 1, 1, facecolor=SURFACE, edgecolor=ORANGE, hatch="///")],
+              labels=["Fine-tuned", "Baseline"], frameon=False, loc="lower right")
+    title(ax, "InvoiceRoute: DeepSeek V4.1 Flash, before vs after", "Teammate's run · OCR text to JSON · exact field F1 +27.95 pp")
+    fig.subplots_adjust(left=0.25, right=0.88, top=0.82, bottom=0.15)
+    fig.savefig(FIG / "invoiceroute.png", dpi=200)
+
+
+if __name__ == "__main__":
+    invoiceroute()
