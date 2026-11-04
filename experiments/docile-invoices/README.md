@@ -208,6 +208,9 @@ git clone https://github.com/rossumai/docile /tmp/docile
 | `09_reward_gate_ppi.py` | Pilot: codebook vs scalar reward at the gate, PPI++ coverage, using the saved predictions → `results/reward_gate_ppi.json` | free |
 | `10_bon_overopt.py` | E2: codebook vs scalar LLM-judge rewards under best-of-N (`estimate`, `sample`, `judge`, `analyse`) | ~$12 |
 | `11_expert_kit.py` | Two-expert review sheets for the remaining errors; Krippendorff's alpha; re-scoring under corrected labels | free (expert time) |
+| `rl_env.py` | GEDD RL environment: codebook, six rewards (GEDD, cost-only GEDD, exact, three hackable proxies), leak-free splits, GRPO advantages | — |
+| `12_reward_audit.py` | Reward audit before RL: every reward on real systems and three degenerate policies; headroom → `results/reward_audit.json` | free |
+| `13_rl_grpo.py` | GRPO vision-LoRA training under any reward; logs all rewards and failure codes per step; locked-set eval before/after (`--smoke`, `--dry-run`) | ~$19 per reward arm |
 
 Results are cached per document in `results/*.jsonl` (one row per document, with every field's prediction and score). The DocILE label text (`gold`) and `splits/` are not published here, per the dataset's terms; `01_build_splits.py` rebuilds them from your own DocILE download, and re-running the eval restores `gold`.
 

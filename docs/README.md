@@ -28,5 +28,5 @@ Start with the [latest findings](../FINDINGS.md), then pick a path by flywheel s
 |---|---|
 | [`judges/`](judges/) | Worked LLM-as-Judge write-ups for 17 domains (claims, clinical, Rx, tax, legal, HR, energy and more) |
 | [`blog/`](blog/) | Articles on GEDD for different audiences |
-| [`talks/`](talks/) | Conference talk material |
+| [`talks/`](talks/) | Workshop deck ([`gedd-workshop.pptx`](talks/gedd-workshop.pptx), built from the results by [`build_gedd_deck.py`](talks/build_gedd_deck.py)) and conference talk material |
 | [`setup.md`](setup.md) | Install, configure a model provider, run locally or deploy the app |

@@ -6,7 +6,7 @@
 
 ## Latest findings
 
-*Updated 2026-11-03. Every number below is regenerated from saved per-case results, and CI fails if they drift. Null results are reported alongside the wins. The full log, with ids, evidence and scripts, is in [FINDINGS.md](FINDINGS.md).*
+*Updated 2026-11-04. Every number below is regenerated from saved per-case results, and CI fails if they drift. Null results are reported alongside the wins. The full log, with ids, evidence and scripts, is in [FINDINGS.md](FINDINGS.md).*
 
 ### ✅ Proven: a GEDD round beats the off-the-shelf model on real invoices
 
@@ -40,6 +40,17 @@ We tested the codebook reward model (per failure code, weighted by severity, cal
 
 Prediction-powered inference (PPI++) combines judge scores on every case with a small random expert sample. Its 95% intervals had close to nominal coverage (92–97%) for field accuracy and invoice success. With the weak judge above, they were only **1–6% narrower** than expert labels alone. PPI++ falls back to the experts instead of inheriting the judge's bias, which is the safe behaviour. → F7
 
+### ✅ Proven before any training: a reward audit catches loopholes
+
+Every candidate reward was scored on the same 500 invoices, for the real systems and for three degenerate policies: answer null everywhere, never answer null, and dump every candidate into each field.
+- **All three proxy rewards pay a degenerate policy.** Charging only for invented values pays abstention a perfect 1.0, above the fine-tune.
+- **The GEDD reward and the exact scorer pay none of them.**
+- **A GEDD reward that only charges severity leaves abstention within 0.03 of the base model.** Paying +1 per correct field widens the gap to 0.26. Pay for the goal, charge for the cost.
+
+![Reward audit](experiments/docile-invoices/figures/reward_audit.png)
+
+→ F8 · [`12_reward_audit.py`](experiments/docile-invoices/12_reward_audit.py) · RL environment: [`rl_env.py`](experiments/docile-invoices/rl_env.py)
+
 ### ⏳ Next: pre-registered experiments
 
 | | Question | Status |
@@ -48,6 +59,7 @@ Prediction-powered inference (PPI++) combines judge scores on every case with a 
 | **E2** | Codebook vs scalar LLM-judge reward under best-of-N pressure: which overoptimizes less? | Script ready, about $12 → [`10_bon_overopt.py`](experiments/docile-invoices/10_bon_overopt.py) |
 | **E3** | How much accuracy does each expert label buy, and does the online loop improve the model round after round? | Planned |
 | **Labels** | Two experts double-label the 582 remaining errors; inter-annotator agreement; re-scoring under corrected labels | Kit ready → [`11_expert_kit.py`](experiments/docile-invoices/11_expert_kit.py) |
+| **R1** | GRPO under the GEDD reward vs two hackable proxies: does RL amplify the loophole the audit predicts? | Environment + trainer ready, about $19 per arm → [`13_rl_grpo.py`](experiments/docile-invoices/13_rl_grpo.py) |
 
 Full positioning against the post-training literature, the gap list and its status: [docs/research.md](docs/research.md).
 

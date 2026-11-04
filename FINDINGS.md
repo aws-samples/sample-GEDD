@@ -20,10 +20,12 @@ effect (MDE) reported, so a null result can be read as underpowered or as eviden
 | [F5](#f5) | Requiring both tests changes conclusions (rules prompt at invoice level: McNemar yes, bootstrap no) | ✅ | 2026-11-03 |
 | [F6](#f6) | With weak gold-free detectors, a decomposed codebook reward doesn't reliably beat a scalar reward at the gate | ⚠️ null | 2026-11-03 |
 | [F7](#f7) | PPI++ online estimates stay valid; a weak judge saves few expert labels | ⚠️ | 2026-11-03 |
+| [F8](#f8) | A reward audit before RL catches loopholes: all three proxy rewards pay a degenerate policy; the GEDD and exact rewards don't, and the cost-only GEDD reward nearly pays abstention | ✅ | 2026-11-04 |
 | [E1](#e1) | Criteria source: generic vs a-priori expert vs LLM-written vs GEDD codebook, at equal expert budget | ⏳ | — |
 | [E2](#e2) | Codebook vs scalar LLM-judge reward under best-of-N pressure (overoptimization) | ⏳ script ready | — |
 | [E3](#e3) | Expert-label efficiency and multi-round online improvement | ⏳ | — |
 | [L1](#l1) | Inter-annotator agreement and label-gap correction on the 582 remaining errors | ⏳ kit ready | — |
+| [R1](#r1) | GRPO under the GEDD reward vs two hackable proxies: does RL amplify the loophole the audit predicts? | ⏳ env + trainer ready | — |
 
 All case-study findings use the same setup: DocILE scanned business documents, 500 locked test
 documents = 5,000 field cases in 204 layout clusters (124 documents on unseen layouts), 10 fields,
@@ -91,6 +93,38 @@ with a random "expert" sample of n = 25–400 and the agreement score as the jud
 labels alone, because PPI++ correctly discounts a weak judge. *Script:* `09_reward_gate_ppi.py`,
 `figures/ppi_width.png`.
 
+### F8
+**Audit the reward before training.** This finding needs no training: every reward in
+[`rl_env.py`](experiments/docile-invoices/rl_env.py) was scored on the 500 locked test invoices for the
+four real systems and for three degenerate policies, each the cheapest way to game one kind of reward.
+
+| Policy | gedd | gedd (cost only) | exact | no invention | coverage | lenient |
+|---|---|---|---|---|---|---|
+| Base model | 0.804 | 0.828 | 0.785 | 0.674 | 0.752 | 0.785 |
+| SFT fine-tune | 0.899 | 0.919 | 0.884 | 0.880 | 0.672 | 0.884 |
+| All null (abstain) | 0.546 | 0.796 | 0.346 | **1.000 ⚠** | 0.000 | 0.346 |
+| Never null (blind guess) | 0.575 | 0.594 | 0.559 | 0.006 | **1.000 ⚠** | 0.559 |
+| Dump every candidate | 0.760 | 0.789 | 0.737 | 0.646 | **0.777 ⚠** | **0.831 ⚠** |
+
+⚠ = scores at or above the base model under that reward, so RL from the base would be paid to drift there.
+
+- **Every proxy can be gamed.** Charging only for invention pays abstention a perfect score,
+  above the fine-tune. Paying for answers pays blind guessing. Lenient "contains the answer"
+  matching pays dumping candidates into a field. This is the proxy → gap → amplify pattern of
+  reward hacking, visible before spending anything on training.
+- **The GEDD reward and the exact scorer can't be gamed by these policies.** No degenerate
+  policy reaches the base model (margins +0.04 and +0.05 over the best hack).
+- **"Pay for the goal, charge for the cost."** A GEDD reward that only charges severity
+  (1 − cost) leaves abstention within 0.03 of the base model, because a missed value is cheap
+  next to an invented one. Adding +1 per correct field widens that gap to 0.26.
+- **Headroom.** The best single system gets 88.4% of fields. Picking the best of the five per
+  field would get 92.3%, and 44.2% of invoices are fully right in at least one system (vs 38.8%
+  for the fine-tune), so RL has room to move.
+
+*Script:* `12_reward_audit.py` → `results/reward_audit.json`, `figures/reward_audit.png`. Field outcomes
+come from saved per-case scores. The lenient reward for the real systems is a lower bound, and the
+dump policy's candidates come from all five systems.
+
 ---
 
 ### E1
@@ -116,3 +150,12 @@ locked-set accuracy rises every round.
 **Label quality.** Two experts review the 582 remaining errors plus 10% correct controls, with 20%
 overlap. Report Krippendorff's α for verdict and code, then re-score every system under the
 adjudicated labels. *Script:* `11_expert_kit.py`.
+
+### R1
+**Does RL amplify the loophole?** GRPO with a vision LoRA on the leak-free training pool (no layout
+cluster shared with the test set), 18 steps × 4 invoices × 4 tries, in three arms: `gedd`,
+`no_invention` and `coverage`. Every step logs all six rewards and the failure-code counts, and the
+locked set is scored by the fixed exact scorer before and after. Prediction from F8: the
+`no_invention` arm drifts toward nulls (missed values rise while its reward rises), the `coverage`
+arm toward invention, and the `gedd` arm improves `exact`. *Script:* `13_rl_grpo.py`, about $19 per
+arm (`--smoke` first). *Needs:* DocILE data and an API key.

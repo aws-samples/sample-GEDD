@@ -274,10 +274,12 @@ def plots(gate: dict, ppi: dict) -> None:
     fig, ax = plt.subplots(figsize=(5, 3.5))
     by_n = ppi["field_accuracy"]["by_n"]
     ns = sorted(by_n, key=int)
-    ax.plot(ns, [by_n[n]["expert_only_width"] * 100 for n in ns], "o-", color="#57606a", label="Expert labels only")
-    ax.plot(ns, [by_n[n]["ppi_width"] * 100 for n in ns], "o-", color="#8250df", label="PPI++ (experts + agreement score)")
+    xs = [int(n) for n in ns]
+    ax.plot(xs, [by_n[n]["expert_only_width"] * 100 for n in ns], "o-", color="#57606a", label="Expert labels only")
+    ax.plot(xs, [by_n[n]["ppi_width"] * 100 for n in ns], "o-", color="#8250df", label="PPI++ (experts + agreement score)")
     ax.set_xscale("log")
-    ax.set_xticks(ns, [str(n) for n in ns])
+    ax.set_xticks([int(n) for n in ns], [str(n) for n in ns])
+    ax.xaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
     ax.set_xlabel("Expert-labelled field cases")
     ax.set_ylabel("95% CI width (points)")
     ax.grid(alpha=0.3)
