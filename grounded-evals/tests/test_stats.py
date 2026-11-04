@@ -48,7 +48,7 @@ def test_mcnemar_no_discordant_pairs():
 
 
 def test_mcnemar_reproduces_docile_headline():
-    # docile-forge README: fine-tune vs baseline, 625 / 134 discordant pairs, p = 1e-76.
+    # experiments/docile-invoices README: fine-tune vs baseline, 625 / 134 discordant pairs, p = 1e-76.
     a, b = _pairs(625, 134, both=3800, neither=441)
     p = mcnemar_exact(a, b).p_value
     assert 1e-77 < p < 1e-75

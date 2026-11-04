@@ -123,7 +123,7 @@ wheels = [
 ]
 
 [[package]]
-name = "docile-forge"
+name = "docile-invoices"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

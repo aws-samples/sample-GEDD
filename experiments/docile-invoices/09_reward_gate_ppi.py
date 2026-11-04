@@ -29,7 +29,7 @@ from pathlib import Path
 from statistics import fmean, pstdev
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "grounded-evals" / "src"))
+sys.path.insert(0, str(HERE.parents[1] / "grounded-evals" / "src"))
 
 import dl_common as d  # noqa: E402
 
@@ -286,13 +286,25 @@ def plots(gate: dict, ppi: dict) -> None:
     fig.savefig(HERE / "figures" / "ppi_width.png", dpi=200)
 
 
+def _stable(obj):
+    """Round floats to 10 significant digits so results are byte-identical across platforms and
+    Python versions (summation order differs in the last bits); far finer than anything reported."""
+    if isinstance(obj, float):
+        return float(f"{obj:.10g}")
+    if isinstance(obj, dict):
+        return {k: _stable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_stable(v) for v in obj]
+    return obj
+
+
 def main() -> None:
     cases = build_cases()
     print(f"{len(cases)} field cases, {len(by_doc(cases))} documents, "
           f"{sum(not c['correct'] for c in cases)} errors")
     gate = gate_experiment(cases)
     ppi = ppi_experiment(cases)
-    (d.RESULTS / "reward_gate_ppi.json").write_text(json.dumps({"gate": gate, "ppi": ppi}, indent=2))
+    (d.RESULTS / "reward_gate_ppi.json").write_text(json.dumps(_stable({"gate": gate, "ppi": ppi}), indent=2))
     plots(gate, ppi)
 
     cal = gate["calibration"]

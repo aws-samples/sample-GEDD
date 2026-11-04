@@ -1,6 +1,6 @@
 """Rigor pass on the round-1 results: Holm-corrected significance, power, error taxonomy.
 
-Closes the statistical gaps flagged in RESEARCH.md §3.5 using only the saved per-case results
+Closes the statistical gaps flagged in docs/research.md §3.5 using only the saved per-case results
 (no API calls, no DocILE download needed):
   * every pre-specified comparison, Holm-adjusted for family-wise error;
   * cluster-robust standard error and minimum detectable effect (80% power) for each;
@@ -19,7 +19,7 @@ from collections import defaultdict
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "grounded-evals" / "src"))
+sys.path.insert(0, str(HERE.parents[1] / "grounded-evals" / "src"))
 
 import dl_common as d  # noqa: E402
 
@@ -72,6 +72,18 @@ def doc_success(tag: str) -> dict[str, tuple[bool, int]]:
     return {k: (all(f["score"] >= 1 for f in v), v[0]["cluster"]) for k, v in by.items()}
 
 
+def _stable(obj):
+    """Round floats to 10 significant digits so results are byte-identical across platforms and
+    Python versions (summation order differs in the last bits); far finer than anything reported."""
+    if isinstance(obj, float):
+        return float(f"{obj:.10g}")
+    if isinstance(obj, dict):
+        return {k: _stable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_stable(v) for v in obj]
+    return obj
+
+
 def main() -> None:
     data = {t: rows(t) for t in SYSTEMS}
     out: dict = {"comparisons": [], "taxonomy": {}, "doc_success": []}
@@ -121,7 +133,7 @@ def main() -> None:
         print(f"| {NAMES[t]} | {c.acc_a:.1%} | {c.acc_b:.1%} | {c.delta * 100:+.1f} | {c.mcnemar.p_value:.1g} "
               f"| [{c.bootstrap.lo * 100:+.1f}, {c.bootstrap.hi * 100:+.1f}] |")
 
-    (d.RESULTS / "rigor.json").write_text(json.dumps(out, indent=2))
+    (d.RESULTS / "rigor.json").write_text(json.dumps(_stable(out), indent=2))
     print(f"\nwrote {d.RESULTS / 'rigor.json'}")
 
 

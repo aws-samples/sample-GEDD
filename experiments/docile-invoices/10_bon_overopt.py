@@ -11,7 +11,7 @@
             proxy reward vs gold field accuracy for N = 1..K, single member vs conservative
             ensemble (mean - k*std). Repeated over cluster splits.
 
-Hypothesis H2 (RESEARCH.md): the codebook reward's gold curve peaks later and higher than the
+Hypothesis H2 (docs/research.md): the codebook reward's gold curve peaks later and higher than the
 scalar judge's, and the conservative ensemble flattens any decline.
 
   uv run python 10_bon_overopt.py estimate          # token/cost estimate, no API calls
@@ -34,7 +34,7 @@ from pathlib import Path
 from statistics import fmean
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "grounded-evals" / "src"))
+sys.path.insert(0, str(HERE.parents[1] / "grounded-evals" / "src"))
 
 import dl_common as d  # noqa: E402
 

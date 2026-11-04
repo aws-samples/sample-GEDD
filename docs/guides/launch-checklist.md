@@ -51,7 +51,7 @@ Suggested stale-doc scan:
 
 ```bash
 rg -n 'python -m grounded_evals\.app|Eight industries|5-step workflow|Step 3: Deploy|Claude Code conversation|plugins/gedd|\.agents/plugins' \
-  README.md SETUP.md grounded-evals/docs
+  README.md docs
 ```
 
 ---
@@ -368,10 +368,10 @@ Pass criteria:
 | Audience | Required doc path | Required result |
 |----------|-------------------|-----------------|
 | First-time user | `README.md` | Website is the first option; demos and domain expert discovery are clear |
-| Engineer | `SETUP.md` | Local setup, providers, auth, env vars, and deployment are current |
-| Domain expert | `grounded-evals/docs/domain-expert-guide.md` | No CLI required to understand the workflow |
-| ML engineer | `grounded-evals/docs/pipeline-guide.md` | Handoff and MLflow path are executable |
-| CLI user | `README.md`, `grounded-evals/docs/pipeline-guide.md` | Web app vs CLI expectations are clear and no plugin is required |
+| Engineer | `docs/setup.md` | Local setup, providers, auth, env vars, and deployment are current |
+| Domain expert | `docs/guides/domain-expert-guide.md` | No CLI required to understand the workflow |
+| ML engineer | `docs/guides/pipeline-guide.md` | Handoff and MLflow path are executable |
+| CLI user | `README.md`, `docs/guides/pipeline-guide.md` | Web app vs CLI expectations are clear and no plugin is required |
 | Maintainer | This checklist | Launch gates are repeatable |
 
 ---

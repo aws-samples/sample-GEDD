@@ -1286,7 +1286,7 @@ Insurance regulations change. When you update the underlying model:
 
 *This guide was generated from a GEDD evaluation session on InsureBot (ShieldPoint Insurance). The golden queries, annotations, codebook, and paradigm model are real artifacts from the PM's 90-minute session. The judge prompt is deployable as-is after calibration against your specific model version.*
 
-*For the methodology behind this approach, see [METHODOLOGY.md](../../METHODOLOGY.md). For Cohen's Kappa computation details, see [Cohen's Kappa for LLM Judges](cohens-kappa-for-llm-judges.md). For the general PM-to-ML handoff guide, see [PM Artifacts → Production Judge](pm-to-ml-llm-judge.md).*
+*For the methodology behind this approach, see [METHODOLOGY.md](../methodology.md). For Cohen's Kappa computation details, see [Cohen's Kappa for LLM Judges](../guides/cohens-kappa-for-llm-judges.md). For the general PM-to-ML handoff guide, see [PM Artifacts → Production Judge](../guides/pm-to-ml-llm-judge.md).*
 
 ---
 
