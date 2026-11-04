@@ -329,6 +329,7 @@ The judge no longer asks "is this translation fluent?" It asks "does this respon
 
 - **Run the app:** [SETUP.md](SETUP.md) — install, configure a model provider, run locally or deploy.
 - **Method in depth:** [METHODOLOGY.md](METHODOLOGY.md) — the grounded-theory coding behind case curation and error analysis.
+- **Research positioning:** [RESEARCH.md](RESEARCH.md) — how GEDD compares with the post-training literature (RLHF, DPO, reward models, rubric rewards), its gaps, and the experiments that would test its central claim.
 - **Guides:** [domain expert guide](grounded-evals/docs/domain-expert-guide.md) · [pipeline guide](grounded-evals/docs/pipeline-guide.md) · [building an LLM-as-Judge](grounded-evals/docs/building-llm-as-a-judge.md) · [launch checklist](grounded-evals/docs/launch-checklist.md)
 - **Worked example:** [docile-forge/](docile-forge/)
 
