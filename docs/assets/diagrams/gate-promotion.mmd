@@ -1,0 +1,12 @@
+flowchart LR
+    D["Draft<br/>judge from<br/>codebook"] --> C["Calibrate<br/>against expert<br/>labels"]
+    C --> S["Shadow<br/>log decisions,<br/>block nothing"]
+    S --> B["Blocking<br/>gates live<br/>traffic"]
+    B --> M["Monitor<br/>drift and<br/>new failures"]
+    M -. "new failure mode" .-> D
+    S -. "disagreement" .-> C
+
+    classDef stage fill:#f6f8fa,stroke:#57606a,color:#24292f;
+    classDef live fill:#ddf4ff,stroke:#0969da,color:#0a3069;
+    class D,C,S stage;
+    class B,M live;

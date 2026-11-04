@@ -1,0 +1,16 @@
+flowchart LR
+    R["Request"] --> S["AI system"]
+    S -- "candidate response" --> J["LLM-as-Judge"]
+    J -- "verdict + failure code<br/>+ severity" --> P{"Gate policy"}
+    P -- "pass" --> A["Show to customer"]
+    P -- "fixable" --> V["Revise"]
+    V --> S
+    P -- "uncertain / high risk" --> H["Human review"]
+    P -- "unsafe" --> B["Block"]
+
+    classDef ok fill:#dafbe1,stroke:#1a7f37,color:#0f5323;
+    classDef warn fill:#fff8c5,stroke:#9a6700,color:#4d2d00;
+    classDef stop fill:#ffebe9,stroke:#cf222e,color:#82071e;
+    class A ok;
+    class V,H warn;
+    class B stop;

@@ -83,28 +83,9 @@ Full positioning against the post-training literature, the gap list and its stat
 
 ## The GEDD flywheel
 
-```mermaid
-flowchart LR
-    E["1 · Evidence<br/>expert-labelled cases<br/>failure codebook"]
-    M["2 · Measure<br/>locked test set<br/>baseline vs system"]
-    I["3 · Improve<br/>harness · SFT · DPO · RL"]
-    G["4 · Guard<br/>LLM-as-Judge<br/>response gate"]
-    P["5 · Production<br/>traces and<br/>new failures"]
-    R["Reward model<br/>learned from expert<br/>verdicts and severity"]
+<p align="center"><img src="docs/assets/diagrams/flywheel.png" alt="The GEDD flywheel: 1 Evidence (expert-labelled cases, failure codebook) → 2 Measure (locked test set, baseline vs system) → 3 Improve (harness, SFT, DPO, RL) → 4 Guard (LLM-as-Judge response gate) → 5 Production (traces and new failures), with new evidence looping back to Evidence. A reward model learned from expert verdicts and severity takes labels and preference pairs from Evidence and supplies the reward signal to Improve and the gate score to Guard." width="100%"></p>
 
-    E --> M --> I --> G --> P
-    P -. "new evidence" .-> E
-    E -- "labels and<br/>preference pairs" --> R
-    R -- "reward signal" --> I
-    R -- "gate score" --> G
-
-    classDef step fill:#f6f8fa,stroke:#57606a,stroke-width:1px,color:#24292f;
-    classDef live fill:#ddf4ff,stroke:#0969da,stroke-width:1px,color:#0a3069;
-    classDef rm fill:#fbefff,stroke:#8250df,stroke-width:1.5px,color:#3e1f79;
-    class E,M,I,G step;
-    class P live;
-    class R rm;
-```
+<sub>Diagram source: <a href="docs/assets/diagrams/flywheel.mmd">flywheel.mmd</a></sub>
 
 | Stage | What happens | Evidence so far |
 |---|---|---|
@@ -201,24 +182,9 @@ The statistics (`grounded_evals.stats`) are pure Python and tested against hand-
 <details>
 <summary><b>The response gate</b>: routing, output contract and staged promotion</summary>
 
-```mermaid
-flowchart LR
-    R["Request"] --> S["AI system"]
-    S -- "candidate response" --> J["LLM-as-Judge"]
-    J -- "verdict + failure code<br/>+ severity" --> P{"Gate policy"}
-    P -- "pass" --> A["Show to customer"]
-    P -- "fixable" --> V["Revise"]
-    V --> S
-    P -- "uncertain / high risk" --> H["Human review"]
-    P -- "unsafe" --> B["Block"]
+<p align="center"><img src="docs/assets/diagrams/response-gate.png" alt="Response gate: a request goes to the AI system; the candidate response goes to the LLM-as-Judge, which returns a verdict, failure code and severity to the gate policy. Pass shows the response to the customer, fixable sends it back for revision, uncertain or high-risk goes to human review, unsafe is blocked." width="100%"></p>
 
-    classDef ok fill:#dafbe1,stroke:#1a7f37,color:#0f5323;
-    classDef warn fill:#fff8c5,stroke:#9a6700,color:#4d2d00;
-    classDef stop fill:#ffebe9,stroke:#cf222e,color:#82071e;
-    class A ok;
-    class V,H warn;
-    class B stop;
-```
+<sub>Diagram source: <a href="docs/assets/diagrams/response-gate.mmd">response-gate.mmd</a></sub>
 
 ```json
 {
@@ -232,20 +198,9 @@ flowchart LR
 }
 ```
 
-```mermaid
-flowchart LR
-    D["Draft<br/>judge from<br/>codebook"] --> C["Calibrate<br/>against expert<br/>labels"]
-    C --> S["Shadow<br/>log decisions,<br/>block nothing"]
-    S --> B["Blocking<br/>gates live<br/>traffic"]
-    B --> M["Monitor<br/>drift and<br/>new failures"]
-    M -. "new failure mode" .-> D
-    S -. "disagreement" .-> C
+<p align="center"><img src="docs/assets/diagrams/gate-promotion.png" alt="Gate promotion: Draft (judge from codebook) → Calibrate (against expert labels) → Shadow (log decisions, block nothing) → Blocking (gates live traffic) → Monitor (drift and new failures). Disagreement in shadow returns to Calibrate; a new failure mode returns to Draft." width="100%"></p>
 
-    classDef stage fill:#f6f8fa,stroke:#57606a,color:#24292f;
-    classDef live fill:#ddf4ff,stroke:#0969da,color:#0a3069;
-    class D,C,S stage;
-    class B,M live;
-```
+<sub>Diagram source: <a href="docs/assets/diagrams/gate-promotion.mmd">gate-promotion.mmd</a></sub>
 
 | Move to | Only when |
 |---|---|
