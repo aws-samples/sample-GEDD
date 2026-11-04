@@ -203,6 +203,11 @@ git clone https://github.com/rossumai/docile /tmp/docile
 | `04_sft.py` | Vision LoRA fine-tune, in-session test scoring, promotion. `--dry-run` prints the cost estimate. Run with `DOCILE_MAX_SIDE=1344` | ~$36–41 |
 | `05_score_sft.py` | Re-score a saved checkpoint on the test set (bounded concurrency, retries, cached). `DOCILE_MAX_SIDE=1344` | ~$3 |
 | `06_report.py` | Leaderboard, McNemar, cluster bootstrap, per-field table | free |
+| `07_charts.py` | Figures | free |
+| `08_rigor.py` | Holm-adjusted comparisons, minimum detectable effect, error taxonomy, document-level success → `results/rigor.json` | free |
+| `09_reward_gate_ppi.py` | Pilot: codebook vs scalar reward at the gate, PPI++ coverage, using the saved predictions → `results/reward_gate_ppi.json` | free |
+| `10_bon_overopt.py` | E2: codebook vs scalar LLM-judge rewards under best-of-N (`estimate`, `sample`, `judge`, `analyse`) | ~$12 |
+| `11_expert_kit.py` | Two-expert review sheets for the remaining errors; Krippendorff's alpha; re-scoring under corrected labels | free (expert time) |
 
 Results are cached per document in `results/*.jsonl` (one row per document, with every field's prediction and score). The DocILE label text (`gold`) and `splits/` are not published here, per the dataset's terms; `01_build_splits.py` rebuilds them from your own DocILE download, and re-running the eval restores `gold`.
 
