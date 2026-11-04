@@ -45,11 +45,13 @@ jobs:
           uv sync --frozen
           uv run python -W ignore 08_rigor.py
           uv run python -W ignore 09_reward_gate_ppi.py
+          uv run python -W ignore 12_reward_audit.py
       - name: Fail if committed findings drift
         run: >-
           git diff --exit-code --
           experiments/docile-invoices/results/rigor.json
           experiments/docile-invoices/results/reward_gate_ppi.json
+          experiments/docile-invoices/results/reward_audit.json
 
   security-scan:
     runs-on: ubuntu-latest

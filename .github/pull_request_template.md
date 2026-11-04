@@ -17,7 +17,7 @@ commit the regenerated results, and update the finding's status and date. -->
 ## Checklist
 
 - [ ] Tests pass locally (`cd grounded-evals && pytest tests/`)
-- [ ] Findings reproduce (`cd experiments/docile-invoices && uv run python 08_rigor.py && uv run python 09_reward_gate_ppi.py`, no diff in `results/`)
+- [ ] Findings reproduce (`cd experiments/docile-invoices && uv run python 08_rigor.py && uv run python 09_reward_gate_ppi.py && uv run python 12_reward_audit.py`, no diff in `results/`)
 - [ ] No new secrets or credentials in code
 - [ ] IAM policies use least-privilege (resource-scoped, no `*`)
 - [ ] CDK synth succeeds (`cd infra && cdk synth`)

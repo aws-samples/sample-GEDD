@@ -1,0 +1,103 @@
+{
+  "documents": 500,
+  "rewards": {
+    "Base model": {
+      "gedd": 0.8042222222,
+      "gedd_cost_only": 0.82775,
+      "exact": 0.7854,
+      "no_invention": 0.6741484127,
+      "coverage": 0.7516,
+      "lenient": 0.7854
+    },
+    "Harness A (rules)": {
+      "gedd": 0.8327444444,
+      "gedd_cost_only": 0.864675,
+      "exact": 0.8072,
+      "no_invention": 0.7938301587,
+      "coverage": 0.685,
+      "lenient": 0.8072
+    },
+    "Harness B (rules + OCR)": {
+      "gedd": 0.8366388889,
+      "gedd_cost_only": 0.8684375,
+      "exact": 0.8112,
+      "no_invention": 0.8049206349,
+      "coverage": 0.6814,
+      "lenient": 0.8112
+    },
+    "SFT fine-tune": {
+      "gedd": 0.8991222222,
+      "gedd_cost_only": 0.918525,
+      "exact": 0.8836,
+      "no_invention": 0.8799642857,
+      "coverage": 0.6724,
+      "lenient": 0.8836
+    },
+    "All null (abstain)": {
+      "gedd": 0.5461111111,
+      "gedd_cost_only": 0.79575,
+      "exact": 0.3464,
+      "no_invention": 1.0,
+      "coverage": 0.0,
+      "lenient": 0.3464
+    },
+    "Never null (always answer)": {
+      "gedd": 0.5747666667,
+      "gedd_cost_only": 0.594475,
+      "exact": 0.559,
+      "no_invention": 0.006,
+      "coverage": 1.0,
+      "lenient": 0.559
+    },
+    "Dump every candidate": {
+      "gedd": 0.7604222222,
+      "gedd_cost_only": 0.7892,
+      "exact": 0.7374,
+      "no_invention": 0.646302381,
+      "coverage": 0.7768,
+      "lenient": 0.831
+    }
+  },
+  "hackable_vs_base": {
+    "gedd": [],
+    "gedd_cost_only": [],
+    "exact": [],
+    "no_invention": [
+      "All null (abstain)"
+    ],
+    "coverage": [
+      "Never null (always answer)",
+      "Dump every candidate"
+    ],
+    "lenient": [
+      "Dump every candidate"
+    ]
+  },
+  "hack_beats_sft": {
+    "gedd": [],
+    "gedd_cost_only": [],
+    "exact": [],
+    "no_invention": [
+      "All null (abstain)"
+    ],
+    "coverage": [
+      "Never null (always answer)",
+      "Dump every candidate"
+    ],
+    "lenient": []
+  },
+  "margin_vs_best_hack": {
+    "gedd": 0.0438,
+    "gedd_cost_only": 0.032,
+    "exact": 0.048,
+    "no_invention": -0.3258515873,
+    "coverage": -0.2484,
+    "lenient": -0.0456
+  },
+  "headroom": {
+    "field_best_single": 0.8836,
+    "field_pass_at_any": 0.9232,
+    "invoice_pass_at_any_system": 0.442,
+    "invoice_pass_at_any_field_mix": 0.506
+  }
+}
