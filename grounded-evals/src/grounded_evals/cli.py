@@ -1386,5 +1386,15 @@ def _format_improvement_report(report: ImprovementReport) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _register_extra_commands() -> None:
+    from grounded_evals.cli_stats import reward, stats
+
+    main.add_command(stats)
+    main.add_command(reward)
+
+
+_register_extra_commands()
+
+
 if __name__ == "__main__":
     main()

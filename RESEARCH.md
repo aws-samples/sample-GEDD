@@ -2,6 +2,20 @@
 
 *An eval scientist's review of GEDD against the post-training and evaluation work presented at NeurIPS, ICML, ICLR and ACL: what's established, what's new, what's missing, and the experiments that would make the claims publishable.*
 
+## Status (2026-11-03)
+
+| Gap (§3) | Status | Where |
+|---|---|---|
+| 3.5 Multiple comparisons, power | **Done.** All 7 round-1 comparisons Holm-adjusted; MDE reported (≈2–3 pts overall, ≈4.6–4.9 on unseen layouts). Every conclusion survives; Harness A's document-level gain does **not** pass the cluster bootstrap. | `docile-forge/08_rigor.py` |
+| 3.2 Reward model evaluated on its own | **Tooling done; pilot run.** Codebook reward model with per-code Platt calibration, conservative ensemble and gate. Pilot with gold-free detectors: calibrated (ECE ≤ 0.02) but weak (AUROC 0.55–0.83); decomposition helps only at the strictest gate, not significantly. | `grounded_evals/reward/`, `docile-forge/09_reward_gate_ppi.py` |
+| 3.6 Unbiased online estimator | **Done.** PPI/PPI++ implemented and validated (coverage ≈ nominal on real predictions; narrow gains with a weak judge). | `grounded_evals/stats/ppi.py` |
+| 3.2 Overoptimization curve | **Ready to run (~$12).** Exact best-of-N curves, scalar vs codebook LLM judges, single vs ensemble. | `docile-forge/10_bon_overopt.py` |
+| 3.3 Inter-annotator agreement, label gaps | **Kit ready; needs two experts.** Review sheets with 20% overlap and controls, Krippendorff's α, adjudication, corrected re-scoring. | `docile-forge/11_expert_kit.py` |
+| 3.1 Core ablation (E1) | **Pre-registered; needs experts + second domain.** | `paper/main.tex` §6 |
+| 3.4 Breadth (domains, seeds, models) | **Open.** | — |
+
+A draft paper (NeurIPS format, numbers generated from saved results) is kept off the public branch until the experiments are run and publication is approved.
+
 ## TL;DR
 
 - **Each piece of GEDD has precedent.** Training on human labels, preference pairs and reward models, LLM-as-Judge, rubric rewards and paired significance tests are all established.
