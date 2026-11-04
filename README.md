@@ -12,7 +12,9 @@ GEDD puts those experts at the centre. They curate cases and judge real outputs.
 | **Improve** | Training and prompting signal taken from expert labels | What should the next version learn? |
 | **Guard** | An LLM-as-Judge response gate calibrated on the same labels | Should this response reach the customer? |
 
-All three come from the same evidence. That's what makes the gate explainable and the gains defensible.
+All three come from the same evidence, and one component ties them together: a **reward model** learned from the experts' labels. That's what makes the gate explainable and the gains defensible.
+
+## The GEDD flywheel
 
 ```mermaid
 flowchart LR
@@ -21,17 +23,41 @@ flowchart LR
     I["3 · Improve<br/>harness · SFT · DPO · RL"]
     G["4 · Guard<br/>LLM-as-Judge<br/>response gate"]
     P["5 · Production<br/>traces and<br/>new failures"]
+    R["Reward model<br/>learned from expert<br/>verdicts and severity"]
 
     E --> M --> I --> G --> P
     P -. "new evidence" .-> E
+    E -- "labels and<br/>preference pairs" --> R
+    R -- "reward signal" --> I
+    R -- "gate score" --> G
 
     classDef step fill:#f6f8fa,stroke:#57606a,stroke-width:1px,color:#24292f;
     classDef live fill:#ddf4ff,stroke:#0969da,stroke-width:1px,color:#0a3069;
+    classDef rm fill:#fbefff,stroke:#8250df,stroke-width:1.5px,color:#3e1f79;
     class E,M,I,G step;
     class P live;
+    class R rm;
 ```
 
-Offline, the loop proves a version is better before it ships. Online, the gate and production traces surface new failures, and those become the next round of evidence.
+Offline, the loop proves a version is better before it ships. Online, the gate and production traces surface new failures, and those become the next round of evidence. Every turn of the wheel retrains the reward model on more expert judgment, so each turn makes both the system and its guard sharper.
+
+### The reward model
+
+The reward model is the expert's judgment, distilled into something that can score any response, instantly and at scale.
+
+| | |
+|---|---|
+| **Learns from** | Expert verdicts (pass / fail), preference pairs ("A, not B, because `failure_code`") and severity weights from the codebook |
+| **Outputs** | A score per response, plus the most likely failure code and severity |
+| **In Improve** | The reward for RL, the ranker for best-of-N sampling, and a miner of DPO pairs from candidate outputs |
+| **In Guard** | The score behind the response gate: allow, revise, human review or block |
+| **In Production** | Scores every live trace so the lowest-scoring and most uncertain responses go to experts first |
+
+It can be a prompted LLM-as-Judge to start, then a smaller trained classifier once there are enough labels. Either way, three rules keep it honest:
+
+- **Calibrate it against experts.** Measure agreement with expert labels on a held-out slice (see [Cohen's kappa for LLM judges](grounded-evals/docs/cohens-kappa-for-llm-judges.md)) before it trains or gates anything.
+- **Never let it grade the final exam.** The locked test set is always scored by the fixed scorer and expert labels, not by the reward model. Otherwise a policy can learn to please the reward model instead of the expert.
+- **Watch for reward hacking.** When the reward model's score goes up but locked-set accuracy doesn't, send those responses to experts. Their verdicts become the next training round for the reward model.
 
 ---
 
@@ -303,6 +329,7 @@ The judge no longer asks "is this translation fluent?" It asks "does this respon
 
 - **Run the app:** [SETUP.md](SETUP.md) — install, configure a model provider, run locally or deploy.
 - **Method in depth:** [METHODOLOGY.md](METHODOLOGY.md) — the grounded-theory coding behind case curation and error analysis.
+- **Research positioning:** [RESEARCH.md](RESEARCH.md) — how GEDD compares with the post-training literature (RLHF, DPO, reward models, rubric rewards), its gaps, and the experiments that would test its central claim.
 - **Guides:** [domain expert guide](grounded-evals/docs/domain-expert-guide.md) · [pipeline guide](grounded-evals/docs/pipeline-guide.md) · [building an LLM-as-Judge](grounded-evals/docs/building-llm-as-a-judge.md) · [launch checklist](grounded-evals/docs/launch-checklist.md)
 - **Worked example:** [docile-forge/](docile-forge/)
 
