@@ -1,6 +1,6 @@
 """Rigor pass on the round-1 results: Holm-corrected significance, power, error taxonomy.
 
-Closes the statistical gaps flagged in RESEARCH.md §3.5 using only the saved per-case results
+Closes the statistical gaps flagged in docs/research.md §3.5 using only the saved per-case results
 (no API calls, no DocILE download needed):
   * every pre-specified comparison, Holm-adjusted for family-wise error;
   * cluster-robust standard error and minimum detectable effect (80% power) for each;
@@ -19,7 +19,7 @@ from collections import defaultdict
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "grounded-evals" / "src"))
+sys.path.insert(0, str(HERE.parents[1] / "grounded-evals" / "src"))
 
 import dl_common as d  # noqa: E402
 

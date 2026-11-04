@@ -6,13 +6,13 @@
 
 ## Latest findings
 
-*Updated 2026-11-03. Every number below is regenerated from saved per-case results by a script in this repo. Null results are reported alongside the wins.*
+*Updated 2026-11-03. Every number below is regenerated from saved per-case results, and CI fails if they drift. Null results are reported alongside the wins. The full log, with ids, evidence and scripts, is in [FINDINGS.md](FINDINGS.md).*
 
 ### ✅ Proven: a GEDD round beats the off-the-shelf model on real invoices
 
 On 500 held-out scanned invoices from DocILE (5,000 field cases across 204 layouts), a vision LoRA fine-tune of an open model raised field accuracy from **78.5% to 88.4%**. Invoices with all 10 fields right **tripled, from 12.8% to 38.8%**. Total compute was under $50.
 
-![Before vs after](docile-forge/figures/leaderboard.png)
+![Before vs after](experiments/docile-invoices/figures/leaderboard.png)
 
 | Comparison | Gap (pts) | p (Holm-adjusted, 7 tests) | Layout-cluster 95% CI | Real? |
 |---|---|---|---|---|
@@ -22,7 +22,7 @@ On 500 held-out scanned invoices from DocILE (5,000 field cases across 204 layou
 | Best prompt vs base, unseen layouts | +0.2 | 1.0 | [−3.1, +3.6] | ❌ underpowered (can only detect ≥ 4.9) |
 | Rules prompt vs base, whole invoices right | +4.0 | 0.01 (unadjusted) | [−0.4, +8.6] | ❌ passes McNemar, fails the cluster bootstrap |
 
-**What the error taxonomy shows:** the fine-tune cut invented values by 62% and wrong values by 39%, but missed values *rose* 22%. Prompting traded invented values for missed ones. The aggregate score hides both trade-offs. → [`docile-forge/08_rigor.py`](docile-forge/08_rigor.py)
+**What the error taxonomy shows:** the fine-tune cut invented values by 62% and wrong values by 39%, but missed values *rose* 22%. Prompting traded invented values for missed ones. The aggregate score hides both trade-offs. → F1–F5 · [`08_rigor.py`](experiments/docile-invoices/08_rigor.py)
 
 ### ⚠️ Pilot, null result: decomposing the reward helps only when the detectors are good
 
@@ -32,24 +32,24 @@ We tested the codebook reward model (per failure code, weighted by severity, cal
 - At the strictest gate (10% of invoices auto-posted), the codebook reward posts **about 11 points more fully correct invoices** in 90% of 50 splits. The 95% range still crosses zero, and at looser gates there's no difference.
 - **Takeaway:** the codebook form is necessary but not sufficient. The gain scales with detector quality, which is what experiment E2 tests with real LLM judges.
 
-![Gate trade-off](docile-forge/figures/gate_tradeoff.png)
+![Gate trade-off](experiments/docile-invoices/figures/gate_tradeoff.png)
 
-→ [`docile-forge/09_reward_gate_ppi.py`](docile-forge/09_reward_gate_ppi.py)
+→ F6 · [`09_reward_gate_ppi.py`](experiments/docile-invoices/09_reward_gate_ppi.py)
 
 ### ⚠️ Pilot: online estimates stay valid, but a weak judge saves few expert labels
 
-Prediction-powered inference (PPI++) combines judge scores on every case with a small random expert sample. Its 95% intervals had close to nominal coverage (92–97%) for field accuracy and invoice success. With the weak judge above, they were only **1–6% narrower** than expert labels alone. PPI++ falls back to the experts instead of inheriting the judge's bias, which is the safe behaviour.
+Prediction-powered inference (PPI++) combines judge scores on every case with a small random expert sample. Its 95% intervals had close to nominal coverage (92–97%) for field accuracy and invoice success. With the weak judge above, they were only **1–6% narrower** than expert labels alone. PPI++ falls back to the experts instead of inheriting the judge's bias, which is the safe behaviour. → F7
 
 ### ⏳ Next: pre-registered experiments
 
 | | Question | Status |
 |---|---|---|
 | **E1** | Where should criteria come from: a generic judge, an expert rubric written up front, an LLM-written rubric, or the GEDD codebook, at the same expert budget? | Needs experts and a second domain |
-| **E2** | Codebook vs scalar LLM-judge reward under best-of-N pressure: which overoptimizes less? | Script ready, about $12 → [`10_bon_overopt.py`](docile-forge/10_bon_overopt.py) |
+| **E2** | Codebook vs scalar LLM-judge reward under best-of-N pressure: which overoptimizes less? | Script ready, about $12 → [`10_bon_overopt.py`](experiments/docile-invoices/10_bon_overopt.py) |
 | **E3** | How much accuracy does each expert label buy, and does the online loop improve the model round after round? | Planned |
-| **Labels** | Two experts double-label the 582 remaining errors; inter-annotator agreement; re-scoring under corrected labels | Kit ready → [`11_expert_kit.py`](docile-forge/11_expert_kit.py) |
+| **Labels** | Two experts double-label the 582 remaining errors; inter-annotator agreement; re-scoring under corrected labels | Kit ready → [`11_expert_kit.py`](experiments/docile-invoices/11_expert_kit.py) |
 
-Full positioning against the post-training literature, the gap list and its status: [RESEARCH.md](RESEARCH.md).
+Full positioning against the post-training literature, the gap list and its status: [docs/research.md](docs/research.md).
 
 ---
 
@@ -58,12 +58,14 @@ Full positioning against the post-training literature, the gap list and its stat
 | I want to… | Go to |
 |---|---|
 | Understand GEDD in five minutes | [The flywheel](#the-gedd-flywheel), just below |
-| Reproduce the findings above | [`docile-forge/`](docile-forge/): `uv sync`, then `uv run python 08_rigor.py` and `uv run python 09_reward_gate_ppi.py` (no API key needed) |
+| See every finding with its evidence and status | [FINDINGS.md](FINDINGS.md) |
+| Reproduce the findings | [`experiments/docile-invoices/`](experiments/docile-invoices/): `uv sync`, then `uv run python 08_rigor.py` and `uv run python 09_reward_gate_ppi.py` (no API key needed) |
 | Test whether my own system's gain is real | [`grounded-evals stats compare`](#tooling) |
 | Score and gate responses with a codebook | [`grounded-evals reward score`](#tooling) |
-| Run the expert-facing app (curate cases, annotate, build a judge) | [SETUP.md](SETUP.md) · [domain expert guide](grounded-evals/docs/domain-expert-guide.md) |
-| See how GEDD compares with RLHF, DPO and rubric rewards | [RESEARCH.md](RESEARCH.md) |
-| Learn the qualitative method behind the codebook | [METHODOLOGY.md](METHODOLOGY.md) |
+| Run the expert-facing app (curate cases, annotate, build a judge) | [docs/setup.md](docs/setup.md) · [domain expert guide](docs/guides/domain-expert-guide.md) |
+| Find docs by flywheel stage or by role | [docs/](docs/) |
+| See how GEDD compares with RLHF, DPO and rubric rewards | [docs/research.md](docs/research.md) |
+| Learn the qualitative method behind the codebook | [docs/methodology.md](docs/methodology.md) |
 
 ---
 
@@ -235,7 +237,7 @@ flowchart LR
 
 | Move to | Only when |
 |---|---|
-| Shadow | Judge-human agreement meets the target ([Cohen's kappa for LLM judges](grounded-evals/docs/cohens-kappa-for-llm-judges.md)) |
+| Shadow | Judge-human agreement meets the target ([Cohen's kappa for LLM judges](docs/guides/cohens-kappa-for-llm-judges.md)) |
 | Blocking | False positives on clean cases and false negatives on critical failures are within limits; output always schema-valid |
 | Back to draft | Monitoring finds a failure mode the codebook doesn't cover |
 </details>
@@ -258,14 +260,15 @@ A localization assistant approves a subtitle that reads naturally but has droppe
 <details>
 <summary><b>Repository layout</b></summary>
 
+The repository follows the flywheel: findings first, then the experiments that produce them, the tooling, and the docs.
+
 | Path | What's there |
 |---|---|
-| [`docile-forge/`](docile-forge/) | Worked example and experiments: invoice extraction, round-1 fine-tune, rigor pass, reward-gate and PPI pilot, E2 script, expert kit |
-| [`grounded-evals/`](grounded-evals/) | The GEDD app (expert-facing case curation, annotation and judge builder), the `stats` and `reward` packages and the CLI |
-| [`grounded-evals/docs/`](grounded-evals/docs/) | Guides and domain judge examples (claims, Rx, tax, localization and more) |
-| [RESEARCH.md](RESEARCH.md) | Literature positioning, gap list and status, experiment plan |
-| [METHODOLOGY.md](METHODOLOGY.md) | Grounded-theory coding method |
-| [SETUP.md](SETUP.md) | Install, configure and deploy the app |
+| [FINDINGS.md](FINDINGS.md) | Dated findings log: id, status, evidence, script. CI checks that results reproduce |
+| [`experiments/docile-invoices/`](experiments/docile-invoices/) | Invoice case study: baseline, harnesses, fine-tune, rigor pass, reward-gate and PPI pilot, E2 script, expert kit |
+| [`grounded-evals/`](grounded-evals/) | The GEDD app (case curation, annotation, judge builder), the `stats` and `reward` packages, the CLI, deployment |
+| [`docs/`](docs/) | Docs index by flywheel stage and role: methodology, research positioning, setup, guides, domain judges, blog, talks |
+| [`.github/`](.github/) | CI (tests, lint, CDK synth, security scan, findings reproduction) and the PR template's findings-impact check |
 </details>
 
 > GEDD is the evidence pipeline that turns expert judgment into a system that keeps getting better, and the proof that it did. Including the proof of what didn't work.

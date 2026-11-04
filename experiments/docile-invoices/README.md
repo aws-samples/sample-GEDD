@@ -134,7 +134,7 @@ trustworthy. Many are disagreements about *what counts as right*: the issuing di
 vendor, a printed invoice number the annotators left unlabelled, the total before or after commission. An AP team
 would judge some of these as real errors, some as acceptable, and some as label gaps.
 
-That's the problem [GEDD (Grounded Evidence Driven Development)](../README.md) is built for: turning domain-expert
+That's the problem [GEDD (Grounded Evidence Driven Development)](../../README.md) is built for: turning domain-expert
 judgment into calibrated scenarios and an LLM-as-Judge response gate. The plan for the next iteration:
 
 1. **Baseline evidence.** Take the fine-tune's wrong fields on the test set (`results/results_glm_sft_1344.jsonl`).

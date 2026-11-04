@@ -29,7 +29,7 @@ from pathlib import Path
 from statistics import fmean, pstdev
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "grounded-evals" / "src"))
+sys.path.insert(0, str(HERE.parents[1] / "grounded-evals" / "src"))
 
 import dl_common as d  # noqa: E402
 

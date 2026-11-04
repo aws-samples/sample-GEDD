@@ -21,7 +21,7 @@ class CognitoStack(Stack):
             self,
             "AgentPlaygroundUserPool",
             user_pool_name="agent-playground-users",
-            # Invite-only: an administrator creates users (see SETUP.md). Open self sign-up would let anyone
+            # Invite-only: an administrator creates users (see docs/setup.md). Open self sign-up would let anyone
             # on the internet create an account and spend this account's Bedrock budget.
             self_sign_up_enabled=False,
             sign_in_aliases=cognito.SignInAliases(email=True),

@@ -2,7 +2,7 @@
 
 GEDD is a systematic evidence-driven framework that combines grounded SME evidence, guardrail calibration scenarios, and LLM-as-a-Judge evaluation in a continuous learning lifecycle. This document covers the academic depth — grounded theory foundations, calibration statistics, and judge generation techniques — for product leaders, researchers, and engineers who need to defend the approach in a design review.
 
-The practical product guide lives in [README.md](README.md).
+The practical product guide lives in [README.md](../README.md).
 
 ---
 
@@ -328,4 +328,4 @@ flowchart TD
 
 ---
 
-For the engineering setup (AWS Bedrock, environment variables, project structure, deployment), see [SETUP.md](SETUP.md). For the user-facing tour, see [README.md](README.md).
+For the engineering setup (AWS Bedrock, environment variables, project structure, deployment), see [SETUP.md](setup.md). For the user-facing tour, see [README.md](../README.md).

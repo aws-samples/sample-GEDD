@@ -6,11 +6,11 @@
 
 | Gap (§3) | Status | Where |
 |---|---|---|
-| 3.5 Multiple comparisons, power | **Done.** All 7 round-1 comparisons Holm-adjusted; MDE reported (≈2–3 pts overall, ≈4.6–4.9 on unseen layouts). Every conclusion survives; Harness A's document-level gain does **not** pass the cluster bootstrap. | `docile-forge/08_rigor.py` |
-| 3.2 Reward model evaluated on its own | **Tooling done; pilot run.** Codebook reward model with per-code Platt calibration, conservative ensemble and gate. Pilot with gold-free detectors: calibrated (ECE ≤ 0.02) but weak (AUROC 0.55–0.83); decomposition helps only at the strictest gate, not significantly. | `grounded_evals/reward/`, `docile-forge/09_reward_gate_ppi.py` |
+| 3.5 Multiple comparisons, power | **Done.** All 7 round-1 comparisons Holm-adjusted; MDE reported (≈2–3 pts overall, ≈4.6–4.9 on unseen layouts). Every conclusion survives; Harness A's document-level gain does **not** pass the cluster bootstrap. | `experiments/docile-invoices/08_rigor.py` |
+| 3.2 Reward model evaluated on its own | **Tooling done; pilot run.** Codebook reward model with per-code Platt calibration, conservative ensemble and gate. Pilot with gold-free detectors: calibrated (ECE ≤ 0.02) but weak (AUROC 0.55–0.83); decomposition helps only at the strictest gate, not significantly. | `grounded_evals/reward/`, `experiments/docile-invoices/09_reward_gate_ppi.py` |
 | 3.6 Unbiased online estimator | **Done.** PPI/PPI++ implemented and validated (coverage ≈ nominal on real predictions; narrow gains with a weak judge). | `grounded_evals/stats/ppi.py` |
-| 3.2 Overoptimization curve | **Ready to run (~$12).** Exact best-of-N curves, scalar vs codebook LLM judges, single vs ensemble. | `docile-forge/10_bon_overopt.py` |
-| 3.3 Inter-annotator agreement, label gaps | **Kit ready; needs two experts.** Review sheets with 20% overlap and controls, Krippendorff's α, adjudication, corrected re-scoring. | `docile-forge/11_expert_kit.py` |
+| 3.2 Overoptimization curve | **Ready to run (~$12).** Exact best-of-N curves, scalar vs codebook LLM judges, single vs ensemble. | `experiments/docile-invoices/10_bon_overopt.py` |
+| 3.3 Inter-annotator agreement, label gaps | **Kit ready; needs two experts.** Review sheets with 20% overlap and controls, Krippendorff's α, adjudication, corrected re-scoring. | `experiments/docile-invoices/11_expert_kit.py` |
 | 3.1 Core ablation (E1) | **Pre-registered; needs experts + second domain.** | `paper/main.tex` §6 |
 | 3.4 Breadth (domains, seeds, models) | **Open.** | — |
 
@@ -20,7 +20,7 @@ A draft paper (NeurIPS format, numbers generated from saved results) is kept off
 
 - **Each piece of GEDD has precedent.** Training on human labels, preference pairs and reward models, LLM-as-Judge, rubric rewards and paired significance tests are all established.
 - **The new part is the source of the signal.** GEDD derives the eval, the reward and the gate from one expert-built **failure codebook**, built by grounded-theory coding of *observed* outputs, with traceability from each gate decision back to an expert annotation. No published method that we know of claims and tests this end to end.
-- **The statistics in `docile-forge/` already beat most applied papers.** It uses a locked test set, an exact McNemar test, a cluster bootstrap and a separate unseen-layout slice.
+- **The statistics in `experiments/docile-invoices/` already beat most applied papers.** It uses a locked test set, an exact McNemar test, a cluster bootstrap and a separate unseen-layout slice.
 - **Four things stop it being a conference paper today:**
   1. There's no ablation showing a codebook-grounded reward or judge beats the alternatives at equal expert effort.
   2. The reward model isn't evaluated on its own: no held-out accuracy, calibration or overoptimization curve.
@@ -53,7 +53,7 @@ That's a testable hypothesis. Today GEDD asserts it; a paper has to measure it.
 
 ## 2. What GEDD already does at conference quality
 
-| Practice | Status in `docile-forge/` | Literature bar |
+| Practice | Status in `experiments/docile-invoices/` | Literature bar |
 |---|---|---|
 | Locked held-out test set, never used for prompts or training | ✅ | Standard, often violated ([Bowman & Dahl, 2021](https://arxiv.org/abs/2104.02145)) |
 | Paired test on the same items | ✅ exact McNemar | [Dietterich, 1998](https://doi.org/10.1162/089976698300017197); [Miller, 2024](https://arxiv.org/abs/2411.00640) |
@@ -91,13 +91,13 @@ The README now puts a reward model at the centre of the flywheel, but nothing me
 
 ### 3.4 Breadth
 
-- **One domain.** A NeurIPS main-track paper needs at least two, and ideally three. The `grounded-evals/docs/*-llm-judge.md` domains (claims, Rx, tax and others) are natural second and third tasks, and unlike invoices they have **no verifiable reward**. That's exactly where an expert-grounded reward model should matter most.
+- **One domain.** A NeurIPS main-track paper needs at least two, and ideally three. The `docs/judges/*-llm-judge.md` domains (claims, Rx, tax and others) are natural second and third tasks, and unlike invoices they have **no verifiable reward**. That's exactly where an expert-grounded reward model should matter most.
 - **One seed.** Report three or more training seeds. Put seed variance next to the bootstrap interval.
 - **One model.** Add a second base model family to show the effect isn't specific to GLM.
 
 ### 3.5 Multiple comparisons and power
 
-- The `docile-forge` table makes seven comparisons. Apply Holm–Bonferroni across them, or pre-register one primary comparison.
+- The `experiments/docile-invoices` table makes seven comparisons. Apply Holm–Bonferroni across them, or pre-register one primary comparison.
 - **Power.** The observed cluster-bootstrap half-widths (about ±1.4 to ±2.3 points) mean the current test set can reliably detect gains of roughly **3 points**. State that up front, and size new test sets with a power calculation ([Card et al., 2020](https://arxiv.org/abs/2010.06595)).
 
 ### 3.6 The online loop needs an unbiased estimator
@@ -130,7 +130,7 @@ These are cheap and make every future GEDD round stronger.
 
 ## 5. The experiment plan
 
-All four experiments run on `docile-forge` (verifiable reward) plus one GEDD domain **without** a verifiable reward (for example claims or Rx), so the reward model's value is tested where it matters most.
+All four experiments run on `experiments/docile-invoices` (verifiable reward) plus one GEDD domain **without** a verifiable reward (for example claims or Rx), so the reward model's value is tested where it matters most.
 
 ### E1 · Where should criteria come from? *(the core claim)*
 

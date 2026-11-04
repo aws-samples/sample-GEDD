@@ -7,6 +7,19 @@ Please read through this document before submitting any issues or pull requests 
 information to effectively respond to your bug report or contribution.
 
 
+## How this repository is organized
+
+The repo follows the GEDD flywheel, findings first:
+
+1. **[FINDINGS.md](FINDINGS.md)** is the source of truth for what GEDD has and hasn't shown. Each finding has an id, a status, its evidence and the script that produces it.
+2. **[`experiments/`](experiments/)** holds one folder per case study. Scripts write per-case results to `results/`, and every reported number is generated from those files.
+3. **[`grounded-evals/`](grounded-evals/)** holds the app and the reusable `stats` and `reward` packages.
+4. **[`docs/`](docs/)** holds the methodology, research positioning, setup, guides, domain judges and blog posts.
+
+**If your change affects a finding:** re-run its script, commit the regenerated `results/`, and update the finding's status and date in FINDINGS.md. Superseded findings keep their entry; don't delete them. CI re-runs the findings scripts and fails if committed results drift.
+
+**Adding an experiment:** create `experiments/<name>/` with its own `pyproject.toml`, a README listing the scripts in run order, and seeded scripts so the results reproduce exactly. Then add its findings to FINDINGS.md.
+
 ## Reporting Bugs/Feature Requests
 
 We welcome you to use the GitHub issue tracker to report bugs or suggest features.

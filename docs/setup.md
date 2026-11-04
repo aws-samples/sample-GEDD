@@ -1,8 +1,8 @@
 # GEDD setup — for engineers
 
-Everything you need to get GEDD running locally and deployed. The PM-facing tour lives in [README.md](README.md); this doc is the engineer's reference.
+Everything you need to get GEDD running locally and deployed. The PM-facing tour lives in [README.md](../README.md); this doc is the engineer's reference.
 
-Before a public beta or production launch, run the [launch checklist](grounded-evals/docs/launch-checklist.md). It covers fresh install, browser E2E, auth, AWS deployment, web-app and CLI validation, MLflow handoff, rollback, and no-go criteria.
+Before a public beta or production launch, run the [launch checklist](guides/launch-checklist.md). It covers fresh install, browser E2E, auth, AWS deployment, web-app and CLI validation, MLflow handoff, rollback, and no-go criteria.
 
 ---
 
@@ -257,6 +257,6 @@ After deploying, smoke-test with `python scripts/release_check.py --base-url <Cl
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). Security issues: [CONTRIBUTING#security-issue-notifications](CONTRIBUTING.md#security-issue-notifications).
+See [CONTRIBUTING.md](../CONTRIBUTING.md). Security issues: [CONTRIBUTING#security-issue-notifications](../CONTRIBUTING.md#security-issue-notifications).
 
-License: MIT-0. See [LICENSE](LICENSE).
+License: MIT-0. See [LICENSE](../LICENSE).
