@@ -259,7 +259,7 @@ rich(s, Inches(0.6), Inches(5.1), Inches(12.1), Inches(1.4), [[
 
 s = new("The idea", "The GEDD flywheel",
         "The same evidence measures the system, trains the next version and gates what customers see.")
-image(s, ASSETS / "flywheel.png", Inches(0.6), Inches(2.3), w=Inches(12.1))
+image(s, ROOT / "docs" / "assets" / "diagrams" / "flywheel.png", Inches(0.6), Inches(2.3), w=Inches(12.1))
 footer(s, "The reward model learns from expert verdicts, preference pairs and severity weights, then supplies "
           "the reward for Improve and the score for Guard.")
 

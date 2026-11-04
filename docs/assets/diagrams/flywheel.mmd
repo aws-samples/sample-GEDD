@@ -1,0 +1,20 @@
+flowchart LR
+    E["1 · Evidence<br/>expert-labelled cases<br/>failure codebook"]
+    M["2 · Measure<br/>locked test set<br/>baseline vs system"]
+    I["3 · Improve<br/>harness · SFT · DPO · RL"]
+    G["4 · Guard<br/>LLM-as-Judge<br/>response gate"]
+    P["5 · Production<br/>traces and<br/>new failures"]
+    R["Reward model<br/>learned from expert<br/>verdicts and severity"]
+
+    E --> M --> I --> G --> P
+    P -. "new evidence" .-> E
+    E -- "labels and<br/>preference pairs" --> R
+    R -- "reward signal" --> I
+    R -- "gate score" --> G
+
+    classDef step fill:#f6f8fa,stroke:#57606a,stroke-width:1px,color:#24292f;
+    classDef live fill:#ddf4ff,stroke:#0969da,stroke-width:1px,color:#0a3069;
+    classDef rm fill:#fbefff,stroke:#8250df,stroke-width:1.5px,color:#3e1f79;
+    class E,M,I,G step;
+    class P live;
+    class R rm;
