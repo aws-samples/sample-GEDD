@@ -1,5 +1,5 @@
 # Build stage: compilers live here only.
-FROM python:3.11-slim AS build
+FROM python:3.15-slim AS build
 WORKDIR /build
 RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml README.md* ./
@@ -7,7 +7,7 @@ COPY src/ src/
 RUN pip install --no-cache-dir --prefix=/install .
 
 # Runtime stage: no compilers, non-root, non-editable install.
-FROM python:3.11-slim
+FROM python:3.15-slim
 WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/* && \
