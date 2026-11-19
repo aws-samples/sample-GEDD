@@ -10,7 +10,7 @@ never fail, and that one list becomes the eval, the RL reward and the response g
 |---|---|
 | **1 · Evidence**: cases, expert labels, failure codebook | [Methodology: open and axial coding](methodology.md) · [Domain expert guide](guides/domain-expert-guide.md) · [Paste in traces](guides/paste-in-traces.md) |
 | **2 · Measure**: locked set, paired tests | [Findings log and the GEDD bar](../FINDINGS.md) · [Cohen's kappa for LLM judges](guides/cohens-kappa-for-llm-judges.md) · `grounded-evals stats compare` |
-| **3 · Improve**: RL against the codebook reward, SFT, DPO | [RL eval harness](../experiments/docile-invoices/README.md#rl-eval-harness) · [LLM-as-Judge as the reward](judge-reward-rl.md) · [Invoice case study](../experiments/docile-invoices/) · [Round-2 roadmap](../experiments/docile-invoices/docs/roadmap-sft-dpo-gedd.md) · [LoRA explained](../experiments/docile-invoices/docs/lora-explained.md) |
+| **3 · Improve**: RL against the codebook reward, SFT, DPO | [RL eval flywheel](guides/rl-eval-flywheel.md) · [RL eval harness](../experiments/docile-invoices/README.md#rl-eval-harness) · [LLM-as-Judge as the reward](judge-reward-rl.md) · [Invoice case study](../experiments/docile-invoices/) · [Round-2 roadmap](../experiments/docile-invoices/docs/roadmap-sft-dpo-gedd.md) · [LoRA explained](../experiments/docile-invoices/docs/lora-explained.md) |
 | **Reward model** | [README: the reward model](../README.md#the-gedd-flywheel) · [Judge as reward](judge-reward-rl.md) · [Research positioning](research.md) · `grounded-evals reward score` |
 | **4 · Guard**: response gate | [Building an LLM-as-Judge](guides/building-llm-as-a-judge.md) · [PM to ML judge handoff](guides/pm-to-ml-llm-judge.md) · [Launch checklist](guides/launch-checklist.md) |
 | **5 · Production**: traces, PPI, new codes | [Pipeline guide](guides/pipeline-guide.md) · `grounded-evals stats ppi` |
@@ -19,7 +19,7 @@ never fail, and that one list becomes the eval, the RL reward and the response g
 
 | Role | Start here |
 |---|---|
-| Product manager | [Why GEDD](../README.md#why-gedd) → [Explaining GEDD to a product owner](blog/blog-explain-to-product-owner.md) → [PM to ML judge handoff](guides/pm-to-ml-llm-judge.md) → [Launch checklist](guides/launch-checklist.md) |
+| Product manager | [Why GEDD](../README.md#why-gedd) → [RL eval flywheel](guides/rl-eval-flywheel.md) → [Explaining GEDD to a product owner](blog/blog-explain-to-product-owner.md) → [PM to ML judge handoff](guides/pm-to-ml-llm-judge.md) → [Launch checklist](guides/launch-checklist.md) |
 | Domain expert | [Domain expert guide](guides/domain-expert-guide.md) → [a worked judge for your domain](judges/) |
 | ML engineer | [Setup](setup.md) → [RL eval harness](../experiments/docile-invoices/README.md#rl-eval-harness) → [Judge as reward](judge-reward-rl.md) → [Pipeline guide](guides/pipeline-guide.md) |
 | Researcher | [Research positioning](research.md) → [Findings log](../FINDINGS.md) |

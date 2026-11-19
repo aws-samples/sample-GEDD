@@ -1387,10 +1387,11 @@ def _format_improvement_report(report: ImprovementReport) -> str:
 
 
 def _register_extra_commands() -> None:
-    from grounded_evals.cli_stats import reward, stats
+    from grounded_evals.cli_stats import flywheel, reward, stats
 
     main.add_command(stats)
     main.add_command(reward)
+    main.add_command(flywheel)
 
 
 _register_extra_commands()

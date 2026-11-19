@@ -216,3 +216,40 @@ def reward_score(
                 }
             )
         )
+
+
+@click.group()
+def flywheel() -> None:
+    """The RL eval flywheel: audit the reward, train with a tripwire, gate, grow the codebook."""
+
+
+@flywheel.command("demo")
+@click.option("--seed", default=0, show_default=True, type=int)
+@click.option("--rounds", default=3, show_default=True, type=int)
+@click.option("--json", "json_out", type=click.Path(dir_okay=False), help="Also write the full result as JSON.")
+def flywheel_demo(seed: int, rounds: int, json_out: str | None) -> None:
+    """Run the whole flywheel on a simulated TravelBot agent (offline; a simulation, not a finding)."""
+    from grounded_evals.flywheel.demo import render, run_demo
+
+    result = run_demo(seed=seed, rounds=rounds)
+    click.echo(render(result))
+    if json_out:
+        Path(json_out).write_text(json.dumps(result, indent=2, default=str) + "\n")
+        click.echo(f"\nwrote {json_out}")
+
+
+@flywheel.command("audit")
+@click.argument("codebook", type=click.Path(exists=True))
+def flywheel_audit(codebook: str) -> None:
+    """Validate a codebook YAML and print what the taste reward will charge for each code."""
+    from grounded_evals.flywheel.codebook import Codebook
+
+    try:
+        cb = Codebook.load(codebook)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise click.ClickException(f"bad codebook: {exc}") from exc
+    click.echo(f"codebook v{cb.version}: {len(cb.codes)} codes")
+    for c in cb.codes:
+        click.echo(f"  {c.code:<32} {c.severity:<12} weight {c.w:.2f}{'  BLOCKING (zeroes the reward)' if c.blocking else ''}")
+    if not any(c.blocking for c in cb.codes):
+        click.echo("warning: no blocking code; nothing will zero the reward or block at the gate")

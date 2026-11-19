@@ -97,6 +97,7 @@ Full positioning against the post-training literature, the gap list and its stat
 | Score and gate responses with a codebook | [`grounded-evals reward score`](#tooling) |
 | Run the expert-facing app (curate cases, annotate, build a judge) | [docs/setup.md](docs/setup.md) · [domain expert guide](docs/guides/domain-expert-guide.md) |
 | Find docs by flywheel stage or by role | [docs/](docs/) |
+| Improve my agent app's taste with RL, round after round | [The RL eval flywheel](docs/guides/rl-eval-flywheel.md) · `grounded-evals flywheel demo` |
 | Train an agent against my own standard | [RL eval harness](experiments/docile-invoices/README.md#rl-eval-harness) · [LLM-as-Judge as the reward](docs/judge-reward-rl.md) |
 | See how GEDD compares with RLHF, DPO and rubric rewards | [docs/research.md](docs/research.md) |
 | Learn the qualitative method behind the codebook | [docs/methodology.md](docs/methodology.md) |
@@ -152,9 +153,13 @@ grounded-evals stats ppi labelled.jsonl unlabelled.jsonl --y-key expert --f-key 
 
 # Codebook reward + gate decision per response
 grounded-evals reward score codebook.yaml judgements.jsonl
+
+# The whole RL eval flywheel on a simulated agent app (offline, seconds; a simulation, not a finding)
+grounded-evals flywheel demo
+grounded-evals flywheel audit codebook.yaml   # check a codebook before training on it
 ```
 
-The statistics (`grounded_evals.stats`) are pure Python and tested against hand-computed values and simulation. The reward model and gate live in `grounded_evals.reward`.
+The statistics (`grounded_evals.stats`) are pure Python and tested against hand-computed values and simulation. The reward model and gate live in `grounded_evals.reward`; the flywheel (taste reward, reward audit, RL harness with tripwire, production gate with PPI++, codebook growth) lives in `grounded_evals.flywheel`, described in [the RL eval flywheel guide](docs/guides/rl-eval-flywheel.md).
 
 ---
 
