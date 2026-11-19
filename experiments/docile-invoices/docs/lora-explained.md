@@ -169,12 +169,11 @@ we don't want it to learn to write invoices, only to read them.
 That's one **step**. 1,400 documents ÷ 16 per batch ≈ **88 steps**. Going through every training example once is one
 **epoch**; we do one epoch.
 
-On Fireworks' serverless training, our Python script on a laptop runs this loop, but steps 2–4 happen on Fireworks'
-GPUs:
+With a hosted training API, a Python script on a laptop runs this loop while steps 2–4 happen on remote GPUs. In
+pseudocode:
 
 ```python
-tc = service.create_lora_training_client(base_model="accounts/fireworks/models/glm-5p3-flash",
-                                         rank=16, alpha=32)
+tc = trainer.create_lora_client(base_model="GLM-5.3-Flash", rank=16, alpha=32)
 for batch in batches(examples, size=16):
     tc.forward_backward(batch, "cross_entropy").result()   # steps 2 and 3
     tc.optim_step(adam).result()                           # step 4
@@ -203,11 +202,11 @@ That has practical upsides:
   request.
 - **Reversible**: remove the adapter and you have the original model back, untouched.
 
-On Fireworks, the lifecycle looks like this:
+The lifecycle looks like this:
 
 1. **Save for sampling**: snapshot the adapter and score the test set with those exact weights, inside the training
-   session. This is the evidence for the hackathon.
-2. **Promote**: turn the snapshot into a model in your Fireworks account.
+   session. This is the evidence for the result.
+2. **Promote**: register the snapshot as a servable model.
 3. **Deploy**: serve it on a dedicated (on-demand) deployment. This step bills for GPU time, so we haven't done it.
 
 ---

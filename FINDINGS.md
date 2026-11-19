@@ -25,7 +25,7 @@ effect (MDE) reported, so a null result can be read as underpowered or as eviden
 | [E2](#e2) | Codebook vs scalar LLM-judge reward under best-of-N pressure (overoptimization) | ⏳ script ready | — |
 | [E3](#e3) | Expert-label efficiency and multi-round online improvement | ⏳ | — |
 | [L1](#l1) | Inter-annotator agreement and label-gap correction on the 582 remaining errors | ⏳ kit ready | — |
-| [R1](#r1) | GRPO under the GEDD reward vs two hackable proxies: does RL amplify the loophole the audit predicts? | ⏳ env + trainer ready | — |
+| [R1](#r1) | GRPO under the GEDD reward vs two hackable proxies: does RL amplify the loophole the audit predicts? | ⏳ env + harness ready | — |
 
 All case-study findings use the same setup: DocILE scanned business documents, 500 locked test
 documents = 5,000 field cases in 204 layout clusters (124 documents on unseen layouts), 10 fields,
@@ -157,5 +157,6 @@ cluster shared with the test set), 18 steps × 4 invoices × 4 tries, in three a
 `no_invention` and `coverage`. Every step logs all six rewards and the failure-code counts, and the
 locked set is scored by the fixed exact scorer before and after. Prediction from F8: the
 `no_invention` arm drifts toward nulls (missed values rise while its reward rises), the `coverage`
-arm toward invention, and the `gedd` arm improves `exact`. *Script:* `13_rl_grpo.py`, about $19 per
-arm (`--smoke` first). *Needs:* DocILE data and an API key.
+arm toward invention, and the `gedd` arm improves `exact`. *Harness:* `rl_harness.py` (rewards, advantages,
+per-step logs, tripwire); any GRPO trainer plugs in through its `Trainer` protocol. *Needs:* DocILE data, a
+trainer and a policy endpoint.

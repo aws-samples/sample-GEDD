@@ -1,7 +1,7 @@
 # What's next: hill-climbing past SFT with GEDD, DPO and RL
 
 *Research and plan for round 2 of the DocILE fine-tune. Every number marked "measured" comes from our 500-document test
-set; costs are Fireworks serverless list prices (Oct 2026) and are estimates.*
+set; costs are serverless list prices (Oct 2026) and are estimates.*
 
 ## 1. Where SFT got us, and what's left
 
@@ -53,14 +53,14 @@ happen before any more training, or round 2 trains the model to copy annotation 
 | Choice errors: which order number, which company | **DPO** | A preference objective learns "this, *not* that" directly; SFT only sees the right answer. |
 | Over-cautious nulls vs invented values | **DPO with targeted pairs** | Pairs where chosen = the value and rejected = null (and the reverse) teach the boundary from both sides. |
 | Errors that cost different amounts | **RL with a GEDD-weighted reward** | A wrong amount is a wrong payment; a missed payment term is a minor fix. RL can optimise that directly. |
-| Post / block / human-review routing | **Decision tuning of a small judge** | Fireworks' `decision_loop` trains a calibrated K-way classifier: the GEDD gate as a fine-tuned model. |
+| Post / block / human-review routing | **Decision tuning of a small judge** | A calibrated K-way classifier fine-tuned on SME labels: the GEDD gate as a fine-tuned model. |
 
 ### SFT round 2: cleaner, bigger, matched
 
 - **Clean targets.** Apply GEDD's SME corrections to the training labels (fill label gaps, settle division vs parent).
 - **More data.** All 5,180 training documents instead of 1,400.
 - **Match train and test resolution.** Train at 1,344 px. Round 1 trained at 1,600 px and scored at 1,344 px because the
-  serverless sampler caps an image at 2,048 tokens.
+  scoring sampler capped an image at 2,048 tokens.
 - **Up-weight hard fields.** Oversample documents with order numbers and multi-company headers.
 - **Cost:** about 10M tokens per epoch at ~1,950 tokens/doc → **~$90 per epoch on GLM 5.3 Flash**, or **~$23 on
   Nemotron 3.5 Super VL** ($2.32/M) if we want a cheaper vision base to compare.
@@ -77,19 +77,19 @@ happen before any more training, or round 2 trains the model to copy annotation 
 4. Balance the failure codes so DPO isn't dominated by one error type, and include both directions of the
    null boundary (value-vs-null and null-vs-invented).
 
-**Training:** Fireworks cookbook `recipes/dpo_loop.py`. It accepts `{"chosen": …, "rejected": …}` rows, supports
-base64-image multimodal data, and uses the SFT checkpoint as the frozen reference. Defaults: β = 0.1 (must be
+**Training:** any DPO trainer that accepts `{"chosen": …, "rejected": …}` rows with image inputs (e.g. TRL's
+`DPOTrainer`), with the SFT checkpoint as the frozen reference. Defaults: β = 0.1 (must be
 between 0 and 0.5), learning rate 1e-5. Start from the SFT adapter, not the base model.
 
 **Cost estimate:** ~2,000 training docs × 4 samples to mine pairs (~$12 prefill + ~$7 sampling), then ~1,000 pairs ×
 ~4,000 tokens ≈ 4M training tokens (~$36) → **~$55 per DPO round on GLM 5.3 Flash.**
 
-**Variant:** ORPO (`recipes/orpo_loop.py`) combines the SFT and preference losses with no reference model. It's
+**Variant:** ORPO combines the SFT and preference losses with no reference model. It's
 cheaper if we want one combined round.
 
 ### RL: optimise the business cost, not the string match
 
-Fireworks cookbook `recipes/rl_loop.py`. The reward is **verifiable**: it's our own scorer, so no judge model is needed
+Any GRPO trainer, driven through `rl_harness.py` (rewards, advantages, per-step audit). The reward is **verifiable**: it's our own scorer, so no judge model is needed
 for the base signal.
 
 ```text
@@ -104,8 +104,7 @@ This optimises what an AP team actually cares about. Run it after DPO, once the 
 ### Decision tuning: make the GEDD gate a model
 
 GEDD's gate decides post / block / send to human review. Instead of a prompted LLM-as-Judge only, train a small
-judge with `recipes/decision_loop.py`, which produces a calibrated checkpoint (one fitted temperature per question
-type) from SME-labelled decisions. That gives calibrated confidence for routing and is cheap enough to run on every
+classifier judge on SME-labelled decisions and calibrate it (one fitted temperature per question type). That gives calibrated confidence for routing and is cheap enough to run on every
 invoice.
 
 ## 3. The guardrails on the hill-climb
@@ -135,9 +134,6 @@ invoice.
 
 ## Sources
 
-- Fireworks cookbook (github.com/fw-ai/cookbook), `training/recipes/`: `sft_loop.py`, `dpo_loop.py`, `orpo_loop.py`,
-  `rl_loop.py`, `decision_loop.py`; preference row formats in `training/utils/data.py`.
-- Fireworks serverless training pricing (docs.fireworks.ai/fine-tuning/training-api/serverless).
 - Rafailov et al., *Direct Preference Optimization: Your Language Model is Secretly a Reward Model*, NeurIPS 2023.
 - Hong et al., *ORPO: Monolithic Preference Optimization without Reference Model*, 2024.
 - Measured figures: this repo, `results/results_glm_1344.jsonl` and `results/results_glm_sft_1344.jsonl`.

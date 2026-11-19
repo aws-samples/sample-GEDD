@@ -26,7 +26,6 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
-import os
 import random
 import sys
 from collections import defaultdict
@@ -81,10 +80,7 @@ def judge_prompt(arm: str, candidate: dict) -> str:
 
 
 async def run_judges(k: int, members: int, concurrency: int, limit: int | None) -> None:
-    from openai import AsyncOpenAI
-
-    client = AsyncOpenAI(base_url="https://api.fireworks.ai/inference/v1",
-                         api_key=os.environ["FIREWORKS_API_KEY"], timeout=300)
+    client, kw = d.async_client(d.MODELS[JUDGE_MODEL]["host"])
     split = {r["id"]: r for r in d.load_split("test")}
     model = d.MODELS[JUDGE_MODEL]["model"]
     sem, lock = asyncio.Semaphore(concurrency), asyncio.Lock()
@@ -112,8 +108,7 @@ async def run_judges(k: int, members: int, concurrency: int, limit: int | None) 
             for attempt in range(4):
                 try:
                     resp = await client.chat.completions.create(
-                        model=model, messages=msgs, max_tokens=1500, temperature=0.7,
-                        reasoning_effort="low")
+                        model=model, messages=msgs, max_tokens=1500, temperature=0.7, **kw)
                     text, err = resp.choices[0].message.content or "", None
                     break
                 except Exception as e:  # noqa: BLE001

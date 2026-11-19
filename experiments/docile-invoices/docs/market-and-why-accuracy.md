@@ -84,8 +84,8 @@ Illustrative, for one AP team; replace the assumptions with a real team's number
 | **Saved** | | **~65 hours/month ≈ $1,600/month ≈ $19,000/year** |
 
 That's per 5,000 invoices a month, before overhead, and before counting the cost of the errors that would otherwise
-reach payment. The model itself is cheap: the base model cost **$0.24 for all 500 test documents** on Fireworks
-serverless (about $0.0005 per invoice). Serving the fine-tune needs a dedicated deployment, which we did not measure.
+reach payment. The model itself is cheap: the base model cost **$0.24 for all 500 test documents** on a
+serverless inference endpoint (about $0.0005 per invoice). Serving the fine-tune needs a dedicated deployment, which we did not measure.
 
 ## 5. Why a fine-tuned open model
 

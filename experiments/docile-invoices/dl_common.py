@@ -28,8 +28,8 @@ SPLITS = HERE / "splits"
 RESULTS = HERE / "results"
 
 DPI = 150          # render resolution for page images
-# Longest side sent to the model, px. Training used 1600; the serverless sampler caps one image at 2,048 tokens,
-# so scoring the fine-tune (and its matched baseline) uses DOCILE_MAX_SIDE=1344.
+# Longest side sent to the model, px. Training used 1600; the sampler that scored the fine-tune capped one image at
+# 2,048 tokens, so scoring the fine-tune (and its matched baseline) used DOCILE_MAX_SIDE=1344.
 MAX_SIDE = int(os.environ.get("DOCILE_MAX_SIDE", "1600"))
 MAX_PIXELS = 1_450_000  # ~2,000 image tokens for GLM 5.3 Flash
 IMAGES = CACHE / (f"images_{MAX_SIDE}" if MAX_SIDE != 1600 else "images")
@@ -58,10 +58,14 @@ PROMPT = (
     + "\n\nAnswer with only a JSON object with exactly these keys."
 )
 
+# Model endpoints. "openai" = any OpenAI-compatible server (vLLM, SGLang, LiteLLM, a gateway in front of a managed
+# service), configured with LLM_BASE_URL, LLM_API_KEY and LLM_MODEL; LLM_REASONING_EFFORT (default "low", empty to
+# omit) is passed through for reasoning models. price = USD per 1M (input, output) tokens at the time of the recorded
+# runs, used only for cost estimates.
 MODELS = {
-    # price = serverless inference USD per 1M (input, output) tokens
-    "glm": {"label": "GLM 5.3 Flash", "model": "accounts/fireworks/models/glm-5p3-flash", "host": "fireworks", "price": (0.15, 0.50)},
-    # Frontier baselines via OpenRouter (billed to OPENROUTER_API_KEY, not Fireworks); same prompt, temperature 0.
+    "glm": {"label": "GLM 5.3 Flash", "model": os.environ.get("LLM_MODEL", "zai-org/GLM-5.3-Flash"), "host": "openai",
+            "price": (0.15, 0.50)},
+    # Frontier baselines via OpenRouter (OPENROUTER_API_KEY); same prompt, temperature 0.
     "gemini4": {"label": "Gemini 4 Argon", "model": "google/gemini-4-argon", "host": "openrouter", "price": (2.00, 10.00)},
     "opus55": {"label": "Claude Opus 5.5", "model": "anthropic/claude-opus-5.5", "host": "openrouter", "price": (4.00, 20.00)},
     "gpt61": {"label": "GPT-6.1 Terra Pro", "model": "openai/gpt-6.1-terra-pro", "host": "openrouter", "price": (1.00, 5.00)},
@@ -244,25 +248,47 @@ def field_rows(tag: str) -> list[dict]:
     return [f for r in load_results(tag).values() for f in r["fields"]]
 
 
+def _endpoint(host: str) -> tuple[dict, dict]:
+    """(client kwargs, request kwargs) for a host in MODELS."""
+    if host == "openrouter":
+        return ({"base_url": "https://openrouter.ai/api/v1", "api_key": os.environ["OPENROUTER_API_KEY"]},
+                {"extra_body": {"reasoning": {"effort": "low"}}})
+    if host == "openai":
+        if "LLM_BASE_URL" not in os.environ:
+            raise SystemExit("set LLM_BASE_URL (and LLM_API_KEY, LLM_MODEL) to an OpenAI-compatible endpoint")
+        effort = os.environ.get("LLM_REASONING_EFFORT", "low")
+        return ({"base_url": os.environ["LLM_BASE_URL"], "api_key": os.environ.get("LLM_API_KEY", "EMPTY")},
+                {"reasoning_effort": effort} if effort else {})
+    raise ValueError(f"unknown host {host!r}")
+
+
+def async_client(host: str):
+    from openai import AsyncOpenAI
+
+    ckw, kw = _endpoint(host)
+    return AsyncOpenAI(timeout=300, **ckw), kw
+
+
+def sync_client(host: str):
+    from openai import OpenAI
+
+    ckw, kw = _endpoint(host)
+    return OpenAI(timeout=300, **ckw), kw
+
+
 async def eval_model(model: str, tag: str, split: str = "test", *, build_messages=None, concurrency: int = 8,
                      max_tokens: int = 4096, temperature: float = 0.0, limit: int | None = None,
                      endpoint: str | None = None, extra: dict | None = None):
     """Cached: re-running only fills documents that are missing or errored."""
-    from openai import AsyncOpenAI
     from tqdm.asyncio import tqdm
 
-    m = MODELS.get(model, {"label": model, "model": model, "host": "fireworks", "price": (0.0, 0.0)})
+    m = MODELS.get(model, {"label": model, "model": model, "host": "openai", "price": (0.0, 0.0)})
     rows = load_split(split)
     done = {k for k, r in load_results(tag).items() if not r.get("error")}
     todo = [r for r in rows if r["id"] not in done][:limit]
     print(f"{tag}: {m['label']} on {split} · to_run={len(todo)}")
-    if m["host"] == "openrouter":
-        client = AsyncOpenAI(base_url="https://openrouter.ai/api/v1", api_key=os.environ["OPENROUTER_API_KEY"], timeout=300)
-        kw = {"extra_body": {"reasoning": {"effort": "low"}}, **(extra or {})}
-    else:
-        client = AsyncOpenAI(base_url="https://api.fireworks.ai/inference/v1", api_key=os.environ["FIREWORKS_API_KEY"],
-                             timeout=300)
-        kw = {"reasoning_effort": "low", **(extra or {})}
+    client, kw = async_client(m["host"])
+    kw = {**kw, **(extra or {})}
     sem, lock = asyncio.Semaphore(concurrency), asyncio.Lock()
     build = build_messages or messages
 

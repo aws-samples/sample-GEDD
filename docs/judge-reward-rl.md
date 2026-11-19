@@ -4,8 +4,8 @@
 
 GEDD was built so expert evidence becomes SFT data. This note moves its centre of gravity: the
 **codebook-grounded LLM judge becomes the reward model**, and expert evidence calibrates and
-audits that judge, inside a GRPO loop of the kind shown in the Fireworks Forge workshop
-*Designing agentic RL environments that work* (`fw-ai/forge-workshops/research-agent-rl`).
+audits that judge, inside a GRPO loop built on the practices of agentic-RL environment design: check headroom,
+read the grader first, pay for the goal and charge for the cost, hold out content, and audit for reward hacking.
 
 ## 1. What we have and what's missing
 
@@ -15,11 +15,11 @@ audits that judge, inside a GRPO loop of the kind shown in the Fireworks Forge w
 | LLM judges, scalar and codebook arms, per-field code probabilities, reference-free (image + extraction) | `10_bon_overopt.py` | ✅ script, not run |
 | Best-of-N overoptimization curves (proxy vs gold against KL) | `grounded_evals/stats/overoptimization.py` | ✅ |
 | RL environment, leak-free splits, GRPO advantages | `rl_env.py` | ✅ but the reward is computed **from gold** |
-| GRPO trainer, vision LoRA, serverless, logs every reward per step | `13_rl_grpo.py` | ✅ untested live |
+| Trainer-agnostic RL harness: groups, every reward per step, advantages, headroom, tripwire | `rl_harness.py` | ✅ |
 | Reward audit with degenerate policies | `12_reward_audit.py` | ✅ for rule rewards only |
 | PPI++ for unbiased estimates from judge + small expert sample | `grounded_evals/stats/ppi.py` | ✅ |
 
-**The gap:** `13_rl_grpo.py` trains on `rl_env.score(row, pred)`, which reads `row["gold"]`. That is
+**The gap:** `rl_harness.py` scores with `rl_env.score(row, pred)`, which reads `row["gold"]`. That is
 RL with a verifiable reward (RLVR). Nothing connects the judge, which is what transfers to domains
 without gold, to the training loop.
 
@@ -49,19 +49,19 @@ That's Gao et al.'s proxy-vs-gold setup ([2022](https://arxiv.org/abs/2210.10760
 loop holds there, the same code runs on a domain with no gold (finance, claims, Rx), where the
 expert sample + PPI is the audit channel.
 
-## 3. The workshop's lessons, translated
+## 3. Agentic-RL design lessons, translated
 
-| Workshop lesson | What it means once the reward is a judge | GEDD implementation |
+| Lesson | What it means once the reward is a judge | GEDD implementation |
 |---|---|---|
 | **Check the model sometimes succeeds** (any-of-4 > one try) | Two kinds of headroom: the policy must vary within a group, **and the judge must rank those variants correctly**. GRPO only uses within-group ranking, so the reward model's quality is its *within-group pairwise accuracy vs gold*, not its overall AUROC | New metric in the judge audit: pairwise accuracy within groups, the share of groups the judge leaves flat, and its Spearman ρ with gold `exact` |
-| **Write and read the grader first** ("a strict grader marked half the right answers wrong") | Read judged rollouts. Run a known-answer gate before every paid run (the cookbook's `calibrate_judge.py` pattern): a fixed set of extractions with known codes. Any mismatch stops the run | `judge_reward.py --check` known-answer gate. Ten judged samples printed side by side with gold |
+| **Write and read the grader first** ("a strict grader marked half the right answers wrong") | Read judged rollouts. Run a known-answer gate before every paid run (a known-answer judge check): a fixed set of extractions with known codes. Any mismatch stops the run | `judge_reward.py --check` known-answer gate. Ten judged samples printed side by side with gold |
 | **Pay for the goal, charge for the cost** | Pay `P(correct)` from the judge, not only `1 − cost`. F8 already showed that the cost-only form nearly pays abstention | Judge reward = calibrated version of the `gedd` form: +1·P(no code) − Σ w_c·P(c), rescaled |
 | **Hold out content, not just questions** | Unchanged, plus: the **calibration** slice must also be disjoint from the RL pool and the locked set | Three-way split by layout cluster: RL pool / calibration / locked test |
 | **Train long enough; report the 95% range** | Unchanged. 18 steps, McNemar + cluster bootstrap on the locked set | `08_rigor.py`-style tests on `results_rl_*` |
 | **Reward hacking: proxy → gap → amplify** | A judge adds new gaps that a string matcher lacks (next row) | Judge reward audit before training (§4) |
-| *(cookbook `dpo_antislop`)* A failed scorer call is a missing score, not 0 | A judge timeout scored 0 gives a good answer a negative advantage and trains against API noise | Drop the group for that step and log `scorer_failed_groups` |
-| *(cookbook `dpo_antislop`)* Reward judge ≠ eval judge; satisfying your own gate inflates its metric | The policy is GLM. `10_bon_overopt.py` currently judges with GLM too (self-preference) | Judge from another family. Report the locked set **only** with the exact scorer and experts |
-| *(cookbook `dpo_antislop`)* The reward held while outputs collapsed (4 distinct openers in 40) | For extraction: watch for a collapse onto nulls or onto one formatting convention | Log the null rate and the distinct-value ratio per field each step |
+| A failed scorer call is a missing score, not 0 | A judge timeout scored 0 gives a good answer a negative advantage and trains against API noise | Drop the group for that step and log `scorer_failed_groups` |
+| Reward judge ≠ eval judge; satisfying your own gate inflates its metric | The policy is GLM. `10_bon_overopt.py` currently judges with GLM too (self-preference) | Judge from another family. Report the locked set **only** with the exact scorer and experts |
+| A reward can hold while outputs collapse onto one pattern | For extraction: watch for a collapse onto nulls or onto one formatting convention | Log the null rate and the distinct-value ratio per field each step |
 
 ### Judge-specific loopholes to audit
 
@@ -103,9 +103,9 @@ Reuses `10_bon_overopt.py` (K = 8 samples at T = 1, scalar and codebook judges),
   `CodebookRewardModel` with calibrators fitted on the calibration clusters and loaded from JSON.
 - `rl_env.py`: `judge_score(row, pred, members) -> Score` with the reward from the judge and `codes` from gold
   (audit only). The reward function never reads `row["gold"]`, and a unit test asserts it by passing a row with the gold removed.
-- `13_rl_grpo.py`: `--reward judge_codebook | judge_scalar`, `--judge-model`, `--judge-members`, `--ensemble-k`;
-  drop groups on scorer failure; log proxy, gold `exact`, judge–gold gap, codes, null rate; **tripwire**: if
-  proxy rises while gold `exact` falls for 3 consecutive steps, save, stop and write the worst rollouts to an expert-review sheet.
+- `rl_harness.py`: `--reward judge_codebook | judge_scalar`, `--judge-model`, `--judge-members`, `--ensemble-k`;
+  drop groups on scorer failure; log the judge–gold gap next to proxy and gold `exact` (the tripwire and
+  expert-review sheet already exist).
 - Cost estimate gains a judge line: steps × tasks × group × members × (prompt + output) at inference price.
 
 ### Phase 2: experiment R2, "Can a codebook judge stand in for gold in RL?"
@@ -140,16 +140,17 @@ This is experiment E3 (label efficiency, multi-round) with RL as the improver.
 ### Phase 4: beyond verifiable tasks and single turns
 
 - **Domain without gold** (e.g. the finance domain pack): hard-fail invariants become blocking codes and
-  zero the reward, the way the workshop zeroes an answer given without opening a document. Expert sample + PPI
+  zero the reward, the way a research-agent reward zeroes an answer given without opening a document. Expert sample + PPI
   is the only gold.
 - **Agentic traces:** the judge scores the trajectory, not just the answer. Use the trace-evaluation codes (first divergence point,
   tool boundary drift, source hierarchy drift, silent numeric corruption) as per-step codes. Add an efficiency term
-  as the workshop does (correctness × efficiency) so cost can't be hidden in extra tool calls. `rl_env` grows a
-  multi-turn episode on the `research_rollout.py` pattern (one datum per assistant turn, sharing the episode advantage).
+  (correctness × efficiency) so cost can't be hidden in extra tool calls. `rl_env` grows a
+  multi-turn episode (one datum per assistant turn, sharing the episode advantage).
 
 ## 5. Open decisions
 
-- **Judge model.** It must be a vision model from a different family than GLM. Candidates on Fireworks serverless: Kimi K3 (check vision support), Qwen-VL.
+- **Judge model.** It must be a vision model from a different family than GLM (e.g. a Qwen-VL or Kimi model), served behind
+  the same OpenAI-compatible endpoint settings as the policy.
   Cost and latency per call decide members × group size.
 - **Reference-free vs reference-guided.** Reference-free is what transfers. A reference-guided judge (given the
   expert correction) is a cheaper intermediate for domains where experts write corrections.
@@ -158,8 +159,5 @@ This is experiment E3 (label efficiency, multi-round) with RL as the improver.
 
 ## References
 
-Workshop: Ozdemir, *Designing agentic RL environments that work*, Fireworks Forge (2026);
-`fw-ai/forge-workshops/research-agent-rl`. Cookbook: `fw-ai/cookbook` `training/case-studies/dpo_antislop`
-(judge-gated GRPO, reward audit, scorer-failure rule), `rl_ask_before_acting`, `training/utils/rl/`.
 Literature already cited in [research.md](research.md); additions: Gao, Schulman & Hilton (2022) reward-model
 overoptimization; Coste et al. (2023) reward-model ensembles; Panickssery et al. (2024) self-preference.

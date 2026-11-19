@@ -1,6 +1,6 @@
 # GEDD: Grounded Evidence Driven Development
 
-**GEDD turns domain-expert judgment into one failure codebook, then derives your evaluation, your training reward and your response gate from it.**
+**GEDD is an RL eval harness grounded in expert evidence. It turns domain-expert judgment into one failure codebook, then derives your evaluation, your RL reward (rule-based or an LLM-as-Judge reward model) and your response gate from it, and checks every training run for reward hacking.**
 
 ---
 
@@ -49,7 +49,7 @@ Every candidate reward was scored on the same 500 invoices, for the real systems
 
 ![Reward audit](experiments/docile-invoices/figures/reward_audit.png)
 
-→ F8 · [`12_reward_audit.py`](experiments/docile-invoices/12_reward_audit.py) · RL environment: [`rl_env.py`](experiments/docile-invoices/rl_env.py)
+→ F8 · [`12_reward_audit.py`](experiments/docile-invoices/12_reward_audit.py) · RL environment: [`rl_env.py`](experiments/docile-invoices/rl_env.py) · harness: [`rl_harness.py`](experiments/docile-invoices/rl_harness.py) · judge as reward: [docs/judge-reward-rl.md](docs/judge-reward-rl.md)
 
 ### ⏳ Next: pre-registered experiments
 
@@ -59,7 +59,7 @@ Every candidate reward was scored on the same 500 invoices, for the real systems
 | **E2** | Codebook vs scalar LLM-judge reward under best-of-N pressure: which overoptimizes less? | Script ready, about $12 → [`10_bon_overopt.py`](experiments/docile-invoices/10_bon_overopt.py) |
 | **E3** | How much accuracy does each expert label buy, and does the online loop improve the model round after round? | Planned |
 | **Labels** | Two experts double-label the 582 remaining errors; inter-annotator agreement; re-scoring under corrected labels | Kit ready → [`11_expert_kit.py`](experiments/docile-invoices/11_expert_kit.py) |
-| **R1** | GRPO under the GEDD reward vs two hackable proxies: does RL amplify the loophole the audit predicts? | Environment + trainer ready, about $19 per arm → [`13_rl_grpo.py`](experiments/docile-invoices/13_rl_grpo.py) |
+| **R1** | GRPO under the GEDD reward vs two hackable proxies: does RL amplify the loophole the audit predicts? | Environment + harness ready; plug in any GRPO trainer → [`rl_harness.py`](experiments/docile-invoices/rl_harness.py) |
 
 Full positioning against the post-training literature, the gap list and its status: [docs/research.md](docs/research.md).
 

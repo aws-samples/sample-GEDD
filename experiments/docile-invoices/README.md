@@ -1,14 +1,15 @@
-# DocILE invoice extraction: fine-tuning GLM 5.3 Flash on Fireworks
+# DocILE invoice extraction: the GEDD RL eval harness on real invoices
 
 Accounts-payable clerks key the same ten fields off every invoice: invoice number, dates, vendor, customer, order number,
 payment terms, totals and currency. We ask GLM 5.3 Flash to read those fields off real scanned business documents and
-return JSON, try to improve it with prompting, then with a vision LoRA fine-tune on Fireworks serverless training, and
-test every gain for statistical significance.
+return JSON, try to improve it with prompting, then with a vision LoRA fine-tune, and
+test every gain for statistical significance. The same task is the GEDD RL environment: rewards, reward audits and a
+trainer-agnostic harness for GRPO-style training (see [RL eval harness](#rl-eval-harness)).
 
 **Result:** fine-tuning took GLM 5.3 Flash from 78.5% to **88.4%** of fields correct (+9.8 points; McNemar
 p = 1e-76, layout-cluster bootstrap 95% CI [+7.7, +12.2]). On layouts it never saw in training the gain is smaller but
 still real (+4.7, CI [+1.8, +8.1]). Prompting with the labelling rules gained only +2.2 to +2.6, and traded one kind of
-error for another. Total Fireworks spend: about $40.
+error for another. Total compute spend: about $40.
 
 **Why it matters:** an invoice skips human review only if every field is right. The fine-tune raises fully correct documents from 12.8% to **38.8%** (3x). See [docs/market-and-why-accuracy.md](docs/market-and-why-accuracy.md) for the market and value case.
 
@@ -61,7 +62,7 @@ All systems are GLM 5.3 Flash, scored on the same 5,000 field cases (500 test do
 | Harness B: rules + OCR text | 81.1% | 83.0% | 77.5% | 80.1% | +2.6, significant | $0.29 |
 | **Vision LoRA fine-tune (1,344 px)** | **88.4%** | **89.2%** | **86.8%** | **85.5%** | **+9.8, significant** | scored in training session* |
 
-\*Scored on Fireworks' serverless training sampler (~$3 at list price for the 500 documents), not a deployment.
+\*Scored in the training session on the exact trained weights (~$3 for the 500 documents), not a deployment.
 
 | Comparison | Gap | Only A right / only B right | McNemar p | Layout-cluster bootstrap 95% CI |
 | --- | --- | --- | --- | --- |
@@ -97,7 +98,7 @@ Unlike prompting, the fine-tune got better at *both* kinds of case at once: it l
 
 ![Significance](figures/significance.png)
 
-Same two checks as the Forge sample; a difference counts only if it passes both.
+A difference counts only if it passes both checks.
 
 - **Exact McNemar test** on the 5,000 field cases: of the cases where exactly one system is right, does one win far more
   often than a coin flip would? p < 0.05.
@@ -116,16 +117,16 @@ too eager to answer null: amount_due fell from 85% to 75%, and accuracy on field
 ### Fine-tuning
 
 1,400 training documents, `[page image, prompt] → JSON` with the first labelled value of each field (null if absent).
-Serverless vision LoRA on Fireworks: rank 16, learning rate 1e-4, 1 epoch, batch 16 (88 steps; training loss
-0.37 → 0.04). The test set is scored on Fireworks' serverless sampler on the exact trained weights; see
+Vision LoRA: rank 16, learning rate 1e-4, 1 epoch, batch 16 (88 steps; training loss
+0.37 → 0.04). The test set is scored on the exact trained weights; see
 [docs/lora-explained.md](docs/lora-explained.md) for a beginner's walkthrough of what that means.
 
 **What went wrong first.** The in-session scoring of the first run failed on 495 of 500 documents with
-`400 Bad Request`. The serverless sampler rejects any single image over 2,048 prompt tokens, while training accepts
+`400 Bad Request`. The scoring sampler rejected any single image over 2,048 prompt tokens, while training accepted
 larger ones; our 1,600 px pages were ~2,600 tokens. We re-scored the saved checkpoint at 1,344 px (near-square pages
-capped at 1.45 MP, largest image 1,894 tokens) with `05_score_sft.py`, and re-ran the baseline at 1,344 px so the
+capped at 1.45 MP, largest image 1,894 tokens), and re-ran the baseline at 1,344 px so the
 headline comparison uses identical images. Downscaling made no difference to the baseline (78.5% both ways).
-`04_sft.py` now checks every test image against the limit before training starts.
+Lesson: check every eval image against the serving limits before training starts.
 
 ## Next step: hill-climbing with GEDD
 
@@ -152,10 +153,26 @@ the people who know them.
 The full round-2 plan (error breakdown, which of SFT / DPO / RL / decision tuning fixes what, costs and guardrails)
 is in [docs/roadmap-sft-dpo-gedd.md](docs/roadmap-sft-dpo-gedd.md).
 
+## RL eval harness
+
+The repository ships the parts of RL that decide whether a run can be trusted, and leaves the gradient step to
+whichever trainer you use (TRL, verl, OpenRLHF or your own loop):
+
+| Piece | File | What it answers |
+| --- | --- | --- |
+| Environment + rewards | `rl_env.py` | The task, the codebook, the GEDD reward and five comparison rewards (three deliberately hackable), leak-free splits, GRPO advantages |
+| Reward audit | `12_reward_audit.py` | Before any training: does a degenerate policy (all null, blind guessing, dumping candidates) score at or above the base model under this reward? |
+| Harness | `rl_harness.py` | During training: every reward and failure-code count per step, flat-group share (headroom), null rate, and a tripwire when the trained reward rises while gold accuracy falls |
+| Judge reward | `10_bon_overopt.py`, [`../../docs/judge-reward-rl.md`](../../docs/judge-reward-rl.md) | Can a codebook LLM judge replace the gold scorer as the reward? |
+| Statistics | `08_rigor.py`, `grounded-evals stats compare` | Is the locked-set gain after training real (Holm-adjusted McNemar + cluster bootstrap)? |
+
+A trainer integrates by implementing `Trainer.policy()` (sample from the current weights) and
+`Trainer.update(groups)` (one optimiser step from the scored groups and their advantages); see the docstring of
+`rl_harness.py`.
+
 ## Cost
 
-Total Fireworks spend was kept under a hard $50 cap. `04_sft.py` estimates the whole run before starting and stops
-training if it would exceed `--max-usd`.
+Total spend was kept under a hard $50 cap, with the whole run estimated before starting.
 
 | Item | USD (list price) |
 | --- | --- |
@@ -165,7 +182,7 @@ training if it would exceed `--max-usd`.
 | Failed first scoring pass (5 of 500 succeeded) | <0.10 |
 | Re-scoring the fine-tune at 1,344 px | ~3.0 |
 | Baseline re-run at 1,344 px | ~0.18 |
-| **Total** | **~$40** (estimate from token counts at list price; check the Fireworks billing page) |
+| **Total** | **~$40** (estimate from token counts at list price) |
 
 ## Caveats
 
@@ -188,20 +205,19 @@ training if it would exceed `--max-usd`.
 ## Run it
 
 ```bash
-uv sync && uv pip install -e cookbook/training   # cookbook: git clone https://github.com/fw-ai/cookbook
-echo 'FIREWORKS_API_KEY=...' > .env
+uv sync
+# any OpenAI-compatible endpoint serving the policy / judge model (vLLM, SGLang, LiteLLM, a gateway)
+printf 'LLM_BASE_URL=http://localhost:8000/v1\nLLM_API_KEY=EMPTY\nLLM_MODEL=zai-org/GLM-5.3-Flash\n' > .env
 git clone https://github.com/rossumai/docile /tmp/docile
 /tmp/docile/download_dataset.sh TOKEN annotated-trainval data/docile --unzip   # needs poppler (pdftoppm)
 ```
 
-| Script | What it does | Fireworks cost |
+| Script | What it does | API cost |
 | --- | --- | --- |
 | `01_build_splits.py` | Reads the official labels, builds `splits/train.jsonl` and `splits/test.jsonl` | free |
 | `02_baseline.py` | Base GLM 5.3 Flash on the 500 test documents (also run with `DOCILE_MAX_SIDE=1344`, tag `glm_1344`) | ~$0.24 |
 | `02b_frontier.py` | Optional: Gemini / Claude / GPT via OpenRouter (not run) | OpenRouter |
 | `03_harness.py` | Prompt ideas A and B | ~$0.54 |
-| `04_sft.py` | Vision LoRA fine-tune, in-session test scoring, promotion. `--dry-run` prints the cost estimate. Run with `DOCILE_MAX_SIDE=1344` | ~$36–41 |
-| `05_score_sft.py` | Re-score a saved checkpoint on the test set (bounded concurrency, retries, cached). `DOCILE_MAX_SIDE=1344` | ~$3 |
 | `06_report.py` | Leaderboard, McNemar, cluster bootstrap, per-field table | free |
 | `07_charts.py` | Figures | free |
 | `08_rigor.py` | Holm-adjusted comparisons, minimum detectable effect, error taxonomy, document-level success → `results/rigor.json` | free |
@@ -210,7 +226,7 @@ git clone https://github.com/rossumai/docile /tmp/docile
 | `11_expert_kit.py` | Two-expert review sheets for the remaining errors; Krippendorff's alpha; re-scoring under corrected labels | free (expert time) |
 | `rl_env.py` | GEDD RL environment: codebook, six rewards (GEDD, cost-only GEDD, exact, three hackable proxies), leak-free splits, GRPO advantages | — |
 | `12_reward_audit.py` | Reward audit before RL: every reward on real systems and three degenerate policies; headroom → `results/reward_audit.json` | free |
-| `13_rl_grpo.py` | GRPO vision-LoRA training under any reward; logs all rewards and failure codes per step; locked-set eval before/after (`--smoke`, `--dry-run`) | ~$19 per reward arm |
+| `rl_harness.py` | Trainer-agnostic RL eval harness: sample groups, score every reward, GRPO advantages, per-step code counts, headroom, reward-hacking tripwire. `headroom` runs it with no trainer | inference only |
 
 Results are cached per document in `results/*.jsonl` (one row per document, with every field's prediction and score). The DocILE label text (`gold`) and `splits/` are not published here, per the dataset's terms; `01_build_splits.py` rebuilds them from your own DocILE download, and re-running the eval restores `gold`.
 
@@ -220,6 +236,6 @@ Results are cached per document in `results/*.jsonl` (one row per document, with
 
 ## Disclosure
 
-Built during the hackathon. The pipeline structure, training loop and statistical tests follow the Forge sample
-submission ([sinanuozdemir/ai-experiments](https://github.com/sinanuozdemir/ai-experiments),
-`floorplancad-symbol-counting`). Code was written with an AI coding assistant (Claude Code).
+The fine-tune results (`results/results_glm_sft_1344.jsonl`) come from a one-off training run whose provider-specific
+training scripts are no longer part of this repository; every number is regenerated from the saved per-case results.
+Code was written with an AI coding assistant (Claude Code).
