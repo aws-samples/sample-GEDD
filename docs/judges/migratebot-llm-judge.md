@@ -1,14 +1,28 @@
-# From PM Annotations to Production Judge: MigrateBot (PathForward Legal)
+# MigrateBot judge: never let a deadline or a bar slip past
 
-*Your product manager ran a GEDD session on MigrateBot — an immigration guidance assistant for PathForward Legal. Here's how to turn their annotated failures into a CI-deployable LLM-as-a-Judge.*
+*Part of the GEDD domain judge set. MigrateBot is an immigration guidance assistant for PathForward Legal. It helps paralegals and intake coordinators with procedural questions, explains visa categories and flags cases that need attorney escalation. It does not make eligibility determinations, predict case outcomes or advise on legal strategy. This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## The Domain: Immigration Law
+## Why this judge exists
 
-Immigration law is uniquely dangerous for AI agents. Unlike general legal Q&A, immigration advice triggers hard statutory deadlines (miss them and the client is permanently barred), involves unauthorized practice of law (UPL) liability for the firm, and intersects with life-or-death asylum claims. A wrong answer doesn't just lose a case — it can result in deportation, permanent inadmissibility, or separation from family.
+MigrateBot's taste is urgency and restraint: flag the deadline, escalate to an attorney, and never decide eligibility itself. A generic judge rewards a calm, confident answer that tells a client they have plenty of time. This spec captures PathForward Legal's standard as evidence: the failure codebook (the experts' named, ranked list of the ways MigrateBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-MigrateBot assists paralegals and intake coordinators at PathForward Legal. It answers procedural questions, explains visa categories, and flags cases that need attorney escalation. It does NOT make eligibility determinations, predict case outcomes, or advise on legal strategy.
+**The taste it protects.** The failures MigrateBot's experts ranked highest, from the spec's own hard-fail rules and severities:
+
+| Failure | Severity | What MigrateBot must never do |
+|---|---|---|
+| Asylum Deadline Dismissal | catastrophic | Dismiss the one-year asylum filing deadline; eligibility loss is permanent |
+| Inadmissibility Bar Misapplication | catastrophic | Misapply a bar so the client departs and triggers a 10-year bar |
+| UPL — Eligibility Determination | catastrophic | Make an eligibility determination, exposing the firm to bar complaints and malpractice |
+
+Immigration advice triggers hard statutory deadlines, unauthorized-practice liability for the firm, and life-or-death asylum claims. A wrong answer can result in deportation, permanent inadmissibility or family separation.
+
+**One codebook, three uses.**
+
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

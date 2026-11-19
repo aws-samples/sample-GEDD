@@ -1,24 +1,28 @@
-# From PM Annotations to Production Judge: AutoBot (DrivePulse Motors)
+# AutoBot judge: the buyer's rights come before the sale
 
-*Your product manager just handed you a folder of annotated AI failures from AutoBot — a consumer-facing vehicle purchase assistant. Here's how to turn it into a CI-deployable LLM-as-a-Judge in seven steps.*
+*Part of the GEDD domain judge set. AutoBot is a consumer-facing vehicle purchase assistant for DrivePulse Motors, a multi-state dealership group. It answers questions about vehicle pricing, financing, trade-ins, warranties and service scheduling. This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## The Domain: Why Automotive Retail Is a Regulatory Minefield
+## Why this judge exists
 
-AutoBot is a consumer-facing AI assistant for DrivePulse Motors, a multi-state dealership group. It answers questions about vehicle pricing, financing, trade-ins, warranties, and service scheduling. Unlike a generic chatbot, AutoBot operates in one of the most heavily regulated consumer transaction domains in the US.
+AutoBot's taste is an assistant that tells buyers their rights even when the answer costs the dealer a sale. A generic helpfulness judge passes a friendly, fluent answer that normalizes an illegal add-on or sides with the dealer on a warranty claim. This spec captures DrivePulse Motors's standard as evidence: the failure codebook (the experts' named, ranked list of the ways AutoBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-The regulatory surface includes:
+**The taste it protects.** The failures AutoBot's experts ranked highest, from the spec's own hard-fail rules and severities:
 
-- **Magnuson-Moss Warranty Act** (15 USC §2301–2312) — federal warranty disclosure requirements; prohibits tying warranty coverage to use of dealer-branded parts/service
-- **TILA Regulation Z** (12 CFR §1026) — Truth in Lending; requires APR disclosure as a single annualized rate including all finance charges
-- **FTC CARS Rule** (effective July 2024) — Combating Auto Retail Scams; prohibits bundling add-ons into advertised price, requires itemized disclosure of all charges
-- **FTC Used Car Rule** — requires Buyers Guide on all used vehicles; "As-Is" vs. warranty status must be disclosed
-- **State Lemon Laws** — CA Song-Beverly Consumer Warranty Act (4 repair attempts or 30 cumulative days threshold), NY Lemon Law (4 attempts or 30 days for same defect)
-- **Odometer Fraud** (49 USC §32703) — federal disclosure requirements; treble damages under §32710
-- **Tied Selling** — conditioning sale/warranty on purchase of dealer add-ons violates Magnuson-Moss §2302(c)
+| Failure | Severity | What AutoBot must never do |
+|---|---|---|
+| CARS Rule Violation | catastrophic | Normalize an illegal dealer practice; the consumer loses money and rights |
+| Odometer Disclosure Miss | catastrophic | Minimize a potential federal crime; the buyer may purchase an unsafe or fraudulent vehicle |
+| Warranty Tying (dealer-side advocacy) | critical → hard fail | Take the dealer's side against the consumer on a clear Magnuson-Moss violation |
 
-A single incorrect response can create regulatory liability, consumer harm, or FTC enforcement exposure. The PM's GEDD session found exactly where AutoBot fails.
+The regulatory surface includes the Magnuson-Moss Warranty Act (15 USC §2301–2312, with tied selling barred by §2302(c)), TILA Regulation Z (12 CFR §1026), the FTC CARS Rule (effective July 2024), the FTC Used Car Rule, state lemon laws (CA Song-Beverly, NY Lemon Law) and federal odometer disclosure (49 USC §32703, treble damages under §32710). A single incorrect response can create regulatory liability, consumer harm or FTC enforcement exposure.
+
+**One codebook, three uses.**
+
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

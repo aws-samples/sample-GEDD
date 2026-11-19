@@ -1,4 +1,6 @@
-# From SME Evidence to LLM-as-Judge Gates: How We Refocused GEDD
+# From SME Evidence to LLM-as-Judge Gates: How We Refocused GEDD Around the Product's Own Standard
+
+A judge written before anyone has looked at real failures enforces a generic standard, and a product held to a generic standard drifts toward generic behaviour. This post explains how we refocused GEDD so the judge is earned from domain-expert evidence and the product keeps its taste: its own standard of what good and unacceptable look like. That standard is captured in a failure codebook: a short list of named failure types the experts found in real answers, each with a severity and an action.
 
 AI teams keep running into the same evaluation problem: everyone wants a reliable judge, but the judge is often written before the team has enough evidence to know what it should judge.
 
@@ -267,3 +269,5 @@ GEDD makes the judge accountable to the people who know the domain:
 - The judge inherits those decisions and makes them executable.
 
 That is the difference between a generic evaluator and a customer-facing response gate a product team can defend.
+
+It is also what keeps the product's taste stable while the agent underneath changes. The failure codebook outlives any one model or prompt. GEDD has since extended the same codebook beyond the gate: it now also defines the RL reward and is audited for reward hacking before training (see the [README](../../README.md) and [judge as reward](../judge-reward-rl.md)). The evidence behind it, the codebook, the labelled scenarios and the calibrated judge, is what a competitor using the same base model doesn't have.

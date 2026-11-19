@@ -1,6 +1,6 @@
 # Why I'm Replacing Our Eval Infrastructure With a PM Conversation
 
-*I've spent 8 years building ML systems. The best evaluation pipeline I've ever shipped was written by a product manager who doesn't know what a tensor is.*
+*I've spent 8 years building ML systems. Every model swap and prompt change I shipped was measured against something; when that something was a generic rubric, the product slowly lost the judgment our PM cared about and our scores never showed it. The best evaluation pipeline I've shipped was written by a product manager who doesn't know what a tensor is.*
 
 ---
 
@@ -18,7 +18,7 @@ The pattern is always the same:
 
 The eval suite grows, but it's always one step behind. It's reactive, not systematic. And the person who actually knows what "correct" means — the PM, the domain expert, the compliance officer — is locked out of the process because our tools require Python, JSON schemas, and ML vocabulary.
 
-I've tried fixing this with better tooling (LangSmith, Braintrust, custom harnesses). They all have the same assumption: the engineer defines what to measure. That assumption is wrong.
+I've tried fixing this with better tooling (LangSmith, Braintrust, custom harnesses). They all have the same assumption: the engineer defines what to measure. That assumption is wrong. When the engineer defines it, the measurement drifts toward generic quality ("helpful", "accurate"), and so does every model and prompt we tune against it. The product's taste, the specific standard the PM and the domain experts hold, erodes without a failing test.
 
 ---
 
@@ -28,7 +28,7 @@ A colleague pointed me to GEDD. I was skeptical — another eval tool, another f
 
 **The domain expert produces the eval artifacts. The ML engineer consumes them.**
 
-Not the other way around. Not "engineer builds rubric, PM reviews." The PM builds the rubric by having a conversation, and the engineer wires it into CI.
+Not the other way around. Not "engineer builds rubric, PM reviews." The PM builds the rubric by having a conversation, and the engineer wires it into CI. The contract between us is the *failure codebook*: a short list of named failure codes, each with a severity, that says exactly how the product must never fail.
 
 I tested it with our pharmacy agent (RxBot). Here's what happened.
 
@@ -40,9 +40,9 @@ I tested it with our pharmacy agent (RxBot). Here's what happened.
 
 I handed our pharmacy PM the Claude Code skill and said: "Run `/gedd`. Define RxBot. Generate test cases. Mark the responses. I'll take it from there."
 
-She spent 45 minutes. No Python. No JSON. Just a conversation.
+They spent 45 minutes. No Python. No JSON. Just a conversation.
 
-### What she produced
+### What they produced
 
 A `session.json` containing:
 - **Agent definition:** 5 capabilities, 2 user personas, pharmacy domain
@@ -52,12 +52,12 @@ A `session.json` containing:
 
 The error codes are what sold me:
 
-| Error Code | What She Found | Why I Would Have Missed It |
+| Error Code | What the PM Found | Why I Would Have Missed It |
 |-----------|---------------|---------------------------|
-| `dosage_unit_confusion` | Agent said "mg" when context suggests "mcg" | I'd see a well-formatted answer. She sees a 1000x dosage error that could kill someone. |
-| `interaction_underwarning` | Mentioned aspirin+metoprolol interaction but didn't flag kidney risk | I'd see "interaction mentioned = correct." She knows the kidney risk is the critical part. |
+| `dosage_unit_confusion` | Agent said "mg" when context suggests "mcg" | I'd see a well-formatted answer. The PM sees a 1000x dosage error that could kill someone. |
+| `interaction_underwarning` | Mentioned aspirin+metoprolol interaction but didn't flag kidney risk | I'd see "interaction mentioned = correct." The PM knows the kidney risk is the critical part. |
 
-These aren't generic labels. They're domain-specific failure modes that encode institutional knowledge. And they came from a 45-minute conversation, not a 3-week rubric design sprint.
+These aren't generic labels. They're the product's taste written down: domain-specific failure modes that encode institutional knowledge. And they came from a 45-minute conversation, not a 3-week rubric design sprint.
 
 ---
 
@@ -142,7 +142,7 @@ grounded-evals mlflow \
 
 One command. The PM's work is now in our MLflow tracking server as:
 - A registered experiment with metadata
-- Custom judges (via `make_judge()`) that encode her domain knowledge
+- Custom judges (via `make_judge()`) that encode the PM's domain knowledge
 - An eval dataset with expected behaviors
 - Human annotation baselines for judge calibration
 
@@ -202,10 +202,10 @@ Bedrock AgentCore
 
 What I like about this:
 
-1. **The PM never touches MLflow.** She works in Claude Code. I work in the terminal.
+1. **The PM never touches MLflow.** They work in Claude Code. I work in the terminal.
 2. **The handoff is one file.** No meetings, no Jira tickets, no "can you export that spreadsheet as JSON."
 3. **The judges are grounded in evidence.** Not "evaluate helpfulness 1-5" — evaluate whether dosage units are correct and interactions are fully characterized.
-4. **It's idempotent.** PM finds a new failure next month? She runs `/gedd`, says "add more," names the error. I re-run `grounded-evals mlflow`. The pipeline grows.
+4. **It's idempotent.** PM finds a new failure next month? They run `/gedd`, say "add more," name the error. I re-run `grounded-evals mlflow`. The pipeline grows.
 5. **It's all AWS-native.** Bedrock for inference, AgentCore for hosting, SageMaker MLflow for tracking. IAM for auth. No external vendors.
 
 ---
@@ -224,7 +224,7 @@ What I like about this:
 
 ---
 
-## The Hard Truth About LLM-as-Judge
+## The Hard Truth About LLM-as-Judge (and Judge-as-Reward)
 
 The MLflow article on agent evaluations says:
 
@@ -233,6 +233,8 @@ The MLflow article on agent evaluations says:
 GEDD gives you that human-labeled set for free. The PM's annotations ARE the calibration data. You don't need a separate labeling sprint — the eval creation process produces the labels.
 
 And because the error codes are specific (`dosage_unit_confusion`, not `incorrect`), the judges are specific too. A specific judge is easier to calibrate than a vague one.
+
+This matters more once the judge stops being a report and starts being a training signal. If you fine-tune or run RL against a generic "helpfulness 1-5" judge, the policy learns whatever that judge pays for, and the score climbs while the product gets worse in ways the PM would notice. That is reward hacking, and for a product team it is silent taste loss. GEDD's invoice case study audits candidate rewards against deliberately degenerate policies before any training run: every proxy reward pays at least one of them, while the codebook-derived reward and the exact scorer pay none ([FINDINGS F8](../../FINDINGS.md#f8)). Calibrate the judge against the PM's annotations before it trains or gates anything, and keep it off the locked test set. More in [docs/judge-reward-rl.md](../judge-reward-rl.md).
 
 ---
 
@@ -254,14 +256,14 @@ If you're a principal/staff engineer evaluating this for your org:
 
 ## The Line That Stuck With Me
 
-From the GEDD README:
+From the `/gedd` skill's instructions:
 
 > *The eval pipeline is the product. The agent is just the thing it produces.*
 
-After 8 years of building ML systems, I think this is right. Models change. Prompts change. Tools change. But the eval pipeline — the golden queries, the error codes, the judges, the regression gates — that's the institutional knowledge that survives every rewrite.
+After 8 years of building ML systems, I think this is right. Models change. Prompts change. Tools change. But the eval pipeline — the golden queries, the codebook, the judges, the regression gates — is the product's taste in a form every change can be checked against. It survives every rewrite, and a competitor using the same base model doesn't have it.
 
 And the best person to build it isn't the engineer. It's the person who knows what "correct" means.
 
 ---
 
-*[GEDD](https://github.com/aws-samples/sample-GEDD) is open source (MIT-0). The full pipeline guide is at `docs/pipeline-guide.md`.*
+*[GEDD](https://github.com/aws-samples/sample-GEDD) is open source (MIT-0). The full pipeline guide is at [`docs/guides/pipeline-guide.md`](../guides/pipeline-guide.md).*

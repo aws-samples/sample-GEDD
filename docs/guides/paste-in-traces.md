@@ -4,6 +4,8 @@
 
 ## TL;DR
 
+A product's taste is made explicit by experts looking at real outputs. Paste-in mode removes the setup step between "I have traces" and "I'm naming the failures", so the failure codebook (the named, severity-ranked list of ways the product must not fail) starts from the product's real mistakes instead of imagined ones.
+
 Add a second entry point to GEDD: a textarea on the home page that accepts 20+ pasted agent transcripts (or a CSV upload). Within 60 seconds, the user sees auto-suggested open codes against the pasted data, with a one-click path to refine in the existing `/coding` workbench. The `/coach` flow stays untouched as the guided onboarding for users who don't have data yet.
 
 ## The user this serves

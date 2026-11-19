@@ -1,6 +1,8 @@
-# From Domain Expert to AI Judge: Building Your Agent's Character in 6 Steps
+# From Domain Expert to AI Judge: Giving Your Agent Your Product's Taste in 6 Steps
 
 *How we tested the GEDD skill end-to-end with an insurance claims bot — and why the person who knows the domain should be the one defining what "correct" means.*
+
+An agent's character is the product's taste in practice: what it will and won't say, and which mistakes it must never make. If nobody with domain expertise writes that down, every model or prompt change nudges the agent toward generic behaviour. The GEDD skill lets the domain expert write it down once and have it checked on every change.
 
 ---
 
@@ -265,6 +267,8 @@ The GEDD skill translates your domain expertise into six concrete artifacts:
 The person closest to the domain should be the one defining the agent's character. Not because engineers can't — but because they shouldn't have to guess what "coverage hallucination" means in insurance, or why "not escalating a bad faith allegation" is a critical failure.
 
 That's the bounded context for agent character — and only you can build it.
+
+It is also what keeps your product's taste intact as the team swaps models and rewrites prompts: the error codes, golden dataset and judge stay the bar. And it compounds. Each new failure you name in production is one more piece of your standard that a competitor using the same model doesn't have.
 
 ---
 

@@ -1,6 +1,7 @@
 # GEDD findings log
 
-Each finding has an id, a status, the evidence and the script that regenerates it. CI re-runs the
+The evidence behind GEDD's promise that a product's taste survives model, prompt and training changes, including
+the results that didn't support it. Each finding has an id, a status, the evidence and the script that regenerates it. CI re-runs the
 scripts on every pull request and fails if a committed result drifts. When a new round changes a
 finding, update its status and date here rather than deleting it: superseded findings stay as a
 record.

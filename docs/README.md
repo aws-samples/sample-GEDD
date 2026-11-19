@@ -1,15 +1,17 @@
 # GEDD documentation
 
-Start with the [latest findings](../FINDINGS.md), then pick a path by flywheel stage or by role.
+GEDD keeps your AI product's taste as you build with agents: domain experts name and rank the ways the product must
+never fail, and that one list becomes the eval, the RL reward and the response gate. Start with
+[why GEDD](../README.md#why-gedd) and the [latest findings](../FINDINGS.md), then pick a path by role or by flywheel stage.
 
-## By flywheel stage
+## By flywheel stage: make taste explicit → measure it → train toward it → enforce it → grow it
 
 | Stage | Read |
 |---|---|
 | **1 · Evidence**: cases, expert labels, failure codebook | [Methodology: open and axial coding](methodology.md) · [Domain expert guide](guides/domain-expert-guide.md) · [Paste in traces](guides/paste-in-traces.md) |
 | **2 · Measure**: locked set, paired tests | [Findings log and the GEDD bar](../FINDINGS.md) · [Cohen's kappa for LLM judges](guides/cohens-kappa-for-llm-judges.md) · `grounded-evals stats compare` |
-| **3 · Improve**: harness, SFT, DPO, RL | [Invoice case study](../experiments/docile-invoices/) · [Round-2 roadmap](../experiments/docile-invoices/docs/roadmap-sft-dpo-gedd.md) · [LoRA explained](../experiments/docile-invoices/docs/lora-explained.md) |
-| **Reward model** | [README: the reward model](../README.md#the-gedd-flywheel) · [Research positioning](research.md) · `grounded-evals reward score` |
+| **3 · Improve**: RL against the codebook reward, SFT, DPO | [RL eval harness](../experiments/docile-invoices/README.md#rl-eval-harness) · [LLM-as-Judge as the reward](judge-reward-rl.md) · [Invoice case study](../experiments/docile-invoices/) · [Round-2 roadmap](../experiments/docile-invoices/docs/roadmap-sft-dpo-gedd.md) · [LoRA explained](../experiments/docile-invoices/docs/lora-explained.md) |
+| **Reward model** | [README: the reward model](../README.md#the-gedd-flywheel) · [Judge as reward](judge-reward-rl.md) · [Research positioning](research.md) · `grounded-evals reward score` |
 | **4 · Guard**: response gate | [Building an LLM-as-Judge](guides/building-llm-as-a-judge.md) · [PM to ML judge handoff](guides/pm-to-ml-llm-judge.md) · [Launch checklist](guides/launch-checklist.md) |
 | **5 · Production**: traces, PPI, new codes | [Pipeline guide](guides/pipeline-guide.md) · `grounded-evals stats ppi` |
 
@@ -17,9 +19,9 @@ Start with the [latest findings](../FINDINGS.md), then pick a path by flywheel s
 
 | Role | Start here |
 |---|---|
+| Product manager | [Why GEDD](../README.md#why-gedd) → [Explaining GEDD to a product owner](blog/blog-explain-to-product-owner.md) → [PM to ML judge handoff](guides/pm-to-ml-llm-judge.md) → [Launch checklist](guides/launch-checklist.md) |
 | Domain expert | [Domain expert guide](guides/domain-expert-guide.md) → [a worked judge for your domain](judges/) |
-| Product manager | [Findings](../FINDINGS.md) → [Why accuracy is worth money](../experiments/docile-invoices/docs/market-and-why-accuracy.md) → [Launch checklist](guides/launch-checklist.md) |
-| ML engineer | [Setup](setup.md) → [Pipeline guide](guides/pipeline-guide.md) → [Invoice experiments](../experiments/docile-invoices/) |
+| ML engineer | [Setup](setup.md) → [RL eval harness](../experiments/docile-invoices/README.md#rl-eval-harness) → [Judge as reward](judge-reward-rl.md) → [Pipeline guide](guides/pipeline-guide.md) |
 | Researcher | [Research positioning](research.md) → [Findings log](../FINDINGS.md) |
 
 ## Everything else

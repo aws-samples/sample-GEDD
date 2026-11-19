@@ -1,7 +1,11 @@
 # What's next: hill-climbing past SFT with GEDD, DPO and RL
 
-*Research and plan for round 2 of the DocILE fine-tune. Every number marked "measured" comes from our 500-document test
+*Research and plan for round 2 of the DocILE case study. Every number marked "measured" comes from our 500-document test
 set; costs are serverless list prices (Oct 2026) and are estimates.*
+
+Round 2 has to improve the AP product without eroding its standard (every field right, no invented values). SFT is one
+way to get there; DPO, RL and a tuned gate are others. Whichever is used, the GEDD codebook decides what counts as
+better, and the RL eval harness checks that the score and the product move together.
 
 ## 1. Where SFT got us, and what's left
 
@@ -118,6 +122,9 @@ invoice.
   missed ones (as round 1 partly did) must say so.
 - **Track document-level success.** The business metric is invoices with all fields right (12.8% → 38.8% after round 1),
   plus "both money fields right" (74% → 84%).
+- **Audit any reward before RL, and watch it during.** `12_reward_audit.py` scores the reward on degenerate policies
+  first (F8: a cost-only GEDD reward leaves abstention within 0.03 of the base model). During training, `rl_harness.py`
+  trips when the trained reward rises while gold accuracy falls: the score going up while the product gets worse.
 
 ## 4. The round-2 plan
 

@@ -1,6 +1,8 @@
-# The 90-Minute Investment That Lets Me Sleep Before Every Agent Launch
+# The 90 Minutes That Keep Our Agents' Taste Intact, Launch After Launch
 
-*I'm a CPO. I don't write code. But I now own the quality gate for every AI agent my company ships — and I can explain exactly why each one is safe to deploy.*
+*I'm a CPO. I don't write code. But I now own the standard every AI agent my company ships is held to, and I can explain exactly why each one is safe to deploy.*
+
+Our agents change every month: new models, new prompts, new frameworks. Each change is optimised against some test, and when that test was written without domain expertise, the agents drifted toward generic behaviour that looked fine on a dashboard. This post is about how I put our own standard, our product's taste, back in charge.
 
 ---
 
@@ -8,7 +10,7 @@
 
 Last quarter, a board member asked me: "How do you know your AI agents are safe to ship?"
 
-I said what every product leader says: "We have testing." But when she pressed — *what* testing, *who* decides what's correct, *how* do you know it covers the right scenarios — I didn't have a good answer.
+I said what every product leader says: "We have testing." But when they pressed — *what* testing, *who* decides what's correct, *how* do you know it covers the right scenarios — I didn't have a good answer.
 
 Our engineers had eval suites. They ran on every deploy. Green checkmarks everywhere. But the tests were written by engineers who don't know that citing NEM 2.0 rates in California is wrong (it's been NEM 3.0 since April 2023), or that saying "mg" when you mean "mcg" is a potentially fatal pharmacy error, or that a 90-day visa overstay doesn't trigger the 3-year bar (that's 180 days).
 
@@ -97,7 +99,7 @@ Done. 90 minutes. My domain knowledge is now encoded in a judge that runs automa
 
 ## What Happens After I'm Done
 
-I hand `session.json` to my ML engineer. She runs one command:
+I hand `session.json` to our ML engineer. They run one command:
 
 ```
 grounded-evals mlflow --session session.json --tracking-uri $SAGEMAKER_ARN
@@ -105,7 +107,7 @@ grounded-evals mlflow --session session.json --tracking-uri $SAGEMAKER_ARN
 
 My error codes become automated judges. My golden queries become the regression suite. My annotations become the calibration baseline. It all lives in SageMaker MLflow — tracked, versioned, monitored.
 
-**I never touch MLflow.** She never touches the golden dataset. We each work in our own tool, connected by one file.
+**I never touch MLflow.** They never touch the golden dataset. We each work in our own tool, connected by one file.
 
 ---
 
@@ -175,6 +177,8 @@ These are **my** artifacts. I produced them. I can explain every one of them to 
 > "The eval pipeline is the product. The agent is just the thing it produces."
 
 The agent will change — new models, new prompts, new capabilities. But the eval pipeline persists. It's the institutional knowledge that prevents every past mistake from recurring. And it was built by the person who knows the domain best: me.
+
+That is our taste, written down and enforced on every deploy. It is also our moat: a competitor can call the same base model, but they don't have our error codes, our annotated cases or the judge calibrated on them, and that evidence grows every time production shows us a new failure.
 
 ---
 

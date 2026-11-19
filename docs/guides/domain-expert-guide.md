@@ -1,8 +1,10 @@
 # GEDD — Domain Expert's Guide
 
+Your judgment is your AI product's taste: what a good answer looks like, and which failures are unacceptable. If no one writes it down, every model upgrade and prompt change gets scored against a generic standard instead, and the product slowly drifts toward generic model behaviour. This guide is how you write it down so it holds.
+
 A step-by-step walkthrough of **Grounded Evidence Driven Development** for the people who actually know what "good" looks like: product managers, subject-matter experts, customer success leads, compliance reviewers, anyone whose judgment the AI agent ultimately has to satisfy.
 
-You don't need to write code. You don't need to know what an embedding is. You bring **domain judgment**; GEDD turns that into a deployable evaluation system in roughly 90 minutes.
+You don't need to write code. You don't need to know what an embedding is. You bring **domain judgment**; GEDD turns that into a deployable evaluation system in roughly 90 minutes. The same failure codes later become the reward your ML engineers train toward and the gate that decides which responses reach customers.
 
 ---
 
@@ -17,7 +19,7 @@ By the end of this guide you will have:
 5. A **deployable LLM-as-a-Judge prompt** — a rubric the system can use to grade thousands of future responses without you, calibrated against your own judgment with Cohen's Kappa.
 6. An **evaluation report** — a self-contained HTML you can email to a stakeholder.
 
-The whole thing is the **eval pipeline** — and the eval pipeline is the product.
+The whole thing is the **eval pipeline** — and the eval pipeline is the product. Your codes, annotations and calibrated judge are also the moat: a competitor can use the same base model, but not your evidence.
 
 ---
 
@@ -272,7 +274,7 @@ Below that, the eval runner: each golden query shown as a card with a model sele
 **Time:** ~30–60 minutes (this is the deepest step)
 **What you produce:** A **codebook** — your domain's vocabulary for what goes wrong — and one or more codes attached to every failure.
 
-This is **Open Coding**. The principle: don't pick from a predefined list of failure types. Look at each failure and **name it in your own words**. Patterns will emerge.
+This is **Open Coding**. The principle: don't pick from a predefined list of failure types. Look at each failure and **name it in your own words**. Patterns will emerge. This is the step where your taste becomes explicit: a generic list would let through the failures only your domain notices, like a subtitle that reads naturally but has dropped `{player_name}`.
 
 ### What you see
 
@@ -378,7 +380,7 @@ When you import a teammate's annotations, the page shows **code overlap %** — 
 **Time:** ~15 minutes
 **What you produce:** A **paradigm model** — your codes organized into a causal map.
 
-Open coding gave you names. Axial coding tells you **why**. You're now treating your codebook as data and asking: *what triggers these failures? Under what conditions? What makes them worse? Who suffers?*
+Open coding gave you names. Axial coding tells you **why**, which is what lets you rank failures by how much they hurt users. You're now treating your codebook as data and asking: *what triggers these failures? Under what conditions? What makes them worse? Who suffers?*
 
 ### What you see
 
@@ -443,7 +445,7 @@ Adapted from grounded theory (Strauss & Corbin), the model has six structural sl
 **Time:** ~20 minutes
 **What you produce:** A deployable LLM-as-a-Judge prompt, calibrated against your annotations.
 
-This is selective coding: turning your paradigm model into a **rubric** an LLM can apply at scale. Five sub-steps, with a stepper at the top of the page.
+This is selective coding: turning your paradigm model into a **rubric** an LLM can apply at scale, so your standard is applied to thousands of responses you will never read. Five sub-steps, with a stepper at the top of the page.
 
 ### Step 7.1 — Review failures
 Read-only summary of your top failure codes by frequency, with the paradigm model rendered. Confirm everything looks right. If your codebook is messy, click **"Audit Codebook"** to see issues. Click **"Next: Map Dimensions →"** when ready.
@@ -622,4 +624,4 @@ You're done with a GEDD pass when:
 7. ✅ Eval Health Score ≥ 60.
 8. ✅ HTML report exported and shared.
 
-If you hit all eight, you have a deployable evaluation system. Re-run it the next time the agent's system prompt changes — that's the **eval pipeline**, and the eval pipeline is the product.
+If you hit all eight, you have a deployable evaluation system. Re-run it the next time the agent's system prompt changes — that's the **eval pipeline**, and the eval pipeline is the product. Each new failure you code in a later round makes the standard sharper and harder to copy.

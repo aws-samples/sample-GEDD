@@ -2,6 +2,8 @@
 
 Read `session.json` (use the Read tool) and display a concise dashboard. If the file doesn't exist, say so and suggest running `/gedd` to start.
 
+(Context, not part of the display: the error codes counted below are the start of the product's failure codebook, the experts' ranked list of ways it must not fail, which GEDD later turns into the eval, RL reward and response gate.)
+
 Display exactly this layout:
 
 ```

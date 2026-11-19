@@ -205,7 +205,7 @@ def login_page():
         ui.html('<div class="brand-title" style="font-size:1.4rem; color:#f7f8f8; font-weight:700">GEDD</div>')
         ui.html(
             '<div style="font-size:0.8rem; color:#6e737b">'
-            "SME evidence to LLM-as-Judge response gates"
+            "Keep your AI product's taste as you build with agents"
             "</div>"
         )
         with ui.card().style("width: 320px; padding: 2rem; border-radius: 12px; background: #141516; border: 1px solid rgba(255,255,255,0.09)"):
@@ -503,9 +503,9 @@ def main_page() -> None:
             ui.html('<div class="coach-product-title">Grounded Evidence Driven Development</div>')
             ui.html(
                 '<div class="coach-product-copy">'
-                "Coach leads SMEs and product managers from baseline behavior to a "
-                "systematic LLM-as-Judge and response gate that checks customer-facing "
-                "answers before customers see them."
+                "Coach helps product managers and domain experts name the ways the product "
+                "must never fail, then turns that list into an eval, a training reward and an "
+                "LLM-as-Judge gate that checks answers before customers see them."
                 "</div>"
             )
             coach_stage_container = ui.element("div")

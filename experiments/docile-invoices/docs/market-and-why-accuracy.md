@@ -1,7 +1,10 @@
 # Why invoice extraction is worth solving, and why accuracy is the whole game
 
-*A business-strategy brief for the DocILE fine-tune. Market figures are third-party estimates (sources at the end);
+*A business-strategy brief for the DocILE case study. Market figures are third-party estimates (sources at the end);
 everything labelled "measured" comes from our own test set.*
+
+For an AP product, taste is concrete: every field right, and no invented values. This brief shows why that standard
+is worth protecting in money terms, and why a model that is "mostly accurate" doesn't meet it.
 
 ## 1. The market
 
@@ -92,8 +95,13 @@ serverless inference endpoint (about $0.0005 per invoice). Serving the fine-tune
 - **Accuracy where it matters**: +9.8 points overall, every field better, and still +4.7 on vendor layouts it never saw.
 - **Cost**: a small open model at fractions of a cent per invoice; one $36 training run.
 - **Control**: open weights you own. Financial documents can stay in an environment you control.
-- **A path to keep improving**: GEDD (see the README) turns AP experts' judgments on the remaining errors into an
-  LLM-as-Judge gate (post / block / human review) and new training data.
+- **A path to keep improving**: GEDD (see the README) turns AP experts' judgments on the remaining errors into a
+  failure codebook, then into an LLM-as-Judge gate (post / block / human review), an RL reward that the reward audit
+  (`12_reward_audit.py`) checked against three degenerate policies (abstain, guess blindly, dump every candidate)
+  without paying any of them, and new training data.
+
+The base model is available to every competitor. What isn't is the AP team's standard written down as evidence: which
+errors matter, how much each costs, and the labelled cases that prove it. That is the part worth owning.
 
 ## Sources
 

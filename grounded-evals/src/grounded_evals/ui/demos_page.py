@@ -1132,7 +1132,7 @@ def demos_page():
         # Page header
         with ui.element("div").classes("ds-page-heading"):
             with ui.element("div"):
-                ui.html('<div class="ds-page-title">SME evidence to LLM-as-Judge response gates</div>')
+                ui.html('<div class="ds-page-title">Keeping product taste: SME evidence to eval, reward and gate</div>')
                 ui.html(
                     '<div class="ds-page-subtitle">'
                     'Each demo starts with baseline evidence and SME annotations, then produces '

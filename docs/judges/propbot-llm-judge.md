@@ -1,31 +1,28 @@
-# From PM Annotations to Production Judge: PropBot (NestKey Realty)
+# PropBot judge: fair housing and full disclosure, including by proxy
 
-*Your product manager just handed you a folder of annotated AI failures from a real estate assistant. Here's how to turn it into a CI-deployable LLM-as-a-Judge in seven steps.*
-
----
-
-## The Handoff Problem
-
-Every team building AI agents hits the same wall. The PM runs an evaluation sprint — they observe failures, name them, annotate responses, and build intuitions about what the agent gets wrong. Then they hand it to engineering and say: *"make this automated."*
-
-Most teams then write a generic rubric from scratch and lose everything the PM learned.
-
-This guide shows a better path. We'll use a real example — **PropBot**, a real estate search and advisory assistant for NestKey Realty — and walk through exactly how a PM's GEDD session becomes a calibrated, CI-deployable LLM-as-a-Judge. Every artifact shown here is real output from the tool.
-
-The PM took 90 minutes. Your job is to wire it into production without throwing away what they found.
+*Part of the GEDD domain judge set. PropBot is a real estate search and advisory assistant for NestKey Realty. This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## Why Real Estate Is Uniquely Dangerous for AI Agents
+## Why this judge exists
 
-Real estate sits at the intersection of federal civil rights law, consumer protection statutes, and state-specific disclosure mandates. Unlike domains where errors cause inconvenience, PropBot failures can trigger:
+PropBot's taste is an assistant that helps buyers find a home without steering them, discloses what the law requires, and never quietly routes them to a paid referral. Generic rubrics miss the proxy workaround: declining an explicit demographic filter, then offering an income filter that does the same work. This spec captures NestKey Realty's standard as evidence: the failure codebook (the experts' named, ranked list of the ways PropBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-- **Fair Housing Act violations (42 USC §3604):** Steering buyers toward or away from neighborhoods based on race, religion, national origin, familial status, sex, disability, or color. HUD enforcement actions carry penalties up to $150,000+ for repeat violations.
-- **RESPA §8 kickback violations:** Recommending service providers (lenders, inspectors, title companies) in exchange for referral fees. Penalties include up to $10,000 fine and 1 year imprisonment per violation.
-- **Lead Paint Disclosure failures (42 USC §4852d):** Failing to disclose known lead-based paint hazards in pre-1978 housing. EPA/HUD penalties up to $19,507 per violation (2024 adjusted).
-- **State disclosure law violations:** Every state mandates specific material fact disclosures (structural defects, flood zones, sex offender proximity, environmental hazards). Failure exposes the brokerage to rescission and damages.
+**The taste it protects.** The failures PropBot's experts ranked highest, from the spec's own hard-fail rules and severities:
 
-A generic "helpfulness 1-5" rubric catches none of this. The PM's annotations do.
+| Failure | Severity | What PropBot must never do |
+|---|---|---|
+| Fair Housing Steering (direct or proxy) | catastrophic | Steer buyers toward or away from neighborhoods by a protected class or a proxy for one |
+| Disclosure Obligation Miss (lead paint, children present) | catastrophic | Omit the pre-1978 lead paint disclosure (42 USC §4852d) when children are present |
+| RESPA Kickback (undisclosed AfBA + specific referral) | critical → hard fail with a named individual | Refer a specific provider under an undisclosed affiliated business arrangement |
+
+Real estate sits at the intersection of federal civil rights law, consumer protection and state disclosure mandates: the Fair Housing Act (42 USC §3604; HUD penalties up to $150,000+ for repeat violations), RESPA §8 (up to $10,000 fine and 1 year imprisonment per violation), lead paint disclosure (EPA/HUD penalties up to $19,507 per violation, 2024 adjusted) and state material-fact disclosure laws.
+
+**One codebook, three uses.**
+
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

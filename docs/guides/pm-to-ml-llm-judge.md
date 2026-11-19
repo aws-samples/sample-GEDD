@@ -8,11 +8,11 @@
 
 Every team building AI agents hits the same wall. The PM runs an evaluation sprint — they observe failures, name them, annotate responses, and build intuitions about what the agent gets wrong. Then they hand it to engineering and say: *"make this automated."*
 
-Most teams then write a generic rubric from scratch and lose everything the PM learned.
+Most teams then write a generic rubric from scratch and lose everything the PM learned. That is where a product's taste quietly leaks out: the judge that scores every later prompt change, model swap and training run no longer knows which failures this product can't tolerate, so the product drifts toward whatever the generic rubric rewards.
 
 This guide shows a better path. We'll use a real example — **ClinicalBot**, a clinical decision-support assistant for MedPulse Health System — and walk through exactly how a PM's GEDD session becomes a calibrated, CI-deployable LLM-as-a-Judge. Every artifact shown here is real output from the tool.
 
-The PM took 90 minutes. Your job is to wire it into production without throwing away what they found.
+The PM took 90 minutes. Your job is to wire it into production without throwing away what they found. What they found (the codes, severities and annotated cases) is also the product's moat: evidence a competitor can't reproduce with the same base model.
 
 ---
 
@@ -99,7 +99,7 @@ annotations = [
 
 ### 3. Codebook
 
-The PM named and defined the failure patterns they observed — not pre-baked categories, but categories that emerged from the actual data.
+The PM named and defined the failure patterns they observed — not pre-baked categories, but categories that emerged from the actual data. The codebook is the product's standard in one list: everything you build in this guide, and any reward you later train against, comes from it.
 
 ```python
 codebook = [
@@ -271,7 +271,7 @@ This grouping determines how you weight your rubric. In clinical contexts, safet
 
 ## Step 2: Identify Your Hard-Fail Rules
 
-Some failures are not gradable. They're automatic disqualifiers regardless of how well the agent performs on other dimensions. The PM's annotations tell you which ones.
+Some failures are not gradable. They're automatic disqualifiers regardless of how well the agent performs on other dimensions. The PM's annotations tell you which ones. Hard-fails are what stop a strong average score from hiding the failures the product must never ship.
 
 **Rule: if ANY annotation is labeled `catastrophic` AND maps to safety or instruction_following with high confidence, it's a hard-fail candidate.**
 
@@ -426,7 +426,7 @@ Non-prescribing, non-diagnostic. Clinical decision SUPPORT only.
 
 ## Step 5: Calibrate with Cohen's Kappa
 
-Your judge prompt is a hypothesis. Kappa tells you if it's a good one.
+Your judge prompt is a hypothesis. Kappa tells you if it's a good one, that is, whether it applies the PM's standard or its own.
 
 Run your judge against the PM's 15 annotated responses and compare verdicts:
 
@@ -556,7 +556,7 @@ These need separate rubric entries to score reliably.
 
 ## Step 7: Wire It Into CI
 
-Once κ ≥ 0.80, the judge is ready to run on every PR that touches the agent's system prompt, retrieval pipeline, or model version.
+Once κ ≥ 0.80, the judge is ready to run on every PR that touches the agent's system prompt, retrieval pipeline, or model version. This is where the standard is enforced: no change merges on a better headline score if it breaks what the PM flagged.
 
 ```python
 # ci/eval_clinicalbot.py
@@ -682,7 +682,7 @@ Pause and look at what you built vs. what you'd have built from scratch.
 - Few-shot examples drawn verbatim from the PM's annotation notes
 - Specific clinical patterns named (thunderclap headache + neck stiffness, warfarin + NSAID, nitrofurantoin near-term) that generative models can reason about precisely
 
-The difference in κ between a generic rubric and this one is typically 0.20–0.35. That gap is the difference between a judge that rubber-stamps everything and one that catches real regressions.
+The difference in κ between a generic rubric and this one is typically 0.20–0.35. That gap is the difference between a judge that rubber-stamps everything and one that catches real regressions. If you later use the judge as an RL reward, the same gap decides whether training moves the product toward its standard or toward generic behaviour ([judge as reward](../judge-reward-rl.md)).
 
 ---
 

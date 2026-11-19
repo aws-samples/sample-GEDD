@@ -1,6 +1,8 @@
-# GEDD Methodology — Evidence-Driven LLM Judge + Guardrail Calibration
+# GEDD Methodology: how experts' judgment becomes the product's standard
 
-GEDD is a systematic evidence-driven framework that combines grounded SME evidence, guardrail calibration scenarios, and LLM-as-a-Judge evaluation in a continuous learning lifecycle. This document covers the academic depth — grounded theory foundations, calibration statistics, and judge generation techniques — for product leaders, researchers, and engineers who need to defend the approach in a design review.
+A product keeps its taste only if its standard of good and unacceptable is written down from real outputs, not assumed. This is the method GEDD uses to do that: domain experts observe what the agent actually does, name and rank the failures, and the result becomes the **failure codebook**, the list of failure codes with a definition and severity for each, that the eval, the RL reward and the response gate are all built from.
+
+This document covers the academic depth (grounded theory foundations, calibration statistics and judge generation techniques) for product managers, researchers and engineers who need to defend the approach in a design review.
 
 The practical product guide lives in [README.md](../README.md).
 
@@ -23,7 +25,7 @@ GEDD applies three phases of Strauss & Corbin's grounded theory to LLM evaluatio
 
 ## Phase 1: Open Coding
 
-The inductive discovery phase. You break the agent's domain into testable pieces, then observe what actually happens.
+The inductive discovery phase. You break the agent's domain into testable pieces, then observe what actually happens. This is where taste becomes explicit: failures are named in the expert's own words from real outputs, not from a generic checklist.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d2a1a'}}}%%
@@ -99,7 +101,7 @@ stateDiagram-v2
 
 ## Phase 2: Axial Coding
 
-Connects the error patterns you discovered into a causal model. Answers: *why* do failures happen?
+Connects the error patterns you discovered into a causal model. Answers: *why* do failures happen? Knowing the cause and the consequence is what lets experts rank failures by severity, so the reward and the gate charge most for the failures users would notice most.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d1f3d'}}}%%
@@ -170,7 +172,7 @@ Errors map to these categories:
 
 ## Phase 3: Selective Coding (Judge Builder)
 
-Transforms the qualitative analysis into a deployable automated judge — using ML research techniques grounded in your own annotations.
+Transforms the qualitative analysis into a deployable automated judge, using ML research techniques grounded in your own annotations. The calibrated judge is part of the moat: it encodes your experts' verdicts on your cases, which a competitor using the same base model doesn't have.
 
 ```mermaid
 %%{init: {'theme': 'dark', 'themeVariables': {'primaryColor': '#1e3a5f', 'primaryTextColor': '#e2e8f0', 'primaryBorderColor': '#4a7fa5', 'lineColor': '#64b5f6', 'secondaryColor': '#1a3a2a', 'tertiaryColor': '#2d1f3d'}}}%%
@@ -261,11 +263,11 @@ The judge outputs structured JSON:
 
 ## Why grounded theory?
 
-Most eval frameworks ask: *"What should we measure?"* — then build rubrics from assumptions.
+Most eval frameworks ask: *"What should we measure?"*, then build rubrics from assumptions.
 
-Grounded Theory asks: *"What is actually happening?"* — then builds theory from evidence.
+Grounded Theory asks: *"What is actually happening?"*, then builds theory from evidence.
 
-This matters because:
+This matters for a product because whatever a model upgrade, prompt change or training run is scored against is what the product drifts toward. If that is a generic rubric ("be accurate"), the product drifts toward generic model behaviour. In the repo's invoice study, prompting traded invented values for missed ones while the aggregate score barely moved ([FINDINGS F4](../FINDINGS.md#f4)); only a breakdown by failure code showed it. Specifically:
 
 1. **You can't evaluate what you haven't observed.** Assumed rubrics miss failure modes unique to your agent.
 2. **Criteria should be weighted by evidence.** Not all dimensions matter equally for every agent.
@@ -315,7 +317,7 @@ flowchart TD
     style G fill:#90caf9,stroke:#64b5f6,color:#1a1a1a
 ```
 
-> **The flywheel never stops.** Production monitoring surfaces new failure patterns that feed back into Open Coding — your evaluation evolves as your agent evolves.
+> **The flywheel never stops.** Production monitoring surfaces new failure patterns that feed back into Open Coding, so your evaluation evolves as your agent evolves. Each round adds codes, labelled cases and calibration data, which is how the moat compounds.
 
 ---
 

@@ -1,6 +1,6 @@
 # 109 Queries, 2 Models, 1 Winner: Benchmarking AI for Privacy Engineering at Scale
 
-*We built the largest domain-specific benchmark for a privacy AI assistant — 109 queries curated by a DPO across 7 categories. The cheapest model won. Again. Here's every number, every finding, and why the flywheel makes this benchmark more valuable every quarter.*
+*Every model choice for a privacy assistant either keeps or erodes the DPO's standard of what a safe answer looks like. We scaled our privacy benchmark to 109 queries curated by a DPO across 7 categories, so model decisions are held to that standard rather than to a generic one. The cheapest model won again. Here's every number, what it does and doesn't prove, and why the flywheel makes this benchmark more valuable every quarter.*
 
 ---
 
@@ -14,7 +14,7 @@ Our first benchmark (12 queries) showed Haiku 4.5 beating Sonnet on adversarial 
 - Which model handles multi-turn privacy conversations better?
 - What's the real cost difference when you run this in CI daily?
 
-So we scaled up. A privacy engineer spent 90 minutes with `/gedd` generating 109 diverse queries — the kind of comprehensive benchmark that would take weeks to build manually.
+So we scaled up. A privacy engineer spent 90 minutes with `/gedd` generating 109 diverse queries, a benchmark that would take weeks to build manually.
 
 ---
 
@@ -94,7 +94,9 @@ Both models produced 109/109 successful responses. Zero errors. Now we score the
 | **Cost per run** | **$0.26** | $0.98 |
 | **Adversarial refusal** | **62%** | 48% |
 
-Haiku wins on the metrics that matter for compliance. Let's break it down.
+The overall scores are a point apart, so the headline doesn't pick a model. The breakdown does: Haiku leads on the metrics that matter for compliance. That's the general lesson of [FINDINGS F4](../../FINDINGS.md#f4): aggregate scores hide the trade-offs, so report by criterion and failure code.
+
+**What this does and doesn't prove:** these comparisons have not been run through the GEDD bar (Holm-adjusted McNemar plus a group bootstrap, with the minimum detectable effect reported). The adversarial gap is 13 vs 10 of 21 queries, and several category gaps rest on 5-10 queries. Treat the results as a well-designed pilot that tells you where to look, not as a proven ranking.
 
 ### Quality Scoring: 8 Privacy-Specific Criteria
 
@@ -125,7 +127,7 @@ We scored every response on 8 criteria that a DPO cares about:
 | Persona Variation | 10 | 54.3% | **60.0%** | Sonnet |
 | Ambiguous | 6 | 57.1% | 57.1% | Tie |
 
-**The pattern is clear:** Haiku wins on compliance-critical categories (edge cases, adversarial, happy path). Sonnet wins on nuance-heavy categories (multi-turn, persona variation, error recovery). For a privacy compliance tool, compliance-critical wins.
+**The pattern:** Haiku leads on compliance-critical categories (edge cases, adversarial, happy path). Sonnet leads on nuance-heavy categories (multi-turn, persona variation, error recovery). For a privacy compliance tool, compliance-critical wins.
 
 ---
 
@@ -152,14 +154,14 @@ A DPO under pressure from a VP who wants to skip consent doesn't need "let's exp
 
 ## Step 5: Human Annotation (Error Codes Discovered)
 
-The privacy engineer annotated Haiku 4.5's responses on a sample:
+The privacy engineer annotated Haiku 4.5's responses on a sample. Each failure gets a stable error code; the codes, each with a severity, make up the *failure codebook*, the shared list of ways the product must never fail that the DPO owns and the engineer builds judges and gates from:
 
 | Error Code | What Happened | GDPR Reference |
 |-----------|---------------|----------------|
 | `dpia_threshold_miss` | Didn't mention Art. 35(3)(a) automated decision-making trigger | Article 35(3)(a) |
 | `retention_period_omission` | Data mapping without retention periods | Article 30(1)(f) |
 
-Both are **compliance gaps that only a DPO would catch.** A generic eval sees "helpful guidance." A DPO sees "non-compliant ROPA."
+Both are **compliance gaps that only a DPO would catch.** A generic eval sees "helpful guidance." A DPO sees "non-compliant ROPA." This is also why a generic judge is a poor reward if you later fine-tune or run RL: it would pay for helpful-looking guidance that omits retention periods, and the score would rise while the product got worse. Audit any reward for loopholes before training ([FINDINGS F8](../../FINDINGS.md#f8), [docs/judge-reward-rl.md](../judge-reward-rl.md)).
 
 ---
 
@@ -193,7 +195,7 @@ Both are **compliance gaps that only a DPO would catch.** A generic eval sees "h
 
 ## The Flywheel: From 12 to 109 to 200+
 
-Here's how this benchmark grew — and why it'll keep growing:
+Here's how this benchmark grew, and how it could keep growing. Weeks 1-3 are what happened; Month 2 onward is an illustrative plan, not results:
 
 ```
 Week 1:   DPO runs /gedd → 12 queries (basic coverage)
@@ -215,10 +217,11 @@ Month 3:  Supervisory authority fines company for inadequate DPIA
           DPO adds 5 queries mimicking the violation pattern
           Dataset: 124 queries
 
-Month 4:  New model released (Claude Opus 4.8)
-          ML engineer runs: grounded-evals eval --model us.anthropic.claude-opus-4-8
-          Instant comparison against 124 queries
-          Decision: Opus scores 68% (better!) → swap model
+Month 4:  New model released
+          ML engineer runs: grounded-evals eval --model <new-model-id>
+          Comparison against 124 queries, by criterion and error code
+          Decision: swap only if it beats Haiku on adversarial + edge case
+          and the gain passes the significance tests
 
 Month 6:  Dataset: 150+ queries
           Every regulatory change = new queries
@@ -232,11 +235,11 @@ Month 6:  Dataset: 150+ queries
 Privacy law changes faster than any other regulatory domain:
 - **EDPB guidelines** drop quarterly
 - **Supervisory authority decisions** create new precedent monthly
-- **Adequacy decisions** change (Schrems I → II → III)
+- **Adequacy decisions** change (Schrems I and II each invalidated an EU-US framework)
 - **New legislation** intersects (AI Act, ePrivacy, DSA/DMA)
 - **National implementations** diverge (Germany vs France vs Ireland)
 
-A static benchmark becomes stale in 6 months. The flywheel keeps it current because the DPO adds queries every time the law changes. The benchmark IS the DPO's regulatory knowledge, versioned and testable.
+A static benchmark goes stale quickly. The flywheel keeps it current because the DPO adds queries every time the law changes. The benchmark IS the DPO's regulatory knowledge, versioned and testable, and it's the part of the product a competitor using the same model can't copy.
 
 ---
 
@@ -249,13 +252,13 @@ A static benchmark becomes stale in 6 months. The flywheel keeps it current beca
 | **Production model** | Haiku 4.5 | 61.5% quality, 62% adversarial refusal, $0.26/run |
 | **CI/CD gate model** | Haiku 4.5 | 11 min/run, developers won't bypass |
 | **Capability testing** | Sonnet 4.6 (monthly) | Better on multi-turn, persona variation |
-| **Model swap trigger** | When new model beats Haiku on adversarial + edge case | Run the 109-query benchmark, compare |
+| **Model swap trigger** | When new model beats Haiku on adversarial + edge case, and the gain is significant | Run the 109-query benchmark, compare |
 
 ### The Counter-Intuitive Finding
 
 **The "dumber" model is better for compliance.**
 
-Sonnet 4.6 is objectively more capable at reasoning. But that capability manifests as:
+Sonnet 4.6 is generally stronger at reasoning. On this benchmark, that capability shows up as:
 - Exploring alternatives when it should refuse
 - Providing nuance when it should be firm
 - Being helpful when it should say "no"
@@ -298,13 +301,13 @@ What you get: A 109-query domain-specific benchmark that tells you which model w
 
 | What Generic Benchmarks Say | What 109 Privacy Queries Say |
 |-----------------------------|------------------------------|
-| "Sonnet is more capable" | "Sonnet helps users circumvent consent 52% of the time" |
+| "Sonnet is more capable" | "Sonnet didn't firmly refuse 11 of 21 adversarial queries" |
 | "Higher reasoning scores" | "Higher reasoning = more creative ways to rationalize non-compliance" |
 | "Better at nuance" | "Nuance without firm refusal = regulatory risk" |
 
 For privacy engineering: **the right model isn't the smartest one. It's the one that knows when to say no.**
 
-And only a DPO — with 109 carefully curated queries — can prove which model that is.
+The DPO's 109 queries define which model that is. The engineer's job is to hold every model swap, prompt change and training run to that standard, and to show the gain is real before shipping it.
 
 ---
 

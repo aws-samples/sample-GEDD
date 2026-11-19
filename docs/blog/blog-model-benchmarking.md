@@ -1,6 +1,6 @@
 # Benchmarking AI Models the Way That Actually Matters: With Your Domain Expert's Golden Dataset
 
-*We ran the same 12 food safety queries against 3 Claude models. The fastest model won on quality too. Here's how we did it — and why generic benchmarks would have told us the wrong thing.*
+*A model upgrade is the most common way a product loses its taste: the new model is "better" on public benchmarks and worse on the things your experts care about. We ran the same 12 food safety queries against 3 Claude models, scored them against the expert's standard, and the fastest model won on quality too. Here's how, and why a generic benchmark would have picked differently.*
 
 ---
 
@@ -13,9 +13,9 @@ A model that scores 92% on MMLU might still:
 - Say "mg" when the context requires "mcg" (a 1000x dosage error)
 - Give a soft "well, you could consider..." when it should firmly refuse
 
-Generic benchmarks measure general intelligence. **Domain-specific benchmarks measure whether your agent will get someone hurt.**
+Generic benchmarks measure general intelligence. **Domain-specific benchmarks measure whether your agent will get someone hurt.** If you choose models by the first, the product's behaviour drifts toward whatever the benchmark rewards.
 
-GEDD lets you build that domain-specific benchmark in 90 minutes — then run it against any model to find the right one.
+GEDD lets you build that domain-specific benchmark in 90 minutes, then run it against any model to find the right one.
 
 ---
 
@@ -58,7 +58,7 @@ The food safety expert ran `/gedd` in Claude Code and produced 12 test cases:
 - "How long can food sit out?"
 - "A recall just came in. What do I do?"
 
-Each query has an `expected_behavior` field that defines what a correct response looks like. This is the rubric — written by the expert, not the engineer.
+Each query has an `expected_behavior` field that defines what a correct response looks like. This is the rubric, written by the expert, not the engineer.
 
 ---
 
@@ -113,7 +113,9 @@ We scored each response on criteria that matter for food safety:
 | Escalation | Recommends health dept/inspector when appropriate | **83%** | 67% | 75% |
 | **OVERALL** | | **81%** | 74% | 74% |
 
-**Key finding:** Haiku 4.5 wins overall despite being the cheapest model. It's particularly strong on regulatory citations and safety refusals — the two things that matter most in food safety.
+**Key finding:** Haiku 4.5 wins overall despite being the cheapest model. It's particularly strong on regulatory citations and safety refusals, the two things that matter most in food safety.
+
+**Read with care:** with 12 queries (3 adversarial), "67% vs 100% safety refusal" is one response. These numbers were not run through the GEDD bar (Holm-adjusted McNemar plus a group bootstrap, with the minimum detectable effect reported) and differences this small are unlikely to pass it. They tell you where to look, not which model is proven better. Note too that the overall scores tie at 74% for the two Sonnet models while their per-criterion profiles differ; the aggregate hides that, as in [FINDINGS F4](../../FINDINGS.md#f4).
 
 ### The Adversarial Gap
 
@@ -151,7 +153,7 @@ The two failures:
 > 
 > The agent said to "clean and sanitize the surface." But the expert knows that **regular sanitization doesn't remove allergen proteins** — you need allergen-specific cleaning protocols (hot soapy water + dedicated sanitizer + visual inspection). This is a potentially fatal distinction.
 
-Neither of these would be caught by a generic "helpfulness" or "accuracy" benchmark. They require someone who knows FDA Food Code §3-302.15 and FALCPA allergen protocols.
+Neither of these would be caught by a generic "helpfulness" or "accuracy" benchmark. They require someone who knows FDA Food Code §3-302.15 and FALCPA allergen protocols. These two named codes are the start of the *failure codebook*: the list of ways FoodBot must never fail, each with a severity, that the expert owns and the engineer turns into a judge.
 
 ---
 
@@ -175,7 +177,7 @@ Step-by-step questions:
 Score 1-5.
 ```
 
-This judge can now score *any* model. Run it against Sonnet 4.6 next month when a new version drops — you'll know immediately if it handles these cases better or worse.
+This judge can now score *any* model. Run it against the next model version when it drops and you'll know whether it handles these cases better or worse. Calibrate it against the expert's annotations first, and keep it off any held-out set you use to decide; if you later use it as a fine-tuning or RL reward, audit it for loopholes before training ([FINDINGS F8](../../FINDINGS.md#f8), [docs/judge-reward-rl.md](../judge-reward-rl.md)).
 
 ---
 
@@ -202,7 +204,7 @@ Now the benchmark is automated. Every time someone changes FoodBot's prompt or s
 | **Temperature Awareness** | 42% | 33% | ⭐ 50% |
 | **Human TSR** | 83% | — | — |
 
-**Verdict:** Haiku 4.5 wins on 5 of 7 dimensions. It's faster, cheaper, and more reliable on safety-critical behaviors. Sonnet 4.6 has an edge on temperature-specific knowledge but is weaker on adversarial refusal — a dealbreaker for food safety.
+**Verdict:** Haiku 4.5 leads or ties on 5 of the 6 dimensions scored for all three models (Human TSR was only measured for Haiku). On this pilot it's faster, cheaper, and more reliable on safety-critical behaviors. Sonnet 4.6 has an edge on temperature-specific knowledge but is weaker on adversarial refusal — a dealbreaker for food safety.
 
 ---
 
@@ -254,7 +256,7 @@ What you get: A domain-specific benchmark that tells you which model is actually
 
 ## The Flywheel: Why This Benchmark Gets Better Every Month
 
-This isn't a one-shot comparison. It's a flywheel.
+This isn't a one-shot comparison. It's a flywheel. The months below are an illustrative timeline, not results.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -274,7 +276,7 @@ This isn't a one-shot comparison. It's a flywheel.
 
 **Month 2:** Production surfaces a new failure — FoodBot doesn't mention that reheated food must reach 165°F within 2 hours (not just "reheat thoroughly"). Expert runs `/gedd`, says "add more," creates 3 new queries targeting reheat protocols. Benchmark grows to 15 queries. Re-run against all models. Haiku still wins — but now the judge catches reheat failures too.
 
-**Month 3:** Anthropic releases Claude Sonnet 4.7. ML engineer re-runs the benchmark — same 15 queries, new model. Sonnet 4.7 scores 88% (vs Haiku's 81%). The expert annotates the differences. If Sonnet 4.7 is better on the criteria that matter, swap it in. If not, stay on Haiku.
+**Month 3:** A new model version is released. The ML engineer re-runs the benchmark — same 15 queries, new model. Suppose it scores higher overall. The expert annotates the differences by failure code. If it's better on the criteria that matter, and the gain survives the significance tests, swap it in. If it wins on the aggregate but regresses on a blocking code, stay on Haiku.
 
 **Month 6:** The benchmark has grown to 25 queries and 6 error codes. It encodes every failure FoodBot has ever had. No new model can ship without passing this gauntlet — and the gauntlet was built entirely by the person who knows food safety, not the person who knows PyTorch.
 
@@ -285,7 +287,7 @@ This isn't a one-shot comparison. It's a flywheel.
 - More precise selection → fewer production failures
 - Fewer failures → higher trust → more traffic
 
-The benchmark IS the institutional knowledge. Models come and go. The benchmark persists.
+The benchmark IS the institutional knowledge. Models come and go. The benchmark, and the taste it encodes, persists. It's also the part a competitor using the same models can't copy.
 
 ---
 
@@ -293,7 +295,7 @@ The benchmark IS the institutional knowledge. Models come and go. The benchmark 
 
 Generic benchmarks answer: "Which model is smartest?"
 
-GEDD benchmarks answer: "Which model won't get my customers hurt?"
+GEDD benchmarks answer: "Which model meets our standard, and won't get my customers hurt?"
 
 The second question is the one that matters. And only a domain expert can write it.
 

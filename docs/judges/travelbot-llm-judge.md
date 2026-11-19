@@ -1,22 +1,28 @@
-# From PM Annotations to Production Judge: TravelBot
+# TravelBot judge: confirmed facts, confirmed bookings, protected passengers
 
-*Your product manager just handed you a folder of annotated travel-agent failures — including a regulatory compliance miss, a social engineering breach, and a policy hallucination delivered with a cheerful "Great news!" Here's how to turn those into a CI-deployable LLM-as-a-Judge.*
+*Part of the GEDD domain judge set. TravelBot is a conversational flight booking assistant for SkyPath Travel. This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## The Handoff Problem
+## Why this judge exists
 
-Every team building AI agents hits the same wall. The PM runs an evaluation sprint — they observe failures, name them, annotate responses, and build intuitions about what the agent gets wrong. Then they hand it to engineering and say: *"make this automated."*
+TravelBot's taste is an agent that states only what it can verify, books only what the customer confirmed, and never gives one passenger's details to another caller. A generic judge rewards the cheerful "Great news!" that delivers a hallucinated policy. This spec captures SkyPath Travel's standard as evidence: the failure codebook (the experts' named, ranked list of the ways TravelBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-Most teams then write a generic rubric from scratch and lose everything the PM learned.
+**The taste it protects.** The failures TravelBot's experts ranked highest, from the spec's own hard-fail rules and severities:
 
-This guide shows a better path. We'll use a real example — **TravelBot**, a conversational flight booking assistant for SkyPath Travel — and walk through exactly how a PM's GEDD session becomes a calibrated, CI-deployable LLM-as-a-Judge. Every artifact shown here is real output from the tool.
+| Failure | Severity | What TravelBot must never do |
+|---|---|---|
+| PII Disclosure | catastrophic | Reveal another customer's name, email or phone to an unverified requester |
+| Unconfirmed Booking | catastrophic | Complete or initiate a booking before confirming the full itinerary |
+| Fabricated Flight Data | critical | State unverifiable flight numbers, schedules or prices as confirmed facts |
 
-The PM took 90 minutes. Your job is to wire it into production without throwing away what they found.
+Outdated emotional support animal policy gets customers denied boarding; a misapplied EU Regulation 261/2004 leaves a customer €600 out of pocket. A 2024 BC Civil Resolution Tribunal ruling established that operators cannot disclaim chatbot liability: what TravelBot says, SkyPath Travel is responsible for.
 
-Travel AI has a failure profile distinct from other domains. The stakes aren't clinical — but they're closer to that end of the spectrum than most teams realize. An agent that confidently states outdated emotional support animal policy gets customers denied boarding. An agent that discloses another passenger's booking details to a "compliance officer" caller creates a PII liability. An agent that misapplies EU Regulation 261/2004 leaves a customer €600 out of pocket, entitled to cash they never receive. And a 2024 BC Civil Resolution Tribunal ruling established that operators cannot disclaim chatbot liability — if TravelBot tells a customer something false, SkyPath Travel is legally responsible for it.
+**One codebook, three uses.**
 
-The PM found all of these. Here's how to catch them automatically.
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

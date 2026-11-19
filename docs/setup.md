@@ -1,6 +1,8 @@
 # GEDD setup — for engineers
 
-Everything you need to get GEDD running locally and deployed. The PM-facing tour lives in [README.md](../README.md); this doc is the engineer's reference.
+Everything you need to get GEDD running locally and deployed. The app is where domain experts curate cases, annotate outputs and build the failure codebook (the named, severity-ranked list of ways the product must not fail) that becomes your eval, RL reward and response gate. Getting it running is the first step to holding every model and prompt change to your product's standard rather than a generic one.
+
+The PM-facing tour lives in [README.md](../README.md); this doc is the engineer's reference.
 
 Before a public beta or production launch, run the [launch checklist](guides/launch-checklist.md). It covers fresh install, browser E2E, auth, AWS deployment, web-app and CLI validation, MLflow handoff, rollback, and no-go criteria.
 

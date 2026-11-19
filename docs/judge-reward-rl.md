@@ -2,6 +2,11 @@
 
 *Design note, 2026-11-18. Status: research and plan. No new results yet.*
 
+**Why this matters for the product.** RL makes an agent better at whatever the reward pays for. If the reward is
+generic, RL is the fastest way to lose a product's taste. If the reward is the experts' own failure codebook, RL
+becomes the fastest way to sharpen it. Most products have no gold answer to check against, so the codebook has to
+reach the training loop through a judge.
+
 GEDD was built so expert evidence becomes SFT data. This note moves its centre of gravity: the
 **codebook-grounded LLM judge becomes the reward model**, and expert evidence calibrates and
 audits that judge, inside a GRPO loop built on the practices of agentic-RL environment design: check headroom,

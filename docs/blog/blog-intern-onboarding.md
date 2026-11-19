@@ -1,6 +1,6 @@
 # My First Week as an AI Engineer Intern: How I Learned to Evaluate Agents Before I Learned to Build Them
 
-*I joined the team expecting to fine-tune models. Instead, they handed me a tool that made me understand why evaluation matters more than the model itself.*
+*I joined the team expecting to fine-tune models. Instead, they handed me a tool that made me understand why evaluation comes first: every fine-tune, prompt change or model swap is optimised against some measurement, and if that measurement doesn't encode what our product team considers good, the product slowly turns generic.*
 
 ---
 
@@ -10,9 +10,9 @@ My manager said something that stuck with me:
 
 > "Anyone can make an agent that sounds good. Your job is to prove it actually works — or find exactly where it doesn't."
 
-She pointed me to GEDD — an open-source tool the team uses to build evaluation pipelines for AI agents. My onboarding task: take one of our agents (EnergyBot, a solar energy advisor), run the full eval pipeline, and present what I found to the team on Friday.
+They pointed me to GEDD, an open-source tool the team uses to turn domain-expert judgment into evaluations, judges and gates for AI agents. My onboarding task: take one of our agents (EnergyBot, a solar energy advisor), run the full eval pipeline, and present what I found to the team on Friday.
 
-No model training. No prompt engineering. Just: find what's wrong, name it, and make it testable.
+No model training. No prompt engineering. Just: find what's wrong, name it, and make it testable. Training comes later, and it's only as good as the thing it's trained against.
 
 ---
 
@@ -132,6 +132,8 @@ The agent said "the federal ITC is 30%" without mentioning the step-down schedul
 
 My manager later told me: "Those two error codes are exactly what we needed. An engineer would have marked both responses as correct because they answered the question. You caught the domain-specific failures."
 
+Named codes like these, each with a severity, are what GEDD calls the *failure codebook*: the plain list of ways the product must never fail. The PM and domain experts decide what goes in it; engineers build scorers, judges and gates from it.
+
 **Result:**
 ```
 Done. 9/9 annotated — 7 correct, 1 partial, 1 incorrect
@@ -224,11 +226,11 @@ I don't know much about solar energy policy. But by reading the agent's response
 
 ### 3. Error codes are the real output
 
-The golden dataset is useful. The judge prompt is useful. But the error codes — `nem_version_confusion`, `itc_outdated` — those are the real value. They're the vocabulary the team uses to talk about failures. When someone says "we have an ITC issue," everyone knows exactly what that means.
+The golden dataset is useful. The judge prompt is useful. But the error codes — `nem_version_confusion`, `itc_outdated` — those are the real value. They're the vocabulary the team uses to talk about failures. When someone says "we have an ITC issue," everyone knows exactly what that means. They're also the product's standard in a form a model can be trained against. If we ever fine-tune EnergyBot against a generic "is it helpful?" judge instead, nothing stops the score rising while the NEM answers stay wrong. That's reward hacking, and the codebook is the guard against it.
 
 ### 4. The pipeline is the product
 
-My manager keeps saying this. The agent will change — new models, new prompts, new tools. But the eval pipeline persists. The golden queries, the error codes, the judges — they're the institutional knowledge that prevents regressions.
+My manager keeps saying this. The agent will change — new models, new prompts, new tools. But the eval pipeline persists. The golden queries, the error codes, the judges are the institutional knowledge that prevents regressions. They're also what keeps the product's taste intact through all those changes.
 
 ### 5. Choose the right runtime before testing
 
@@ -275,9 +277,11 @@ If you're starting on an AI team and they hand you GEDD:
 
 2. **Name your errors specifically.** Not "wrong" — `nem_version_confusion`. Not "incomplete" — `itc_outdated`. Specific names become specific judges.
 
-3. **The flywheel is real.** After my Friday presentation, the PM added 3 more queries targeting NEM 3.0 edge cases. The eval suite grew. Next week, another intern will find new failures. The pipeline absorbs them.
+3. **The flywheel is real.** After my Friday presentation, the PM added 3 more queries targeting NEM 3.0 edge cases. The eval suite grew. Next week, another intern will find new failures. The pipeline absorbs them, and the codebook gets harder for anyone else to reproduce.
 
-4. **You don't need to be a domain expert.** You need to be curious enough to Google "is NEM 2.0 still current in California?" when something feels off. The tool gives you the structure; you bring the curiosity.
+4. **You don't need to be a domain expert to start.** You need to be curious enough to Google "is NEM 2.0 still current in California?" when something feels off. Then have a domain expert confirm the code and its severity before it gates anything. The tool gives you the structure; you bring the curiosity.
+
+5. **Before anything trains against the judge, read the reward audit.** [FINDINGS F8](../../FINDINGS.md#f8) shows how easy proxy rewards are to game; [docs/judge-reward-rl.md](../judge-reward-rl.md) explains how GEDD uses a judge as an RL reward safely.
 
 ---
 

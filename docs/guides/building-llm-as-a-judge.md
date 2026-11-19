@@ -5,6 +5,8 @@
 
 ## What You're Building — and Why It's Different
 
+The judge you build here is how your product's taste gets enforced at scale: it scores releases, can serve as the RL reward, and gates responses before customers see them. If it's generic, every change gets optimised toward generic behaviour; if it's grounded in your experts' evidence, it holds every change to your standard, and it's something a competitor with the same base model can't copy.
+
 Most LLM eval tools ask you to write criteria from scratch. GEDD does the opposite: it extracts evaluation criteria **from evidence you already have** — real failure modes observed while testing your agent, organized into a causal map through qualitative research methodology (Grounded Theory). The judge you build at the end is grounded in data, not gut feel.
 
 The workflow is:
@@ -20,7 +22,7 @@ Each step feeds the next. By the time you click "Generate Judge Prompt," the LLM
 
 ## Part 1: Foundations — Before You Touch the Judge Builder
 
-The quality of your judge is determined almost entirely by the quality of what you feed it. Invest here first.
+The quality of your judge is determined almost entirely by the quality of what you feed it. This is where your experts' taste gets written down; invest here first.
 
 ### Step 1.1 — Annotate with Precision in the Tag Failures Tab
 
@@ -45,7 +47,7 @@ Overusing "critical" breaks calibration. If everything is critical, nothing is.
 
 ### Step 1.2 — Build a Clean Codebook
 
-In the **Tag** tab, your codebook is your vocabulary of failure. A good codebook has:
+In the **Tag** tab, your codebook is your vocabulary of failure: the named list of ways your product must not fail, each with a definition and severity. Everything downstream (rubric, hard-fails, reward, gate) is built from it. A good codebook has:
 
 - **Specific names**, not categories. "Missed Drug-Drug Interaction" is better than "Accuracy Failure." The name should be readable in a judge prompt.
 - **A one-sentence definition** that a colleague with no context could apply correctly. Test it: can you apply it consistently yourself?
@@ -122,7 +124,7 @@ Use **Auto-Fill with AI** to generate initial anchors, then edit. The AI-generat
 
 ### Step 2.3 — Set Hard-Fail Rules
 
-Hard-fail rules are the most important part of a production judge for high-stakes domains. They are evaluated before the rubric — if any hard-fail condition is met, the response gets an automatic FAIL regardless of its scores on Tone or Completeness.
+Hard-fail rules are where the failures your experts ranked as unacceptable become non-negotiable. They are the most important part of a production judge for high-stakes domains. They are evaluated before the rubric — if any hard-fail condition is met, the response gets an automatic FAIL regardless of its scores on Tone or Completeness.
 
 **When to create a hard-fail rule:**
 
@@ -166,6 +168,8 @@ Edit directly in the textarea. The most common edits:
 ---
 
 ## Part 3: Calibration — Before You Deploy
+
+An uncalibrated judge enforces its own taste, not your experts'. Calibration is the check that the two match before the judge grades, rewards or gates anything.
 
 ### Step 3.1 — Run the Judge on Annotated Examples First
 
@@ -295,4 +299,4 @@ If you do one thing after reading this guide: **write better memos when annotati
 
 Every memo you write becomes either a few-shot FAIL example (showing the judge what this error looks like in your domain) or a constitutional principle discriminating example (showing the judge exactly where the agent crossed a line). A judge with 10 high-quality annotated examples with detailed memos will consistently outperform a judge with 50 annotations that say "wrong answer."
 
-Specificity compounds. Every specific annotation improves the rubric, the few-shot examples, the constitutional principles, and the active learning signal simultaneously. That is the core insight behind GEDD's Grounded Theory approach: quality of observation beats quantity of labels.
+Specificity compounds. Every specific annotation improves the rubric, the few-shot examples, the constitutional principles, and the active learning signal simultaneously. That is the core insight behind GEDD's Grounded Theory approach: quality of observation beats quantity of labels. It is also how the moat grows: specific, expert-written evidence about your product's failures is the part no one else has.

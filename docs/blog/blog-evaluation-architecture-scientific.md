@@ -1,12 +1,12 @@
 # Evaluation-Driven Development for Agentic Systems: A Stratified Sampling Approach
 
-*On the statistical foundations of domain-grounded evaluation, the precision-recall tradeoff in test set design, and why human-in-the-loop curation produces superior evaluation validity compared to synthetic generation at any scale.*
+*Every model swap, prompt change and training run is optimised against some measurement. If that measurement is generic, the product drifts toward generic behaviour while the scores look fine. This is the statistical case for measuring against the product's own expert-defined standard, at production scale.*
 
 ---
 
 ## Abstract
 
-We present a two-layer evaluation architecture for domain-specific AI agents that resolves the fundamental tension between evaluation validity (are we measuring the right thing?) and evaluation coverage (are we measuring enough of it?). Layer 1 uses a small, expert-curated golden dataset (n=100-150) optimized for construct validity and deployment gating. Layer 2 uses an LLM-as-judge derived from Layer 1 to score production traffic at scale (n=1,000+/day), optimized for failure discovery. A feedback loop promotes validated production failures to Layer 1, producing a monotonically improving evaluation system. We demonstrate this architecture on a privacy engineering agent (109 expert-curated queries, 7 categories, 2 models benchmarked) and show that the expert-curated dataset produces higher discriminative validity between models than synthetic alternatives of 10x the size.
+We present a two-layer evaluation architecture for domain-specific AI agents. Its purpose is to keep a product's standard of good and unacceptable (its *taste*) the thing every change is measured against. It resolves the tension between evaluation validity (are we measuring the right thing?) and evaluation coverage (are we measuring enough of it?). Layer 1 uses a small, expert-curated golden dataset (n=100-150) optimized for construct validity and deployment gating. Layer 2 uses an LLM-as-judge derived from Layer 1 to score production traffic at scale (n=1,000+/day), optimized for failure discovery. A feedback loop promotes validated production failures to Layer 1, producing a monotonically improving evaluation system. We illustrate this architecture on a privacy engineering agent (109 expert-curated queries, 7 categories, 2 models benchmarked) and argue that an expert-curated dataset separates models on compliance-critical behaviour where a synthetic alternative of 10x the size would not. The synthetic comparison is a hypothesis; we have not run it (see §3.3).
 
 ---
 
@@ -22,7 +22,7 @@ For domain-specific agents (legal, medical, financial, privacy), correctness is 
 2. **Severity weighting** — knowing that a dosage unit confusion (mg vs mcg) is catastrophic while a formatting issue is cosmetic
 3. **Contextual judgment** — knowing that "let's explore legitimate interest" is a correct response to a genuine legal question but an incorrect response to an attempt to circumvent consent requirements
 
-These three requirements define the construct we're measuring. An evaluation system has high construct validity when its test cases and scoring criteria faithfully represent this construct. Synthetic test generation — regardless of scale — cannot achieve high construct validity because it lacks access to (1), cannot weight by (2), and cannot distinguish context in (3).
+These three requirements define the construct we're measuring. For a product team, the construct *is* the product's taste. An evaluation system has high construct validity when its test cases and scoring criteria faithfully represent this construct. Synthetic test generation, generic LLM judges and public benchmarks lack access to (1), cannot weight by (2), and cannot distinguish context in (3), regardless of scale. Optimise a model against any of them and you optimise toward generic quality, not toward this construct.
 
 ### 1.2 The Precision-Recall Tradeoff in Test Set Design
 
@@ -75,7 +75,7 @@ The question is whether detecting a 3% regression (n=1000) justifies 10x the cos
 The expert contributes three things no synthetic process can:
 
 1. **Adversarial realism** — queries that reflect actual pressure patterns (e.g., "a VP is asking me to skip consent for ad targeting") rather than abstract adversarial templates
-2. **Failure mode specificity** — error codes like `retention_period_omission` that encode precise regulatory requirements, not generic categories like "incomplete"
+2. **Failure mode specificity** — error codes like `retention_period_omission` that encode precise regulatory requirements, not generic categories like "incomplete". The set of named, severity-ranked codes is the *failure codebook*: the shared list of ways the product must never fail, which the expert writes, the PM ranks and the engineer turns into scorers
 3. **Severity calibration** — knowing that a missing DPIA trigger is a compliance violation while a verbose response is merely suboptimal
 
 ### 2.2 Layer 2: Production Scoring (Online Evaluation)
@@ -101,6 +101,8 @@ Judge accuracy ≤ f(golden dataset quality, judge calibration)
 ```
 
 A judge trained on 20 generic queries produces generic scores. A judge trained on 109 expert-curated queries with specific error codes (`dpia_threshold_miss`, `retention_period_omission`) produces domain-precise scores. The golden dataset's construct validity propagates to the judge's scoring validity.
+
+The same bound applies when the judge becomes an RL reward: its blind spots become the policy's target, and the reward rises while the product gets worse in ways an expert would notice. That is reward hacking; at the product level it is silent taste loss. The repo's invoice case study shows the pattern before any training: every proxy reward audited pays a degenerate policy, while the codebook-derived reward and the exact scorer pay none ([FINDINGS F8](../../FINDINGS.md#f8)). So calibrate the judge against Layer 1 before it trains or gates anything, and never let it score the locked set.
 
 ### 2.3 Layer 3: The Feedback Loop (Evaluation Improvement)
 
@@ -152,7 +154,9 @@ The system converges toward complete coverage of the *observed* failure distribu
 
 ### 3.3 Analysis
 
-The expert-curated dataset produces **high discriminative validity** between models on the metrics that matter for compliance (adversarial refusal: Δ=14%, legal basis: Δ=8%). A synthetic dataset of equivalent size would likely show smaller deltas on these specific metrics because:
+The overall score barely separates the models (Δ = 1.0%); the per-criterion breakdown separates them on the metrics that matter for compliance (adversarial refusal: Δ=14%, legal basis: Δ=8%). As in [FINDINGS F4](../../FINDINGS.md#f4), aggregates hide trade-offs. These deltas have not been put through the GEDD bar (Holm-adjusted McNemar plus group bootstrap, MDE reported); on 21 adversarial queries a 14-point gap is three queries, so treat it as a pilot signal.
+
+We expect a synthetic dataset of equivalent size to show smaller deltas on these specific metrics because:
 
 1. Synthetic adversarial queries tend toward generic jailbreak patterns rather than domain-specific circumvention attempts
 2. Legal basis identification requires queries that create genuine ambiguity between Article 6 bases — something only a practitioner can construct
@@ -166,7 +170,7 @@ The more capable model (Sonnet 4.6) scored *lower* on compliance-critical metric
 - In compliance domains, helpfulness without firm boundaries constitutes a safety failure
 - Generic benchmarks (MMLU, HumanEval) cannot detect this because they reward capability, not constraint adherence
 
-This finding is only visible with domain-expert-curated adversarial queries. Synthetic adversarial generation produces queries that test *capability* (can the model refuse?) rather than *judgment* (does the model know *when* to refuse in this specific domain context?).
+Choosing a model by a generic benchmark here would have selected against the product's standard. This finding is only visible with domain-expert-curated adversarial queries. Synthetic adversarial generation produces queries that test *capability* (can the model refuse?) rather than *judgment* (does the model know *when* to refuse in this specific domain context?).
 
 ---
 
@@ -179,7 +183,7 @@ This finding is only visible with domain-expert-curated adversarial queries. Syn
 | Two-layer (100 + production) | ★★★★★ | ★★★★★ | ★★★★★ | ★★★★☆ |
 | Human annotation at scale | ★★★★★ | ★★★★☆ | ★☆☆☆☆ | ★☆☆☆☆ |
 
-The two-layer architecture achieves the validity of expert curation with the coverage of production-scale scoring, at sustainable maintenance cost.
+Ratings are qualitative judgments, not measurements. The two-layer architecture aims for the validity of expert curation with the coverage of production-scale scoring, at sustainable maintenance cost.
 
 ---
 
@@ -207,7 +211,7 @@ The two-layer architecture achieves the validity of expert curation with the cov
 
 ## 6. Conclusion
 
-The fundamental insight is that evaluation validity and evaluation coverage are orthogonal properties that cannot be jointly optimized in a single dataset. The two-layer architecture resolves this by:
+Models, prompts and training runs will keep changing. What has to stay fixed is the standard they are held to. Evaluation validity and evaluation coverage cannot be jointly optimized in a single dataset; the two-layer architecture resolves this by:
 
 1. **Separating concerns:** Layer 1 optimizes validity (expert curation). Layer 2 optimizes coverage (production sampling).
 2. **Connecting layers:** The judge propagates Layer 1's validity to Layer 2's scoring. The feedback loop propagates Layer 2's coverage discoveries to Layer 1.
@@ -215,8 +219,8 @@ The fundamental insight is that evaluation validity and evaluation coverage are 
 
 For domain-specific agents operating in regulated environments (privacy, healthcare, finance, legal), this architecture is not optional — it is the minimum viable evaluation system that satisfies both engineering requirements (automated, scalable, fast) and compliance requirements (expert-validated, auditable, comprehensive).
 
-The domain expert's 90 minutes of curation produce more evaluation value than any amount of synthetic generation — because they define the construct being measured. Without construct validity, scale is meaningless.
+The domain expert's 90 minutes of curation define the construct being measured, which no amount of synthetic generation can do. That construct, captured as a codebook, labelled cases and a calibrated judge, is also the moat: a competitor with the same base model does not have it, and it grows every time production surfaces a new failure. Without construct validity, scale is meaningless.
 
 ---
 
-*Implementation: [GEDD](https://github.com/aws-samples/sample-GEDD) (MIT-0). Structured elicitation → golden dataset → judge generation → production scoring → feedback loop.*
+*Implementation: [GEDD](https://github.com/aws-samples/sample-GEDD) (MIT-0). Structured elicitation → golden dataset and failure codebook → judge generation → production scoring → feedback loop. For using the judge as an RL reward, see [docs/judge-reward-rl.md](../judge-reward-rl.md).*

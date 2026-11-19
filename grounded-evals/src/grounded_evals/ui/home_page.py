@@ -1468,14 +1468,14 @@ def home_page():
                 )
                 ui.html(
                     '<h1 class="clean-headline">'
-                    "SME evidence to LLM-as-Judge response gates"
+                    "Keep your AI product's taste as you build with agents"
                     "</h1>"
                 )
                 ui.html(
                     '<div class="clean-subhead">'
-                    "Coach leads SMEs and product managers from baseline evidence to a "
-                    "systematic judge spec, and an LLM-as-Judge gate that checks "
-                    "customer-facing responses before customers see them."
+                    "Your domain experts name and rank the ways your product must never fail. "
+                    "Coach turns that list into your eval, your training reward and an "
+                    "LLM-as-Judge gate that checks responses before customers see them."
                     "</div>"
                 )
                 with ui.element("div").classes("clean-actions"):

@@ -67,7 +67,7 @@ def _coverage_table(state, indent: str = "  ") -> str:
 
 @click.group()
 def main() -> None:
-    """GEDD: SME evidence to LLM-as-Judge response gates."""
+    """GEDD: keep your AI product's taste as you build with agents."""
 
 
 STEP_NAMES = {

@@ -1,24 +1,28 @@
-# From PM Annotations to Production Judge: LexBot
+# LexBot judge: only real, current law
 
-*Your PM just flagged a legal AI that invented a federal circuit court opinion. Here's how to turn their annotation session into a CI-deployable judge before that hallucination lands in a filed brief.*
+*Part of the GEDD domain judge set. LexBot is an AI legal research and contract review assistant built into the Lexara Law Suite. This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## The Handoff Problem
+## Why this judge exists
 
-Every team building a legal AI hits the same wall — but the consequences are steeper than in most domains.
+LexBot's taste is that every case it cites exists and every statute it states is still in force, and that it explains what the law says rather than what the user should do. A generic judge can't tell a fabricated citation from a real one, because both read fluently. This spec captures Lexara Law Suite's standard as evidence: the failure codebook (the experts' named, ranked list of the ways LexBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-The PM runs an evaluation sprint. They observe failures, name them, annotate responses, and build sharp intuitions about what the agent gets wrong. Then they hand it to engineering and say: *"make this automated."*
+**The taste it protects.** The failures LexBot's experts ranked highest, from the spec's own hard-fail rules and severities:
 
-Most teams then write a generic rubric from scratch and lose everything the PM learned.
+| Failure | Severity | What LexBot must never do |
+|---|---|---|
+| Phantom Citation — specific case cited | catastrophic | Cite a fabricated case name, reporter, volume and page |
+| Stale Law Cited as Current | catastrophic | State overruled or repealed law as operative without a flag |
+| UPL (unauthorized practice of law) | critical, gradable | Tell the user what to do instead of what the law says |
 
-In legal AI, that loss is not merely an engineering inefficiency. The PM may have caught a phantom citation — a fabricated case name, reporter, volume, and page number that the agent generated with full confidence. They may have caught a response that told a user what to *do* rather than what the law *says*, crossing the line from legal information into legal advice. They may have caught a statute cited as current law that was repealed more than a decade ago.
+These are concrete liability vectors: Rule 11 sanctions for attorneys who file briefs containing nonexistent cases, state bar discipline for unauthorized practice of law, and policy drafted from dead statutes. Privilege misses are severe but graded by whether privileged content was analyzed; jurisdiction errors are functional.
 
-These are not vague quality concerns. They are concrete liability vectors: Rule 11 sanctions for attorneys who file briefs containing nonexistent cases, state bar discipline for unauthorized practice of law, and regulatory violations when policy is drafted from dead statutes.
+**One codebook, three uses.**
 
-This guide shows a better path. We'll use a real example — **LexBot**, an AI legal research and contract review assistant built into the Lexara Law Suite — and walk through exactly how a PM's GEDD session becomes a calibrated, CI-deployable LLM-as-a-Judge. Every artifact shown here is real output from the tool.
-
-The PM took 90 minutes. Your job is to wire it into production without throwing away what they found.
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

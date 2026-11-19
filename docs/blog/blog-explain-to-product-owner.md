@@ -1,6 +1,8 @@
-# "Why Do You Only Need 100 Test Cases?" — Explaining Our Eval Architecture to My Product Owner
+# "Why Only 100 Test Cases?" — Explaining to My Product Owner How We Keep the Agent's Taste
 
-*She asked a fair question. Here's how I explained it without a single formula.*
+*They asked a fair question. Here's how I explained it without a single formula.*
+
+Every change we ship to the agent (a new model, a prompt edit, a framework upgrade) is optimised against some test. If that test is generic, the agent drifts toward generic behaviour and nobody notices until a customer does. A small set of expert-chosen cases is how we keep the product's standard, its taste, from eroding.
 
 ---
 
@@ -153,6 +155,8 @@ That's it. Everything else — the infrastructure, the scoring, the CI/CD gates,
 > "We test our AI agent with 100 expert-validated scenarios that cover every known failure pattern in our domain. These run automatically on every code change — if anything breaks, it doesn't ship. Additionally, we score every production interaction against the same criteria, and any new failure patterns get added to the test suite permanently. The test suite grows smarter every month."
 
 That's the whole story. 100 golden test cases. Thousands of production scores. A feedback loop that makes it better over time. And a domain expert who decides what "correct" means.
+
+That last part is what protects the product. The test cases and the failure patterns behind them are our standard written down, so every model upgrade and prompt change is held to it instead of to a generic score. A competitor can use the same model. They can't copy the 125 cases our expert earned from real failures, and that set keeps growing.
 
 ---
 

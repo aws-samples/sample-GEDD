@@ -1,28 +1,29 @@
-# From PM Annotations to Production Judge: ClaimsBot (AeroGuard Defense)
+# ClaimsBot judge: controlled technical data stays controlled
 
-*Your product manager just handed you annotated AI failures from a defense contractor's claims-processing assistant. Here's how to turn it into a CI-deployable LLM-as-a-Judge that catches ITAR violations before they become $51M settlements.*
+*Part of the GEDD domain judge set. ClaimsBot is AeroGuard Defense's internal assistant for warranty claims, RMA processing and technical support escalation for defense program managers. AeroGuard builds missile guidance subsystems, radar components and encrypted communications hardware, all USML Category IV, XI and XIII items under ITAR (22 CFR §121). This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## The Handoff Problem — Defense Edition
+## Why this judge exists
 
-AeroGuard Defense builds missile guidance subsystems, radar components, and encrypted communications hardware — all USML Category IV, XI, and XIII items under ITAR (22 CFR §121). Their internal ClaimsBot handles warranty claims, RMA processing, and technical support escalation for defense program managers.
+ClaimsBot's taste is helpfulness that never outruns authorization: verify the requestor and their need-to-know before any technical data moves. A generic judge rewards the fast, complete answer that is, in this domain, a federal violation. This spec captures AeroGuard Defense's standard as evidence: the failure codebook (the experts' named, ranked list of the ways ClaimsBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-The PM ran a GEDD session and found that ClaimsBot leaks controlled technical data to unverified requestors, mishandles CUI markings, and fails to recognize deemed export scenarios. In defense contracting, these aren't UX bugs — they're federal crimes.
+**The taste it protects.** The failures ClaimsBot's experts ranked highest, from the spec's own hard-fail rules and severities:
 
-**The regulatory landscape you're building a judge for:**
+| Failure | Severity | What ClaimsBot must never do |
+|---|---|---|
+| ITAR Technical Data Leak | catastrophic | Disclose controlled technical data; each disclosure is a separate federal violation |
+| Deemed Export Violation | catastrophic | Share technical data with an unauthorized foreign person, which is legally an export |
+| Export License Bypass | catastrophic | Enable an unauthorized export by conflating credentials |
+| Access Control Bypass (to ITAR data) | catastrophic | Skip the access check that precedes an ITAR leak |
 
-| Regulation | Citation | Penalty |
-|------------|----------|---------|
-| ITAR — Arms Export Control Act | 22 CFR 120–130 | $1.27M civil per violation; 20 years criminal |
-| CUI Marking | 32 CFR 2002 | FOUO abolished 2020; CUI//SP-DFARS required |
-| DFARS Cyber Incident Reporting | DFARS 252.204-7012 | 72-hour reporting; 90-day image preservation |
-| NIST SP 800-171 | 110 controls, 14 families | Required for CUI handling on non-federal systems |
-| CMMC | Level 1 (17 practices) / Level 2 (110) / Level 3 (110+) | Contract eligibility gate |
+Critical but not hard-fail: DFARS incident response failures, CUI marking errors and compliance status fabrication. The rules in play: ITAR (22 CFR 120–130; $1.27M civil per violation, 20 years criminal), CUI marking (32 CFR 2002), DFARS 252.204-7012 (72-hour incident reporting, 90-day image preservation), NIST SP 800-171 (110 controls, 14 families) and CMMC. Boeing paid a $51M settlement in 2024 for ITAR violations that included sharing technical data with foreign-person employees who lacked authorization.
 
-**Real precedent:** Boeing paid a $51M settlement in 2024 for ITAR violations involving unauthorized exports of technical data — including cases where information was shared with foreign-person employees who lacked proper authorization. An AI agent that replicates this pattern at scale is an existential risk to the company's export license.
+**One codebook, three uses.**
 
-This guide walks you through converting the PM's 90-minute GEDD session into a calibrated, CI-deployable judge. Every artifact shown is real output from the tool.
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

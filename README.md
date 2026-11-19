@@ -1,14 +1,35 @@
 # GEDD: Grounded Evidence Driven Development
 
-**GEDD is an RL eval harness grounded in expert evidence. It turns domain-expert judgment into one failure codebook, then derives your evaluation, your RL reward (rule-based or an LLM-as-Judge reward model) and your response gate from it, and checks every training run for reward hacking.**
+**GEDD keeps your AI product's taste as you build with agents.** Your domain experts name and rank the ways your product must never fail. GEDD turns that one list into your eval, your RL reward and your response gate, so every model upgrade, prompt change and training run is held to your standard, not a generic one.
 
 ---
 
-## Latest findings
+## Why GEDD
+
+**Your product's taste is its moat, and it erodes silently.** Taste is what your domain experts know good and unacceptable look like for *your* product: a subtitle that drops `{player_name}`, an invoice total taken before commission, a dose given in the wrong unit. A competitor can use the same base model and the same agent framework. They can't copy that judgment.
+
+Every model swap, prompt change, agent-framework change, fine-tune and RL run is optimised against *something*. When that something is generic (a generic LLM judge, a proxy reward, a public benchmark, "be accurate"), the product drifts toward generic model behaviour, and aggregate scores hide it. In our own invoice study, prompting traded invented values for missed ones while the headline score barely moved (F4), and every proxy reward we audited paid a degenerate policy (F8). The score went up; the product got worse in ways users would notice.
+
+GEDD makes taste the thing you measure, train and ship against:
+
+| | What happens | What you get |
+|---|---|---|
+| **Make it explicit** | Experts label real outputs and name each failure, with a severity and whether it blocks. That list is the **failure codebook** | Your standard, written down and owned by the people who know it |
+| **Measure it** | A locked eval, reported by failure code, with significance tests | Proof a change kept the taste, not just a higher average |
+| **Train toward it** | The codebook becomes the RL reward: rule-based where answers are checkable, an LLM-as-Judge reward model where they aren't | Training that climbs your standard instead of a proxy |
+| **Enforce it** | A response gate: allow / revise / human review / block | Taste held in production, one response at a time |
+| **Guard it** | Reward audits before training, a reward-hacking tripwire during it, expert sampling + PPI++ on live traffic | You notice the moment a change starts trading taste away |
+| **Grow it** | New failures from production feed the next round | A moat that compounds: evidence competitors don't have |
+
+Under the hood, GEDD is an **RL eval harness grounded in expert evidence**: environments, rewards, reward audits, a trainer-agnostic harness and the statistics to tell a real gain from noise.
+
+---
+
+## Evidence so far
 
 *Updated 2026-11-04. Every number below is regenerated from saved per-case results, and CI fails if they drift. Null results are reported alongside the wins. The full log, with ids, evidence and scripts, is in [FINDINGS.md](FINDINGS.md).*
 
-### ✅ Proven: a GEDD round beats the off-the-shelf model on real invoices
+### ✅ Proven: a GEDD round raises the product's standard on real invoices, not just the average
 
 On 500 held-out scanned invoices from DocILE (5,000 field cases across 204 layouts), a vision LoRA fine-tune of an open model raised field accuracy from **78.5% to 88.4%**. Invoices with all 10 fields right **tripled, from 12.8% to 38.8%**. Total compute was under $50.
 
@@ -22,7 +43,7 @@ On 500 held-out scanned invoices from DocILE (5,000 field cases across 204 layou
 | Best prompt vs base, unseen layouts | +0.2 | 1.0 | [−3.1, +3.6] | ❌ underpowered (can only detect ≥ 4.9) |
 | Rules prompt vs base, whole invoices right | +4.0 | 0.01 (unadjusted) | [−0.4, +8.6] | ❌ passes McNemar, fails the cluster bootstrap |
 
-**What the error taxonomy shows:** the fine-tune cut invented values by 62% and wrong values by 39%, but missed values *rose* 22%. Prompting traded invented values for missed ones. The aggregate score hides both trade-offs. → F1–F5 · [`08_rigor.py`](experiments/docile-invoices/08_rigor.py)
+**What the failure codes show (and the average hides):** the fine-tune cut invented values by 62% and wrong values by 39%, but missed values *rose* 22%. Prompting traded invented values for missed ones. The aggregate score hides both trade-offs. → F1–F5 · [`08_rigor.py`](experiments/docile-invoices/08_rigor.py)
 
 ### ⚠️ Pilot, null result: decomposing the reward helps only when the detectors are good
 
@@ -40,7 +61,7 @@ We tested the codebook reward model (per failure code, weighted by severity, cal
 
 Prediction-powered inference (PPI++) combines judge scores on every case with a small random expert sample. Its 95% intervals had close to nominal coverage (92–97%) for field accuracy and invoice success. With the weak judge above, they were only **1–6% narrower** than expert labels alone. PPI++ falls back to the experts instead of inheriting the judge's bias, which is the safe behaviour. → F7
 
-### ✅ Proven before any training: a reward audit catches loopholes
+### ✅ Proven before any training: a reward audit catches the rewards that would trade taste away
 
 Every candidate reward was scored on the same 500 invoices, for the real systems and for three degenerate policies: answer null everywhere, never answer null, and dump every candidate into each field.
 - **All three proxy rewards pay a degenerate policy.** Charging only for invented values pays abstention a perfect 1.0, above the fine-tune.
@@ -69,13 +90,14 @@ Full positioning against the post-training literature, the gap list and its stat
 
 | I want to… | Go to |
 |---|---|
-| Understand GEDD in five minutes | [The flywheel](#the-gedd-flywheel), just below |
+| Understand GEDD in five minutes | [Why GEDD](#why-gedd) and [the flywheel](#the-gedd-flywheel) |
 | See every finding with its evidence and status | [FINDINGS.md](FINDINGS.md) |
 | Reproduce the findings | [`experiments/docile-invoices/`](experiments/docile-invoices/): `uv sync`, then `uv run python 08_rigor.py` and `uv run python 09_reward_gate_ppi.py` (no API key needed) |
 | Test whether my own system's gain is real | [`grounded-evals stats compare`](#tooling) |
 | Score and gate responses with a codebook | [`grounded-evals reward score`](#tooling) |
 | Run the expert-facing app (curate cases, annotate, build a judge) | [docs/setup.md](docs/setup.md) · [domain expert guide](docs/guides/domain-expert-guide.md) |
 | Find docs by flywheel stage or by role | [docs/](docs/) |
+| Train an agent against my own standard | [RL eval harness](experiments/docile-invoices/README.md#rl-eval-harness) · [LLM-as-Judge as the reward](docs/judge-reward-rl.md) |
 | See how GEDD compares with RLHF, DPO and rubric rewards | [docs/research.md](docs/research.md) |
 | Learn the qualitative method behind the codebook | [docs/methodology.md](docs/methodology.md) |
 
@@ -89,16 +111,16 @@ Full positioning against the post-training literature, the gap list and its stat
 
 | Stage | What happens | Evidence so far |
 |---|---|---|
-| **1 · Evidence** | Experts label real outputs; failure codes emerge from open and axial coding; each code gets a severity | Codebook from the invoice taxonomy: invented, wrong, missed |
-| **2 · Measure** | Locked test set, scored by a fixed scorer. A gain counts only if the exact McNemar test (Holm-adjusted) **and** the group bootstrap agree, and the minimum detectable effect is reported | ✅ Round 1 audited |
-| **3 · Improve** | Corrections → SFT, "A not B because `code`" → DPO pairs, severity → RL reward | ✅ SFT +9.8 · ⏳ DPO / RL next round |
+| **1 · Evidence** (make taste explicit) | Experts label real outputs; failure codes emerge from open and axial coding; each code gets a severity | Codebook from the invoice taxonomy: invented, wrong, missed |
+| **2 · Measure** (prove it held) | Locked test set, scored by a fixed scorer. A gain counts only if the exact McNemar test (Holm-adjusted) **and** the group bootstrap agree, and the minimum detectable effect is reported | ✅ Round 1 audited |
+| **3 · Improve** (train toward it) | Severity → RL reward, via the trainer-agnostic harness; corrections → SFT warm start; "A not B because `code`" → DPO pairs | ✅ SFT +9.8 · ✅ reward audit · ⏳ RL (R1, R2) |
 | **Reward model** | Calibrated per-code probabilities × severity weights. A conservative ensemble penalises judge disagreement | ⚠️ Pilot null; E2 ready |
-| **4 · Guard** | Allow / revise / human review / block. Blocking codes take precedence. Shadow mode before blocking | ⚠️ Pilot gate on invoices |
-| **5 · Production** | The reward model scores every trace; a random expert sample corrects its bias (PPI++); new codes feed round 2 | ⚠️ PPI++ validated; E3 planned |
+| **4 · Guard** (enforce it) | Allow / revise / human review / block. Blocking codes take precedence. Shadow mode before blocking | ⚠️ Pilot gate on invoices |
+| **5 · Production** (grow it) | The reward model scores every trace; a random expert sample corrects its bias (PPI++); new codes feed round 2 | ⚠️ PPI++ validated; E3 planned |
 
 **Why decomposition matters, in one line:** if the per-code probabilities are calibrated, 1 − reward is the expected business cost. Auto-posting the highest-reward responses then minimises expected cost at any straight-through rate. A single scalar reward does that only if every failure costs the same. The pilot shows the caveat: that holds only as far as the detectors can tell failures apart.
 
-**Rules that keep the reward model honest:**
+**Rules that keep the reward model honest (and your taste intact):**
 - **Calibrate it against experts** on a held-out slice before it trains or gates anything.
 - **Never let it grade the final exam.** The locked set is scored only by the fixed scorer and expert labels.
 - **Watch for reward hacking.** If its score rises but locked-set accuracy doesn't, send those cases to experts.
@@ -108,9 +130,10 @@ Full positioning against the post-training literature, the gap list and its stat
 ## Use GEDD in five steps
 
 ```text
+0. Name your taste           →  experts label real outputs; name, rank and flag the failures that must never ship
 1. Create your evaluation    →  a real task, 100+ held-out cases split by group, a success metric; lock it
 2. Establish the baseline    →  score the off-the-shelf model(s); save every per-case output
-3. Engineer your system      →  start with a harness; fine-tune if the failures are about conventions, not reasoning
+3. Engineer your system      →  start with a harness; then train against the codebook reward (audit it first)
 4. Rerun the same evaluation →  same cases, same scorer; choose versions on a dev split, never the locked set
 5. Show the before & after   →  both scores, Holm-adjusted McNemar + group bootstrap, MDE, the business metric,
                                 unseen groups separately, and what didn't work
@@ -138,20 +161,20 @@ The statistics (`grounded_evals.stats`) are pure Python and tested against hand-
 ## Reference
 
 <details>
-<summary><b>Who does what</b>: domain expert, product manager, ML engineer</summary>
+<summary><b>Who does what</b>: product manager, domain expert, ML engineer</summary>
 
-| Step | Domain expert | Product manager | ML engineer |
+| Step | Product manager | Domain expert | ML engineer |
 |---|---|---|---|
-| Scope | Names real risks and red flags | Defines the product boundary and success metric | Advises on what's measurable |
-| Cases | Curates and labels scenarios | Prioritises by customer impact | Builds the locked test set and dev split |
-| Review | Judges outputs and names failure codes | Sets severity and what blocks launch | Exports annotations into datasets |
-| Improve | Writes corrections and ranks pairs | Approves the training budget | Trains the next version and proves the gain |
-| Guard | Approves gate behaviour per failure | Owns the release decision | Builds, calibrates and deploys the judge |
-| Operate | Reviews new failures | Tracks risk and drift | Monitors and feeds traces back |
+| Scope | Defines the product boundary and success metric | Names real risks and red flags | Advises on what's measurable |
+| Cases | Prioritises by customer impact | Curates and labels scenarios | Builds the locked test set and dev split |
+| Review | Sets severity and what blocks launch | Judges outputs and names failure codes | Exports annotations into datasets |
+| Improve | Approves the training budget | Writes corrections and ranks pairs | Trains the next version and proves the gain |
+| Guard | Owns the release decision | Approves gate behaviour per failure | Builds, calibrates and deploys the judge |
+| Operate | Tracks risk and drift | Reviews new failures | Monitors and feeds traces back |
+
+**Product manager:** GEDD turns "is the AI good enough?" into a defensible decision: which customer-visible responses are allowed, revised, escalated or blocked, each traceable from scenario to annotation, failure code and decision. It's how your product's standard survives the next model upgrade.
 
 **Domain expert:** you don't write code. You say what good and dangerous answers look like, give each failure a stable code (`dose_unit_confusion`, `coverage_hallucination`, `placeholder_and_markup_corruption`), and approve what the gate does about it.
-
-**Product manager:** GEDD turns "is the AI good enough?" into a defensible decision: which customer-visible responses are allowed, revised, escalated or blocked, each traceable from scenario to annotation, failure code and decision.
 
 **ML engineer:** instead of "make it more compliant" you get structured data (annotation → code → severity → action) that becomes SFT sets, preference pairs, reward weights, judge prompts, regression tests and the gate.
 </details>
@@ -238,4 +261,4 @@ The repository follows the flywheel: findings first, then the experiments that p
 | [`.github/`](.github/) | CI (tests, lint, CDK synth, security scan, findings reproduction) and the PR template's findings-impact check |
 </details>
 
-> GEDD is the evidence pipeline that turns expert judgment into a system that keeps getting better, and the proof that it did. Including the proof of what didn't work.
+> Models will keep changing. GEDD makes sure your product's taste doesn't: expert judgment becomes the standard every change is measured, trained and shipped against, with the proof that it held, including the proof of what didn't work.

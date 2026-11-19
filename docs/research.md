@@ -1,5 +1,7 @@
 # GEDD as research: where it stands against the post-training literature
 
+GEDD's product claim is that a team can keep its AI product's taste while models, prompts and training runs change underneath it, because every one of those changes is held to the same expert-built standard. This doc asks whether that claim holds up as research.
+
 *An eval scientist's review of GEDD against the post-training and evaluation work presented at NeurIPS, ICML, ICLR and ACL: what's established, what's new, what's missing, and the experiments that would make the claims publishable.*
 
 ## Status (2026-11-03)
@@ -19,7 +21,9 @@ A draft paper (NeurIPS format, numbers generated from saved results) is kept off
 ## TL;DR
 
 - **Each piece of GEDD has precedent.** Training on human labels, preference pairs and reward models, LLM-as-Judge, rubric rewards and paired significance tests are all established.
-- **The new part is the source of the signal.** GEDD derives the eval, the reward and the gate from one expert-built **failure codebook**, built by grounded-theory coding of *observed* outputs, with traceability from each gate decision back to an expert annotation. No published method that we know of claims and tests this end to end.
+- **The new part is the source of the signal.** GEDD derives the eval, the reward and the gate from one expert-built **failure codebook** (the named, severity-ranked list of ways the product must not fail), built by grounded-theory coding of *observed* outputs, with traceability from each gate decision back to an expert annotation. No published method that we know of claims and tests this end to end.
+- **Why that matters for a product.** If the eval, the reward and the gate come from generic criteria, every model upgrade and training run pulls the product toward generic model behaviour, and aggregate scores hide the drift (F4: prompting traded invented values for missed ones while the headline barely moved). Deriving all three from one expert codebook is what keeps the product's taste fixed while everything else changes, and the codebook, its labelled cases and its calibrated judge are evidence a competitor with the same base model doesn't have.
+- **GEDD is now positioned as an RL eval harness grounded in expert evidence.** Rewards are audited for loopholes before training (F8), a trainer-agnostic harness ([`rl_harness.py`](../experiments/docile-invoices/rl_harness.py)) logs every reward and a reward-hacking tripwire per step, and the codebook-grounded judge is designed to become the reward model ([judge-reward-rl.md](judge-reward-rl.md)). SFT is one way to improve, not the centre.
 - **The statistics in `experiments/docile-invoices/` already beat most applied papers.** It uses a locked test set, an exact McNemar test, a cluster bootstrap and a separate unseen-layout slice.
 - **Four things stop it being a conference paper today:**
   1. There's no ablation showing a codebook-grounded reward or judge beats the alternatives at equal expert effort.
@@ -48,6 +52,8 @@ A draft paper (NeurIPS format, numbers generated from saved results) is kept off
 > A single expert-built, empirically grounded failure codebook can serve as the common source of (i) the evaluation, (ii) the training reward and (iii) the deployment gate, and doing so beats building each from generic or a-priori criteria, at equal expert cost.
 
 That's a testable hypothesis. Today GEDD asserts it; a paper has to measure it.
+
+In product terms, this claim is what protects taste: one standard, set by the product's experts, scores the release, pays the training run and gates each response, so none of the three can quietly optimise toward a generic proxy.
 
 ---
 
@@ -153,6 +159,7 @@ Train a single-scalar reward model, a per-failure-code reward model (GEDD), and 
 
 - **Outcome:** curves of proxy reward vs locked-set accuracy, in the style of Gao et al.
 - **H2:** the per-code, severity-weighted reward model peaks later and higher, and the ensemble version flattens the decline.
+- **Tooling for the RL arm.** The best-of-N half is [`10_bon_overopt.py`](../experiments/docile-invoices/10_bon_overopt.py). The RL half runs through the trainer-agnostic eval harness [`rl_harness.py`](../experiments/docile-invoices/rl_harness.py): it scores every try under all rewards in [`rl_env.py`](../experiments/docile-invoices/rl_env.py), computes GRPO advantages, logs failure-code counts per step, and stops on a tripwire when the trained reward rises while the gold `exact` score falls. Any GRPO trainer plugs in through its `Trainer` protocol. Experiment R1 (GEDD reward vs two hackable proxies) uses it, and the reward audit (F8) already predicts which proxies RL would exploit. Today the harness rewards from gold (RLVR); [judge-reward-rl.md](judge-reward-rl.md) plans the step to a codebook-grounded LLM judge as the reward model, which is what carries the expert standard to domains without gold.
 
 ### E3 · Expert-label efficiency
 

@@ -1,5 +1,7 @@
 # GEDD Launch Checklist
 
+Teams use GEDD to hold their AI product to their domain experts' standard, and the annotations, failure codebook and calibrated judges they build in it are the part of their product a competitor can't copy. A launch has to protect that evidence and the workflow that produces it, so every gate below must pass before you rely on it.
+
 Use this checklist before a public beta, workshop launch, or production launch of GEDD.
 
 The current product is suitable for a controlled preview when the local test suite, route smoke test, docs, workflow entry points, and handoff paths pass. Treat it as production-ready only after the full browser workflow, auth modes, AWS deployment, and MLflow handoff have been verified in the target environment.
@@ -169,6 +171,8 @@ Launch-blocking browser issues:
 ---
 
 ## 6. Domain Expert Workflow Gate
+
+This gate checks the path that turns an expert's judgment into a codebook, judge and handoff. If any step loses or distorts annotations, the product's standard is lost with them.
 
 Run one end-to-end expert scenario using a high-risk demo.
 

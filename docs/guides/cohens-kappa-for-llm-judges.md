@@ -1,5 +1,7 @@
 # Cohen's Kappa for LLM-as-a-Judge Calibration
 
+A judge only protects your product's taste if it agrees with your domain experts, not just with itself. Kappa is how you prove that agreement before the judge scores releases, pays an RL reward or gates live responses.
+
 A step-by-step guide to understanding, computing, and acting on κ when building automated evaluation systems for AI agents.
 
 ---
@@ -41,7 +43,7 @@ Consider this example: your agent is correct 80% of the time, partially correct 
 - A judge that always says "Correct" gets **80% accuracy**
 - Its kappa is **0.00** — it agrees with humans no better than chance on the failures that matter
 
-Kappa forces the judge to demonstrate it can distinguish correct from incorrect, not just predict the majority class. For AI product teams, this matters because **failures are what you're trying to catch** — a judge that rubber-stamps everything passes your CI pipeline while real regressions ship.
+Kappa forces the judge to demonstrate it can distinguish correct from incorrect, not just predict the majority class. For AI product teams, this matters because **failures are what you're trying to catch** — a judge that rubber-stamps everything passes your CI pipeline while real regressions ship. Used as a training reward, the same judge would pay the model for drifting away from your standard.
 
 ---
 
@@ -192,6 +194,8 @@ Some failures are so important that they should automatically fail the response 
 
 ## Step 6: Re-Annotate and Iterate
 
+Each round of expert labels you add here is part of your moat: calibration data on your own cases that a competitor with the same base model doesn't have.
+
 After revising the rubric:
 
 1. Run the updated judge on your annotation set
@@ -206,6 +210,8 @@ After revising the rubric:
 ---
 
 ## Step 7: Deploy and Monitor
+
+Calibration is not permanent. Models, prompts and the traffic itself change, so the judge has to be re-checked against experts or it stops holding the product to their standard.
 
 Once κ ≥ 0.80:
 

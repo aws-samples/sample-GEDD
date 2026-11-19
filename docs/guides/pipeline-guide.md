@@ -2,6 +2,8 @@
 
 ## Two Personas, One Pipeline
 
+Every prompt change, model upgrade and retrieval change that reaches CI is scored against something. This pipeline makes that something your domain experts' standard, so the product's taste is checked on every PR instead of drifting toward a generic score.
+
 GEDD bridges the gap between domain expertise and ML engineering. The domain expert discovers what the agent gets wrong. The ML engineer turns those discoveries into a production eval pipeline.
 
 ```
@@ -68,6 +70,8 @@ grounded-evals handoff --session session.json
 ```
 
 ### What the Domain Expert produces
+
+These files are the product's standard in portable form, and the core of its moat: the failure codes, annotations and judge come from your experts on your cases.
 
 | Artifact | Contents |
 |----------|----------|
@@ -151,6 +155,8 @@ jobs:
 
 ### Set regression gates
 
+Regression gates are where taste becomes a release rule: a change that scores well overall but breaks what your experts flagged doesn't ship.
+
 In your CI pipeline, fail the build if:
 - **Task Success Rate (TSR)** drops below 95% on `happy_path` queries
 - **TSR** drops below 80% on `adversarial` queries
@@ -211,7 +217,7 @@ Once the pipeline is in CI, the ML engineer monitors:
 
 ### Refreshing the eval suite
 
-When the domain expert discovers new failure modes in production:
+New failures found in production are how the standard grows each round. When the domain expert discovers new failure modes in production:
 
 ```bash
 # Domain expert adds new queries

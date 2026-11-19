@@ -9,11 +9,13 @@ information to effectively respond to your bug report or contribution.
 
 ## How this repository is organized
 
-The repo follows the GEDD flywheel, findings first:
+GEDD exists so the people building AI products with agents don't lose their product's taste: expert judgment
+becomes the standard every change is measured, trained and shipped against. Contributions should keep that
+standard traceable and the evidence honest. The repo follows the GEDD flywheel, findings first:
 
 1. **[FINDINGS.md](FINDINGS.md)** is the source of truth for what GEDD has and hasn't shown. Each finding has an id, a status, its evidence and the script that produces it.
 2. **[`experiments/`](experiments/)** holds one folder per case study. Scripts write per-case results to `results/`, and every reported number is generated from those files.
-3. **[`grounded-evals/`](grounded-evals/)** holds the app and the reusable `stats` and `reward` packages.
+3. **[`grounded-evals/`](grounded-evals/)** holds the app and the reusable `stats` and `reward` packages. The RL eval harness for the invoice case study is `experiments/docile-invoices/rl_harness.py`.
 4. **[`docs/`](docs/)** holds the methodology, research positioning, setup, guides, domain judges and blog posts.
 
 **If your change affects a finding:** re-run its script, commit the regenerated `results/`, and update the finding's status and date in FINDINGS.md. Superseded findings keep their entry; don't delete them. CI re-runs the findings scripts and fails if committed results drift.

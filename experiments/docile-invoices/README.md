@@ -1,6 +1,11 @@
-# DocILE invoice extraction: the GEDD RL eval harness on real invoices
+# DocILE invoice extraction: keeping an AP product's taste with the GEDD RL eval harness
 
-Accounts-payable clerks key the same ten fields off every invoice: invoice number, dates, vendor, customer, order number,
+An accounts-payable (AP) product has a plain standard: every field right, and no invented values. A blank goes to a
+clerk; a confident wrong value goes into the ledger. This case study shows GEDD holding a model to that standard as it
+improves, and the RL eval harness (`rl_env.py`, `12_reward_audit.py`, `rl_harness.py`) that keeps training from
+drifting away from it.
+
+AP clerks key the same ten fields off every invoice: invoice number, dates, vendor, customer, order number,
 payment terms, totals and currency. We ask GLM 5.3 Flash to read those fields off real scanned business documents and
 return JSON, try to improve it with prompting, then with a vision LoRA fine-tune, and
 test every gain for statistical significance. The same task is the GEDD RL environment: rewards, reward audits and a
@@ -11,7 +16,7 @@ p = 1e-76, layout-cluster bootstrap 95% CI [+7.7, +12.2]). On layouts it never s
 still real (+4.7, CI [+1.8, +8.1]). Prompting with the labelling rules gained only +2.2 to +2.6, and traded one kind of
 error for another. Total compute spend: about $40.
 
-**Why it matters:** an invoice skips human review only if every field is right. The fine-tune raises fully correct documents from 12.8% to **38.8%** (3x). See [docs/market-and-why-accuracy.md](docs/market-and-why-accuracy.md) for the market and value case.
+**Why it matters:** an invoice skips human review only if every field is right. The fine-tune raises fully correct documents from 12.8% to **38.8%** (3x). The headline score alone hides *how* a system got there, which is why GEDD reports invented, wrong and missed values separately ([error breakdown](docs/roadmap-sft-dpo-gedd.md)). See [docs/market-and-why-accuracy.md](docs/market-and-why-accuracy.md) for the market and value case.
 
 ## Data
 
@@ -135,8 +140,10 @@ trustworthy. Many are disagreements about *what counts as right*: the issuing di
 vendor, a printed invoice number the annotators left unlabelled, the total before or after commission. An AP team
 would judge some of these as real errors, some as acceptable, and some as label gaps.
 
-That's the problem [GEDD (Grounded Evidence Driven Development)](../../README.md) is built for: turning domain-expert
-judgment into calibrated scenarios and an LLM-as-Judge response gate. The plan for the next iteration:
+Those calls are the AP product's taste, and they belong to the AP team, not to the metric or the base model. That's the
+problem [GEDD (Grounded Evidence Driven Development)](../../README.md) is built for: turning domain-expert judgment into
+one failure codebook (the experts' named, ranked list of the ways extraction goes wrong) that becomes the eval, the RL
+reward and an LLM-as-Judge response gate. The plan for the next iteration:
 
 1. **Baseline evidence.** Take the fine-tune's wrong fields on the test set (`results/results_glm_sft_1344.jsonl`).
 2. **SME annotation.** An accounts-payable expert labels each one: real error, acceptable variant, or label gap.
@@ -144,19 +151,24 @@ judgment into calibrated scenarios and an LLM-as-Judge response gate. The plan f
    `PRE_COMMISSION_TOTAL`, `DIVISION_VS_PARENT`, `LABEL_GAP`.
 4. **Calibration set → judge.** Build a guardrail calibration set and an LLM-as-Judge that decides, per extracted
    invoice, *post to the AP system*, *block*, or *send to human review*, and measure it before it becomes a blocking control.
-5. **Hill-climb.** Feed the confirmed failures back as new SFT examples and corrected labels, re-train, and re-run the
-   same locked test set plus the GEDD judge, keeping the McNemar + cluster-bootstrap bar for every claimed gain.
+5. **Hill-climb.** Feed the confirmed failures back as corrected labels, new training examples and reward weights,
+   re-train, and re-run the same locked test set plus the GEDD judge, keeping the McNemar + cluster-bootstrap bar for
+   every claimed gain.
 
 The fine-tune makes the model better at the house rules; GEDD makes the house rules explicit, measurable and owned by
-the people who know them.
+the people who know them. Captured that way (codebook, labelled errors, severity weights, a calibrated judge), they
+are also the product's moat: a competitor on the same base model starts without them.
 
 The full round-2 plan (error breakdown, which of SFT / DPO / RL / decision tuning fixes what, costs and guardrails)
 is in [docs/roadmap-sft-dpo-gedd.md](docs/roadmap-sft-dpo-gedd.md).
 
 ## RL eval harness
 
-The repository ships the parts of RL that decide whether a run can be trusted, and leaves the gradient step to
-whichever trainer you use (TRL, verl, OpenRLHF or your own loop):
+RL makes a model better at whatever the reward pays for, so a reward that can be gamed is the fastest way to lose the
+product's standard. The audit (finding F8 in [FINDINGS.md](../../FINDINGS.md)) shows it: a reward that only charges for
+invented values pays a model that answers null everywhere a perfect score. The repository ships the parts of RL that
+decide whether a run can be trusted, and leaves the gradient step to whichever trainer you use (TRL, verl, OpenRLHF or
+your own loop):
 
 | Piece | File | What it answers |
 | --- | --- | --- |

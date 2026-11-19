@@ -1,6 +1,6 @@
 # Benchmarking AI Models for Privacy Engineering: Why the "Smartest" Model Gave the Worst Compliance Advice
 
-*We tested 3 Claude models on 12 GDPR scenarios. The cheapest, fastest model scored highest — because it refused to help a DPO cut corners. Here's the full methodology and why the flywheel matters more than any single benchmark.*
+*A privacy assistant's value is its judgment about when to say no. That judgment is the product's taste, and a model swap chosen by generic benchmarks can quietly remove it. We tested 3 Claude models on 12 GDPR scenarios. The cheapest, fastest model scored highest, because it refused to help a DPO cut corners. Here's the methodology, and why the flywheel matters more than any single benchmark.*
 
 ---
 
@@ -14,7 +14,7 @@ You're building an AI assistant for Data Protection Officers. It needs to:
 
 Generic model benchmarks tell you nothing about these capabilities. A model that scores 95% on legal reasoning benchmarks might still tell your DPO "you could argue legitimate interest" when the correct answer is "you need explicit consent under Article 9 for special category data."
 
-We used GEDD to build a privacy-specific benchmark and ran it against 3 models. The results surprised us.
+We used GEDD to build a privacy-specific benchmark and ran it against 3 models. The results surprised us. (This is a 12-query pilot; see the caveat under the results.)
 
 ---
 
@@ -109,6 +109,8 @@ Same 12 queries. Same system prompt. Three models. Apples to apples.
 | Timeline awareness | **33%** | **33%** | 25% | 30-day DSAR, 72-hour breach notification |
 | **OVERALL** | **77%** | 71% | 68% | |
 
+**Caveat:** each category has 3 queries, so 100% vs 33% adversarial refusal is 3 vs 1 responses. These differences have not been run through the GEDD bar (Holm-adjusted McNemar plus a group bootstrap, with the minimum detectable effect reported). They show where to look; the [109-query follow-up](blog-privacy-109-queries.md) found a smaller gap (62% vs 48%).
+
 ### The Adversarial Refusal Gap (The Critical Finding)
 
 This is where the benchmark told us something no generic eval would:
@@ -131,7 +133,7 @@ The Sonnet models treat this as a legitimate question to explore. Haiku treats i
 
 ## Step 4: Human Annotation (The DPO's Verdict)
 
-The privacy engineer annotated Haiku 4.5's responses:
+The privacy engineer annotated Haiku 4.5's responses. Each failure gets a stable code; together, with a severity each, the codes form the *failure codebook*, the plain list of ways PrivacyBot must never fail.
 
 **10/12 correct.** Two failures:
 
@@ -174,13 +176,13 @@ Step-by-step questions:
 Score 1-5.
 ```
 
-This judge now runs in CI. If anyone changes PrivacyBot's prompt and it stops mentioning retention periods in data mapping, the build fails.
+This judge now runs in CI. If anyone changes PrivacyBot's prompt and it stops mentioning retention periods in data mapping, the build fails. Calibrate it against the DPO's annotations before trusting it to gate, and before using it as a fine-tuning or RL reward: a reward that only checks for citations, say, can be satisfied by a model that cites articles and still gives non-compliant advice. Audit the reward for loopholes first ([FINDINGS F8](../../FINDINGS.md#f8), [docs/judge-reward-rl.md](../judge-reward-rl.md)).
 
 ---
 
 ## The Flywheel: Why This Gets Better Every Quarter
 
-Privacy law doesn't stand still. GDPR enforcement evolves. New guidance drops. The AI Act intersects. Your benchmark must evolve with it.
+Privacy law doesn't stand still. GDPR enforcement evolves. New guidance drops. The AI Act intersects. Your benchmark must evolve with it. The timeline below is illustrative: the regulatory events, query counts and error codes after Q1 are hypothetical.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -226,17 +228,17 @@ Privacy law doesn't stand still. GDPR enforcement evolves. New guidance drops. T
 - Agent misses a cross-border transfer? → `transfer_blindspot` error code
 
 **New models → instant comparison:**
-- Anthropic releases Claude Opus 4.8? → Run the same 21 queries → compare in 2 minutes
-- OpenAI releases GPT-5? → Same benchmark, different model → apples to apples
-- Fine-tuned model from your team? → Same benchmark → did fine-tuning help or hurt?
+- A new model version ships? → Run the same queries → compare in minutes
+- A model from another provider? → Same benchmark, different model → apples to apples
+- Fine-tuned or RL-trained model from your team? → Same benchmark, broken down by error code → did training help or hurt, and did it trade one failure for another?
 
-**The benchmark IS your regulatory knowledge base.** It encodes every GDPR interpretation, every enforcement precedent, every jurisdiction-specific nuance that your DPO has learned. Models come and go. The benchmark persists.
+**The benchmark IS your regulatory knowledge base.** It encodes every GDPR interpretation, every enforcement precedent, every jurisdiction-specific nuance that your DPO has learned. Models come and go. The benchmark persists, and it's the part of the product a competitor with the same base model can't copy.
 
 ---
 
 ## Why "Smarter" Models Scored Worse
 
-The Sonnet models are objectively more capable on general reasoning tasks. But for privacy engineering, that capability becomes a liability:
+The Sonnet models are generally stronger on general reasoning tasks. But for privacy engineering, that capability becomes a liability:
 
 | Behavior | Haiku 4.5 (77%) | Sonnet 4.5/4.6 (68-71%) |
 |----------|:----------------:|:------------------------:|
@@ -249,7 +251,7 @@ The Sonnet models are objectively more capable on general reasoning tasks. But f
 - Nuance without article citations = unverifiable advice
 - Exploration without refusal = enabling non-compliance
 
-Haiku's "limitations" — shorter responses, firmer refusals, more formulaic structure — are actually *features* for a compliance assistant.
+Haiku's "limitations" — shorter responses, firmer refusals, more formulaic structure — are actually *features* for a compliance assistant. A generic judge that rewards nuance and length would score this backwards.
 
 ---
 
@@ -304,7 +306,7 @@ grounded-evals mlflow --session session.json --tracking-uri $ARN --run-eval
 
 For privacy engineering, the right model isn't the smartest one. It's the one that knows when to say no.
 
-And only a DPO can build that benchmark.
+That standard belongs to the DPO and the PM. The engineer's job is to keep every model, prompt and training run held to it.
 
 ---
 

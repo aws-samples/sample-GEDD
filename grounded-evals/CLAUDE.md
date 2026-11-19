@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**Product theme (for explaining GEDD to users):** GEDD keeps an AI product's taste as it is built with agents. Domain experts name and rank the ways the product must never fail; that list (the failure codebook) becomes the eval, the RL reward and the response gate, so model upgrades, prompt changes and training runs are held to the product's own standard rather than a generic one.
+
 ## Product Vision & Value Proposition
 
 **Agent Playground** is an AI Product Manager's tool for building golden evaluation datasets and performing qualitative error analysis on AI Agents. The product name is "Agent Playground — Powered by Grounded Eval Driven Development."

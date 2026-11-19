@@ -2,6 +2,10 @@
 
 *A walk through what actually happens when we "fine-tune GLM 5.3 Flash with a LoRA adapter" to read invoices.*
 
+Fine-tuning is one way to teach a model an AP product's standard (every field right, no invented values) once a prompt
+stops being enough. This guide explains the mechanics; GEDD decides what the examples should teach and checks the
+result.
+
 ---
 
 ## 1. The problem: a smart new hire who doesn't know your rules
@@ -252,6 +256,8 @@ inconsistently, and prompting fixed one error by causing another.
 - **Inconsistent labels.** The model learns your labels, including their mistakes. Garbage in, confident garbage out.
 - **Comparing against a weakened baseline.** Same prompt, same settings, same test set for every system — or the gain
   isn't real.
+- **Reading only the headline score.** Our fine-tune cut invented values by 62% but missed values rose 22%. Report each
+  error type, or a gain can hide a trade-off your users will notice.
 
 ---
 

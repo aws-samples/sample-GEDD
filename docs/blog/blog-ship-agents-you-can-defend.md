@@ -1,14 +1,16 @@
-# Ship AI Agents You Can Defend to Your CEO: The GEDD Pipeline
+# Ship AI Agents That Keep Your Product's Taste, and Defend Them to Your CEO
 
 *How to go from "I think the agent works" to "here's the evidence" in 90 minutes — with a domain expert, an ML engineer, and zero custom infrastructure.*
 
 ---
 
+Every prompt update, model swap and tool addition is tested against something. If that something is a generic score, your agent slowly drifts toward generic model behaviour, and the standard that makes your product worth using erodes without anyone seeing it. GEDD makes your domain expert's standard the test every change has to pass.
+
 Your AI agent sounds confident. It uses the right vocabulary. It passes your vibe check. But can you tell your CEO — with evidence — that it won't hallucinate a drug interaction, fabricate a legal citation, or promise a customer something your company can't deliver?
 
 Most teams can't. They shipped the agent, crossed their fingers, and now they're one bad response away from a Hacker News post they didn't want.
 
-**GEDD fixes this.** It's an open-source tool that turns domain expertise into a production eval pipeline. No ML background required. No YAML. No rubric design. Just a guided conversation that produces deployable judges.
+GEDD is an open-source tool that turns domain expertise into a production eval pipeline. No ML background required. No YAML. No rubric design. Just a guided conversation that produces deployable judges.
 
 > **The eval pipeline is the product. The agent is just the thing it produces.**
 
@@ -261,6 +263,8 @@ You can't evaluate what you haven't observed. Pre-baked rubrics miss the failure
 
 The methodology under the hood is grounded theory — the same discipline social scientists use to find patterns in human data. We use it to find patterns in agent failures.
 
+That is how the product keeps its taste as the agent changes: the expert's error codes and annotated cases become the bar for every deploy. They are also something a competitor can't copy by calling the same model, and they grow each time production surfaces a new failure.
+
 ---
 
 ## Open Source
@@ -275,7 +279,7 @@ cd sample-GEDD/grounded-evals
 pip install -e ".[dev]"
 ```
 
-Star the repo if it helps you find what your agent gets wrong.
+If it helps you find what your agent gets wrong, a star on the repo helps others find it too.
 
 ---
 

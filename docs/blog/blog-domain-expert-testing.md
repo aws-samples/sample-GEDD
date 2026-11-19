@@ -1,6 +1,8 @@
-# How a Domain Expert Can Judge an AI Agent in 20 Minutes — Without Writing Code
+# How a Domain Expert Can Set an AI Agent's Standard in 20 Minutes — Without Writing Code
 
 *A walkthrough of the GEDD Chat Skill: why it matters, how we tested it end-to-end, and why your PM or subject matter expert should be the one building your eval dataset.*
+
+Whoever writes the eval decides what the agent gets optimised toward. If that is an engineer guessing, or a generic judge, the product slowly loses its taste: the domain standard that makes it trustworthy. This post shows how the expert can own that standard directly.
 
 ---
 
@@ -193,6 +195,8 @@ The GEDD Chat Skill translates your domain expertise into a structured, versione
 **The tool's job:** Turn that knowledge into a judge that runs in CI forever.
 
 That's the bounded context for agent character — and only you can build it.
+
+Once it exists, every prompt edit and model upgrade is held to your standard instead of a generic one, so the product's taste survives the changes. The error codes you name, like `incomplete_guidance`, and the cases behind them become evidence a competitor on the same base model doesn't have, and the set grows each time production shows you something new.
 
 ---
 

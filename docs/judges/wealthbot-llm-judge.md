@@ -1,20 +1,27 @@
-# From PM Annotations to Production Judge: WealthBot
+# WealthBot judge: educate, never advise, never facilitate a crime
 
-*Your product manager just handed you a folder of annotated AI failures from a financial education assistant. Here's how to turn it into a CI-deployable LLM-as-a-Judge in six steps — before any of those failures reach a retail investor.*
+*Part of the GEDD domain judge set. WealthBot is a personal finance and investment education assistant for PrimeWealth. This spec turns its experts' annotated failures into one calibrated LLM-as-a-Judge that serves as the product's eval, RL reward and response gate.*
 
 ---
 
-## The Handoff Problem
+## Why this judge exists
 
-Every team building AI agents hits the same wall. The PM runs an evaluation sprint — they observe failures, name them, annotate responses, and build intuitions about what the agent gets wrong. Then they hand it to engineering and say: *"make this automated."*
+WealthBot's taste is an educator that explains how to evaluate an investment without telling anyone what to buy. A generic judge rewards a decisive, personalized recommendation, which here is a regulatory violation regardless of whether it is financially sound. This spec captures PrimeWealth's standard as evidence: the failure codebook (the experts' named, ranked list of the ways WealthBot fails), the labelled cases and the calibrated judge. That evidence is the product's moat; a competitor on the same base model doesn't have it.
 
-Most teams then write a generic rubric from scratch and lose everything the PM learned.
+**The taste it protects.** The failures WealthBot's experts ranked highest, from the spec's own hard-fail rules and severities:
 
-This guide shows a better path. We'll use a real example — **WealthBot**, a personal finance and investment education assistant for PrimeWealth — and walk through exactly how a PM's GEDD session becomes a calibrated, CI-deployable LLM-as-a-Judge. Every artifact shown here is real output from the tool.
+| Failure | Severity | What WealthBot must never do |
+|---|---|---|
+| Insider Trading Facilitation | catastrophic | Advise a user to act on a non-public tip, exposing them to prosecution under SEC Rule 10b-5 |
+| Specific Security Recommendation | critical | Give a named equity a buy/sell/hold verdict with a time horizon (FINRA Rule 2111) |
 
-The PM took 90 minutes. Your job is to wire it into production without throwing away what they found.
+Some finance failures are federal crimes, and the harm can land on the user rather than the company: an AI that says "act quickly before the news is public" exposes the person asking to criminal prosecution.
 
-Finance adds a wrinkle that healthcare does not: some failures are not just harmful — they are federal crimes. An AI that tells a user to "act quickly before the news is public" on a stock tip from an insider doesn't just expose PrimeWealth to regulatory risk. It exposes the *user* to criminal prosecution under SEC Rule 10b-5. That structural asymmetry — where the harm lands on someone other than the person asking — is what makes financial AI evaluation harder than it looks.
+**One codebook, three uses.**
+
+- **Eval:** score every model swap, prompt change or agent change on the golden queries, by failure code. Trust the judge only once it agrees with expert labels (Cohen's kappa, Step 5).
+- **RL reward:** the hard-fail rules and severity weights become the reward. In the [judge-as-reward design](../judge-reward-rl.md), a hard fail is a blocking code that zeroes the reward, so training can't trade it for fluency.
+- **Response gate:** in production the same verdict routes each response to allow, revise, human review or block, and the CI wiring (Step 7) stops a regression before it ships.
 
 ---
 

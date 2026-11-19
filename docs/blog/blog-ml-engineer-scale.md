@@ -1,6 +1,6 @@
 # Why 109 Expert-Curated Queries Beat 1,000 Synthetic Ones: An ML Engineer's Guide to GEDD
 
-*My first instinct was to generate 1,000 test cases. My tech lead said "start with 100 from the DPO." She was right — and here's the math that proves it.*
+*My first instinct was to generate 1,000 test cases. My tech lead said "start with 100 from the DPO." They were right: a synthetic eval measures what an LLM thinks matters, and every model or prompt tuned against it drifts away from the standard our DPO and PM actually hold.*
 
 ---
 
@@ -27,7 +27,7 @@ Signal Quality
      0   50  100  200  500  1000
 ```
 
-Expert-curated queries plateau around 100-150. After that, you're adding redundancy, not coverage. Synthetic queries start lower and never reach the same signal — because they test what an LLM *thinks* might fail, not what a domain expert *knows* fails.
+The curve is illustrative, not measured. In our experience expert-curated queries plateau around 100-150; after that you add redundancy, not coverage. Synthetic queries start lower and never catch up, because they test what an LLM *thinks* might fail, not what a domain expert *knows* fails: the product's taste.
 
 ---
 
@@ -44,7 +44,7 @@ Our DPO (Data Protection Officer) spent 90 minutes generating 109 queries using 
 | Haiku 4.5 | "I can't help with that. Article 6 requires..." | ✅ Refuses |
 | Sonnet 4.6 | "Let's explore legitimate interest as a basis..." | ❌ Enables |
 
-A synthetic query generator would never write this exact query — because it requires knowing that this is a *real thing DPOs get asked by marketing teams*. The DPO wrote it because she's heard it in meetings.
+A synthetic query generator would never write this exact query — because it requires knowing that this is a *real thing DPOs get asked by marketing teams*. The DPO wrote it because they've heard it in meetings.
 
 ### Finding 2: Missing a Single Field = Non-Compliant
 
@@ -62,7 +62,7 @@ Across 21 adversarial queries:
 
 Sonnet's extra 14% "exploration" responses aren't neutral — they're actively dangerous in a compliance context. A DPO under pressure from a VP doesn't need "let's consider the alternatives." They need "no."
 
-No synthetic benchmark would weight adversarial refusal this heavily. The DPO did — because she knows what happens when a privacy tool helps someone rationalize non-compliance.
+No synthetic benchmark would weight adversarial refusal this heavily. The DPO did, because they know what happens when a privacy tool helps someone rationalize non-compliance. One caution: 62% vs 48% is 13 vs 10 of 21 queries and hasn't been run through the GEDD bar (Holm-adjusted McNemar plus group bootstrap, MDE reported), so treat it as a pilot signal. Overall quality was 61.5% vs 60.5%; the aggregate hides the difference that matters ([FINDINGS F4](../../FINDINGS.md#f4)).
 
 ---
 
@@ -79,7 +79,7 @@ No synthetic benchmark would weight adversarial refusal this heavily. The DPO di
 | 201-500 | ~10% novel | 134 unique scenarios |
 | 501-1000 | ~3% novel | 149 unique scenarios |
 
-After ~150 queries in a single domain, you're testing variations of scenarios you've already covered. The 500th query about "cross-border transfers" doesn't add signal — it adds noise.
+These are rough estimates from our privacy domain, not a measured curve. After ~150 queries in a single domain, you're testing variations of scenarios you've already covered. The 500th query about "cross-border transfers" doesn't add signal — it adds noise.
 
 ### Signal-to-Noise Ratio
 
@@ -95,7 +95,7 @@ After ~150 queries in a single domain, you're testing variations of scenarios yo
 | 109 expert (GEDD) | $0 (human time: 90 min) | $0.26 | $0.98 | $1.24 |
 | 1,000 synthetic | ~$2 (LLM generation) | $2.40 | $9.00 | $13.40 |
 
-The 1,000-query approach costs 10x more and produces lower-quality signal.
+The 1,000-query costs are projected, not measured. The 1,000-query approach costs about 10x more, and we expect lower-quality signal.
 
 ---
 
@@ -133,9 +133,9 @@ Here's what my tech lead taught me — the architecture that gives you both qual
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Layer 1** is your GEDD golden dataset — small, high-quality, expert-validated. It gates deployments.
+**Layer 1** is your GEDD golden dataset — small, high-quality, expert-validated. It gates deployments. Its error codes, each with a severity, form the *failure codebook*: the plain list of ways the product must never fail. It's the contract between the PM, the DPO and me: they decide what's in it and what each failure costs; I turn it into scorers, judges and gates.
 
-**Layer 2** uses the judge from Layer 1 to score thousands of production interactions. No human in the loop — the judge runs automatically.
+**Layer 2** uses the judge from Layer 1 to score thousands of production interactions. The judge runs automatically, but its rate estimates should still be corrected with a small random expert sample (PPI++), or you inherit the judge's bias ([FINDINGS F7](../../FINDINGS.md#f7)).
 
 **Layer 3** is the flywheel — when Layer 2 finds a new failure pattern, the DPO validates it and promotes it to Layer 1. The golden dataset grows at the speed of real-world discovery, not synthetic generation.
 
@@ -235,7 +235,20 @@ When production scoring finds a failure:
 
 ---
 
+## When the Judge Becomes a Reward
+
+Once you fine-tune or run RL against the judge, its blind spots become the model's target. The score goes up while the product gets worse in ways the DPO would notice. That's reward hacking, and it's the fastest way to lose a product's taste without a red test. Two habits:
+
+- **Audit the reward before training.** Score it on deliberately degenerate policies (always abstain, never abstain, dump every candidate). In GEDD's invoice case study, every proxy reward paid at least one of them; the codebook-derived reward and the exact scorer paid none ([FINDINGS F8](../../FINDINGS.md#f8)).
+- **Keep the judge off the locked set.** Layer 1 is scored only by the fixed scorer and expert labels. If the judge's score rises and Layer 1 doesn't, send those cases to the DPO.
+
+The trainer-agnostic harness is [`rl_harness.py`](../../experiments/docile-invoices/rl_harness.py); the judge-as-reward design is in [docs/judge-reward-rl.md](../judge-reward-rl.md).
+
+---
+
 ## The Numbers That Convinced My Tech Lead
+
+The 109-query column is from our runs; the 1,000-query column is projected.
 
 | Metric | 109 Expert Queries | 1,000 Synthetic |
 |--------|:------------------:|:---------------:|
@@ -251,7 +264,7 @@ When production scoring finds a failure:
 
 ## What I Tell Other New ML Engineers
 
-1. **Don't generate — curate.** Your instinct to scale with synthetic data is wrong for eval. 100 expert queries > 1,000 LLM-generated ones.
+1. **Don't generate — curate.** Your instinct to scale with synthetic data is wrong for eval. 100 expert queries > 1,000 LLM-generated ones, because the expert's queries encode the product's standard and the LLM's encode a generic one.
 
 2. **The DPO's time is your most valuable resource.** Protect it. Don't ask them to review 1,000 queries. Ask them to generate 100 good ones.
 
@@ -265,31 +278,9 @@ When production scoring finds a failure:
 
 ---
 
-## The Architecture Diagram I Keep on My Monitor
+## The Short Version
 
-```
-DPO (90 min)
-  └── 109 golden queries ──→ CI/CD gate (11 min, every push)
-                                    │
-                                    ▼
-                              Judge prompt
-                                    │
-                                    ▼
-                         Production scoring (1000+/day)
-                                    │
-                                    ▼
-                         New failures discovered
-                                    │
-                                    ▼
-                         DPO validates → golden dataset grows
-                                    │
-                                    ▼
-                              CI/CD gate updated
-                                    │
-                                    └──→ (repeat forever)
-```
-
-The golden dataset is the seed. The judge is the amplifier. Production is the discovery engine. The flywheel connects them.
+The golden dataset is the seed. The judge is the amplifier. Production is the discovery engine. The flywheel connects them. Every round adds failures a competitor with the same base model hasn't catalogued, which is where the moat comes from.
 
 ---
 

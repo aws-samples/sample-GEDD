@@ -1,12 +1,10 @@
-# What Is GEDD? A Shared Explanation for Domain Experts, Product Managers, and ML Engineers
+# What Is GEDD? How Domain Experts, Product Managers, and ML Engineers Keep an AI Product's Taste
 
-GEDD means Grounded Evidence Driven Development.
+Every model swap, prompt change and training run pushes your AI product toward *something*. GEDD (Grounded Evidence Driven Development) makes sure that something is your domain experts' standard, not a generic one, so the product keeps its taste and the evidence behind it becomes a moat.
 
-It is a workflow for turning expert judgment into a systematic LLM-as-Judge response gate. The gate checks candidate customer-facing responses before customers see them.
+Taste here means the product's standard of what good and unacceptable look like, as the people who know the domain judge it. A generic evaluator can say whether an answer is fluent. It cannot reliably say whether the answer is acceptable for pharmacy, insurance, tax, legal, localization, financial services, education, healthcare operations, or any other specialist domain.
 
-GEDD exists because AI quality is not just a model problem. In most real domains, the hardest part is knowing what "good" means. A generic evaluator can say whether an answer is fluent, but it cannot reliably know whether an answer is acceptable for pharmacy, insurance, tax, legal, localization, financial services, education, healthcare operations, or any other specialist domain.
-
-GEDD puts the people who know the domain at the center of the evaluation process. Domain experts and product managers curate evidence. ML engineers turn that evidence into repeatable tests, calibrated judges, and release gates.
+GEDD has domain experts name and rank the ways the product must never fail. That ranked list is the **failure codebook**: a short list of named failure types, each with a severity and an action. GEDD turns that one list into your evaluation, your RL reward and your LLM-as-Judge response gate, which checks candidate customer-facing responses before customers see them. Product managers own the bar, experts supply the judgment, and ML engineers turn it into repeatable tests, rewards, calibrated judges and release gates.
 
 The short version:
 
@@ -219,7 +217,7 @@ Your judgment becomes executable quality control.
 
 ## For a Product Manager
 
-For a product manager, GEDD is a release-quality workflow.
+For a product manager building with agents, GEDD is how the product's standard survives every change the team ships. Each model upgrade, prompt edit or agent-framework change is checked against the same expert-ranked failures, so drift toward generic model behaviour shows up by failure code instead of hiding inside an average score.
 
 It helps you answer:
 
@@ -228,6 +226,7 @@ It helps you answer:
 - Which failures are tolerable, fix-forward issues?
 - Is the judge grounded in actual SME evidence?
 - Can engineering measure the gate before launch?
+- Is the next model or training run held to our standard, or to a generic one?
 
 GEDD turns the vague question "is the AI good enough?" into a product decision:
 
@@ -292,6 +291,7 @@ For an ML engineer, GEDD is a data and evaluation pipeline.
 
 It gives you labeled, traceable, domain-specific artifacts that can become:
 
+- Severity-weighted RL rewards (rule-based or an LLM-as-Judge reward model; see [judge as reward](../judge-reward-rl.md))
 - Judge prompts
 - Regression datasets
 - CI checks
@@ -550,3 +550,5 @@ For the whole team:
 ```text
 GEDD is the evidence pipeline between expert judgment and automated LLM-as-Judge control.
 ```
+
+The codebook, the labelled cases, the severity weights and the calibrated judge are what keep the product's taste intact as the team builds with agents. A competitor can call the same base model, but they don't have that evidence, and it grows every round as production surfaces new failures. That is the moat.

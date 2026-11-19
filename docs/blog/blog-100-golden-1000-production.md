@@ -1,10 +1,12 @@
-# The 100 Golden + 1,000 Production Architecture for Agent Evaluation
+# The 100 Golden + 1,000 Production Architecture: Keeping an Agent's Taste at Production Scale
 
 *A principled approach to evaluation system design that resolves the validity-coverage tradeoff in domain-specific AI agents.*
 
 ---
 
 ## Introduction
+
+An agent is held to whatever its evaluation measures. If production scoring drifts away from what domain experts judge as good and unacceptable, the product's taste erodes at exactly the scale where nobody reads individual responses. This architecture keeps the expert's standard in charge from the first 100 cases to thousands of production interactions a day.
 
 Evaluation of domain-specific AI agents presents a fundamental design tension. The evaluation must be *valid* — measuring what actually matters for correctness in the target domain. It must also be *comprehensive* — covering the space of inputs the agent will encounter in production. These two properties pull in opposite directions: validity requires expert curation (expensive, slow, small-scale), while coverage requires volume (cheap, fast, potentially noisy).
 
@@ -173,6 +175,8 @@ The complete pipeline — from expert conversation to production monitoring — 
 The evaluation of domain-specific AI agents requires a principled approach to the validity-coverage tradeoff. A small expert-curated dataset provides the construct validity necessary for meaningful measurement. Production-scale scoring provides the coverage necessary for comprehensive failure detection. The feedback loop between them produces a system that improves monotonically — converging toward complete coverage of observed failure modes while maintaining the precision that only expert curation can provide.
 
 The domain expert's role is not advisory — it is structural. They define the construct being measured, gate the quality of the evaluation dataset, and maintain its validity as the domain evolves. Without this role, evaluation systems measure the wrong thing at any scale.
+
+For a product team, this is how the product keeps its taste while models, prompts and agent frameworks change underneath it: every change is gated on the expert's cases and scored in production against the expert's error codes, so drift shows up as a named failure rather than disappearing into an average (the repo's own invoice study shows how an aggregate score can hide a trade-off between failure types: [FINDINGS F4](../../FINDINGS.md#f4)). The validated golden set and the error codes behind it are also the moat: a competitor can run the same base model, but not against your expert-curated evidence, which grows every month that production surfaces new failures.
 
 ---
 
