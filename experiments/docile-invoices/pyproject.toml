@@ -4,7 +4,7 @@ version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
     "matplotlib>=3.11.2",
-    "numpy>=2.5.4",
+    "numpy>=2.5.5",
     "openai>=3.42.1",
     "pillow>=13.0.0",
     "python-dateutil>=4.0.0",
